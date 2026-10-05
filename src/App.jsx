@@ -17,53 +17,16 @@ import {
   Clock3,
   Menu,
   X,
-  LogOut,
 } from "lucide-react";
 import "./App.css";
 
 const courses = [
-  {
-    id: 1,
-    name: "Ғарыштық жүйелерді жобалау 1",
-    teacher: "Калыбекова А.А.",
-    short: "ҒЖЖ",
-    color: "#70a7ff",
-  },
-  {
-    id: 2,
-    name: "Серіктік байланыс жүйелері",
-    teacher: "Минглибаев М.Д.",
-    short: "СБЖ",
-    color: "#55d6c2",
-  },
-  {
-    id: 3,
-    name: "Аэродинамика",
-    teacher: "Толеуханов А.Е.",
-    short: "АД",
-    color: "#ffb86b",
-  },
-  {
-    id: 4,
-    name: "Бағдарламаланатын логикалық құрылғылар",
-    teacher: "Калыбеков А.А.",
-    short: "БЛҚ",
-    color: "#b49aff",
-  },
-  {
-    id: 5,
-    name: "Ракетодинамика",
-    teacher: "Байсбаев О.Б.",
-    short: "РД",
-    color: "#ff8295",
-  },
-  {
-    id: 6,
-    name: "Гироскоптың қолданбалы теориясы",
-    teacher: "Байсбаев О.Б.",
-    short: "ГҚТ",
-    color: "#8fbdff",
-  },
+  { id: 1, name: "Ғарыштық жүйелерді жобалау 1", teacher: "Калыбекова А.А.", short: "ҒЖЖ", color: "#70a7ff" },
+  { id: 2, name: "Серіктік байланыс жүйелері", teacher: "Минглибаев М.Д.", short: "СБЖ", color: "#55d6c2" },
+  { id: 3, name: "Аэродинамика", teacher: "Толеуханов А.Е.", short: "АД", color: "#ffb86b" },
+  { id: 4, name: "Бағдарламаланатын логикалық құрылғылар", teacher: "Калыбеков А.А.", short: "БЛҚ", color: "#b49aff" },
+  { id: 5, name: "Ракетодинамика", teacher: "Байсбаев О.Б.", short: "РД", color: "#ff8295" },
+  { id: 6, name: "Гироскоптың қолданбалы теориясы", teacher: "Байсбаев О.Б.", short: "ГҚТ", color: "#8fbdff" },
 ];
 
 const navigation = [
@@ -89,27 +52,35 @@ function App() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [group, setGroup] = useState("1-топ");
+
   const [tasks, setTasks] = useState([]);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskCourse, setTaskCourse] = useState("5");
   const [taskDate, setTaskDate] = useState("");
   const [doneTasks, setDoneTasks] = useState([]);
+  const [notice, setNotice] = useState("");
+
   const [ab1, setAb1] = useState("");
   const [ab2, setAb2] = useState("");
   const [exam, setExam] = useState("");
+
   const [photoType, setPhotoType] = useState("Дәріс");
   const [photoCourse, setPhotoCourse] = useState("5");
-  const [notice, setNotice] = useState("");
 
   const dayToDay =
     ab1 !== "" && ab2 !== ""
       ? ((Number(ab1) + Number(ab2)) / 2) * 0.6
       : null;
 
-  const finalScore =
-    dayToDay !== null && exam !== ""
-      ? dayToDay + Number(exam) * 0.4
-      : null;
+  const validScores =
+    [ab1, ab2, exam].every((value) => value !== "") &&
+    [ab1, ab2, exam].every(
+      (value) => Number(value) >= 0 && Number(value) <= 100
+    );
+
+  const finalScore = validScores
+    ? ((Number(ab1) + Number(ab2)) / 2) * 0.6 + Number(exam) * 0.4
+    : null;
 
   function navigate(page) {
     setActivePage(page);
@@ -126,7 +97,6 @@ function App() {
 
   function addTask(event) {
     event.preventDefault();
-
     if (!taskTitle.trim()) return;
 
     setTasks((previous) => [
@@ -162,7 +132,9 @@ function App() {
       <>
         <section className="welcome-card">
           <div className="welcome-content">
-            <span className="eyebrow">ҒАРЫШТЫҚ ТЕХНИКА ЖӘНЕ ТЕХНОЛОГИЯ</span>
+            <span className="eyebrow">
+              ҒАРЫШТЫҚ ТЕХНИКА ЖӘНЕ ТЕХНОЛОГИЯ
+            </span>
             <h1>
               Оқу кеңістігіңе
               <br />
@@ -178,6 +150,7 @@ function App() {
               Тапсырмаларды қарау <ChevronRight size={17} />
             </button>
           </div>
+
           <div className="welcome-illustration">
             <div className="orbit orbit-one" />
             <div className="orbit orbit-two" />
@@ -192,31 +165,19 @@ function App() {
 
         <section className="stats-grid">
           <div className="stat-card">
-            <span className="stat-icon blue">
-              <BookOpen size={19} />
-            </span>
-            <div>
-              <strong>{courses.length}</strong>
-              <span>Оқу пәні</span>
-            </div>
+            <span className="stat-icon blue"><BookOpen size={19} /></span>
+            <div><strong>{courses.length}</strong><span>Оқу пәні</span></div>
           </div>
           <div className="stat-card">
-            <span className="stat-icon purple">
-              <ClipboardList size={19} />
-            </span>
+            <span className="stat-icon purple"><ClipboardList size={19} /></span>
             <div>
-              <strong>{tasks.length - doneTasks.length}</strong>
+              <strong>{tasks.filter((task) => !doneTasks.includes(task.id)).length}</strong>
               <span>Белсенді тапсырма</span>
             </div>
           </div>
           <div className="stat-card">
-            <span className="stat-icon green">
-              <CheckCircle2 size={19} />
-            </span>
-            <div>
-              <strong>{doneTasks.length}</strong>
-              <span>Орындалғаны</span>
-            </div>
+            <span className="stat-icon green"><CheckCircle2 size={19} /></span>
+            <div><strong>{doneTasks.length}</strong><span>Орындалғаны</span></div>
           </div>
         </section>
 
@@ -241,7 +202,7 @@ function App() {
                     className="course-symbol"
                     style={{
                       color: course.color,
-                      background: `${course.color}18`,
+                      backgroundColor: course.color + "18",
                     }}
                   >
                     {course.short}
@@ -273,27 +234,21 @@ function App() {
         </div>
 
         <div className="filter-row">
-          <button
-            className={`filter-button ${group === "1-топ" ? "selected" : ""}`}
-            onClick={() => setGroup("1-топ")}
-          >
-            1-топ
-          </button>
-          <button
-            className={`filter-button ${group === "2-топ" ? "selected" : ""}`}
-            onClick={() => setGroup("2-топ")}
-          >
-            2-топ
-          </button>
+          {["1-топ", "2-топ"].map((item) => (
+            <button
+              key={item}
+              className={`filter-button ${group === item ? "selected" : ""}`}
+              onClick={() => setGroup(item)}
+            >
+              {item}
+            </button>
+          ))}
         </div>
 
         <div className="empty-state">
           <CalendarDays size={34} />
           <h3>{group} сабақ кестесі</h3>
-          <p>
-            Нақты сабақ күндері мен уақыттары енгізілгеннен кейін осы жерде
-            көрсетіледі.
-          </p>
+          <p>Нақты сабақ күндері мен уақыттары әзірге енгізілмеген.</p>
           <span className="status-label">Кесте деректері әлі енгізілмеген</span>
         </div>
       </section>
@@ -322,9 +277,7 @@ function App() {
           ))}
         </div>
 
-        <label className="field-label" htmlFor="photo-course">
-          Пәнді таңда
-        </label>
+        <label className="field-label" htmlFor="photo-course">Пәнді таңда</label>
         <select
           id="photo-course"
           className="form-control"
@@ -332,24 +285,20 @@ function App() {
           onChange={(event) => setPhotoCourse(event.target.value)}
         >
           {courses.map((course) => (
-            <option key={course.id} value={String(course.id)}>
-              {course.name}
-            </option>
+            <option key={course.id} value={String(course.id)}>{course.name}</option>
           ))}
         </select>
 
         <div className="empty-state">
           <Camera size={34} />
           <h3>{photoType}</h3>
-          <p>
-            {courses.find((course) => String(course.id) === photoCourse)?.name}
-          </p>
+          <p>{courses.find((course) => String(course.id) === photoCourse)?.name}</p>
           <p>
             {photoType === "Дәріс"
               ? "Дәріс материалдарына арналған ортақ бөлім."
               : `${group} тобының зертханалық материалдарына арналған бөлім.`}
           </p>
-          <span className="status-label">Фото сақтау әзірге қосылмаған</span>
+          <span className="status-label">Фото сақтау әлі қосылмаған</span>
         </div>
       </section>
     );
@@ -366,9 +315,7 @@ function App() {
         </div>
 
         <form className="task-form" onSubmit={addTask}>
-          <label className="field-label" htmlFor="task-title">
-            Тапсырма атауы
-          </label>
+          <label className="field-label" htmlFor="task-title">Тапсырма атауы</label>
           <input
             id="task-title"
             className="form-control"
@@ -378,9 +325,7 @@ function App() {
             required
           />
 
-          <label className="field-label" htmlFor="task-course">
-            Пән
-          </label>
+          <label className="field-label" htmlFor="task-course">Пән</label>
           <select
             id="task-course"
             className="form-control"
@@ -388,15 +333,11 @@ function App() {
             onChange={(event) => setTaskCourse(event.target.value)}
           >
             {courses.map((course) => (
-              <option key={course.id} value={String(course.id)}>
-                {course.name}
-              </option>
+              <option key={course.id} value={String(course.id)}>{course.name}</option>
             ))}
           </select>
 
-          <label className="field-label" htmlFor="task-date">
-            Тапсыру мерзімі
-          </label>
+          <label className="field-label" htmlFor="task-date">Тапсыру мерзімі</label>
           <input
             id="task-date"
             type="date"
@@ -420,9 +361,7 @@ function App() {
             </div>
           ) : (
             tasks.map((task) => {
-              const course = courses.find(
-                (item) => String(item.id) === task.courseId
-              );
+              const course = courses.find((item) => String(item.id) === task.courseId);
               const isDone = doneTasks.includes(task.id);
 
               return (
@@ -435,15 +374,9 @@ function App() {
                     {isDone && <CheckCircle2 size={18} />}
                   </button>
                   <div className="task-info">
-                    <strong className={isDone ? "completed-text" : ""}>
-                      {task.title}
-                    </strong>
+                    <strong className={isDone ? "completed-text" : ""}>{task.title}</strong>
                     <span>{course?.name}</span>
-                    {task.date && (
-                      <small>
-                        <Clock3 size={13} /> {task.date}
-                      </small>
-                    )}
+                    {task.date && <small><Clock3 size={13} /> {task.date}</small>}
                   </div>
                   <button
                     className="icon-button danger"
@@ -473,65 +406,26 @@ function App() {
 
         <div className="gpa-layout">
           <div className="gpa-form">
-            <p className="muted-text">
-              Әр көрсеткішті 0 мен 100 аралығында енгіз.
-            </p>
+            <p className="muted-text">Әр көрсеткішті 0 мен 100 аралығында енгіз.</p>
 
-            <label className="field-label" htmlFor="ab1">
-              АБ1 бағасы
-            </label>
-            <input
-              id="ab1"
-              type="number"
-              min="0"
-              max="100"
-              className="form-control"
-              placeholder="0–100"
-              value={ab1}
-              onChange={(event) => setAb1(event.target.value)}
-            />
+            <label className="field-label" htmlFor="ab1">АБ1 бағасы</label>
+            <input id="ab1" type="number" min="0" max="100" className="form-control" placeholder="0–100" value={ab1} onChange={(event) => setAb1(event.target.value)} />
 
-            <label className="field-label" htmlFor="ab2">
-              АБ2 бағасы
-            </label>
-            <input
-              id="ab2"
-              type="number"
-              min="0"
-              max="100"
-              className="form-control"
-              placeholder="0–100"
-              value={ab2}
-              onChange={(event) => setAb2(event.target.value)}
-            />
+            <label className="field-label" htmlFor="ab2">АБ2 бағасы</label>
+            <input id="ab2" type="number" min="0" max="100" className="form-control" placeholder="0–100" value={ab2} onChange={(event) => setAb2(event.target.value)} />
 
-            <label className="field-label" htmlFor="exam">
-              Емтихан бағасы
-            </label>
-            <input
-              id="exam"
-              type="number"
-              min="0"
-              max="100"
-              className="form-control"
-              placeholder="0–100"
-              value={exam}
-              onChange={(event) => setExam(event.target.value)}
-            />
+            <label className="field-label" htmlFor="exam">Емтихан бағасы</label>
+            <input id="exam" type="number" min="0" max="100" className="form-control" placeholder="0–100" value={exam} onChange={(event) => setExam(event.target.value)} />
           </div>
 
           <div className="gpa-result">
             <span className="eyebrow">ҚОРЫТЫНДЫ НӘТИЖЕ</span>
-            <div className="gpa-number">
-              {finalScore === null ? "—" : finalScore.toFixed(2)}
-            </div>
+            <div className="gpa-number">{finalScore === null ? "—" : finalScore.toFixed(2)}</div>
             <span className="muted-text">100 баллдық жүйе</span>
             <div className="result-divider" />
             <div className="result-line">
               <span>Күнделікті бағалар (60%)</span>
-              <strong>
-                {dayToDay === null ? "—" : dayToDay.toFixed(2)}
-              </strong>
+              <strong>{dayToDay === null ? "—" : dayToDay.toFixed(2)}</strong>
             </div>
             <div className="result-line">
               <span>Емтихан (40%)</span>
@@ -580,17 +474,10 @@ function App() {
           </div>
         </div>
 
-        <div className="info-row">
-          <span>Пайдаланушы коды</span>
-          <strong>01</strong>
-        </div>
-        <div className="info-row">
-          <span>Платформа</span>
-          <strong>ULPA</strong>
-        </div>
+        <div className="info-row"><span>Пайдаланушы коды</span><strong>01</strong></div>
+        <div className="info-row"><span>Платформа</span><strong>ULPA</strong></div>
         <p className="muted-text">
-          Бұл әзірге демонстрациялық профиль. Нақты аккаунтқа кіру және
-          мәліметтерді серверде сақтау кейін қосылады.
+          Бұл демонстрациялық профиль. Нақты аккаунтқа кіру және деректерді серверде сақтау кейін қосылады.
         </p>
       </section>
     );
@@ -601,15 +488,13 @@ function App() {
 
     return (
       <section className="section-block">
-        <button className="back-button" onClick={() => navigate("home")}>
-          ← Пәндерге оралу
-        </button>
+        <button className="back-button" onClick={() => navigate("home")}>← Пәндерге оралу</button>
         <div className="course-detail-card">
           <span
             className="course-symbol large"
             style={{
               color: selectedCourse.color,
-              background: `${selectedCourse.color}18`,
+              backgroundColor: selectedCourse.color + "18",
             }}
           >
             {selectedCourse.short}
@@ -619,17 +504,11 @@ function App() {
           <div className="result-divider" />
           <div className="detail-row">
             <BookOpen size={18} />
-            <div>
-              <strong>Оқу материалдары</strong>
-              <p>Бұл бөлімге пәннің материалдарын кейін қосамыз.</p>
-            </div>
+            <div><strong>Оқу материалдары</strong><p>Бұл бөлімге пән материалдарын кейін қосамыз.</p></div>
           </div>
           <div className="detail-row">
             <Camera size={18} />
-            <div>
-              <strong>EASYФОТО</strong>
-              <p>Дәріс және зертханалық жұмыс фотолары.</p>
-            </div>
+            <div><strong>EASYФОТО</strong><p>Дәріс және зертханалық жұмыс фотолары.</p></div>
           </div>
           <button className="primary-button" onClick={() => navigate("photos")}>
             Фото бөліміне өту <ChevronRight size={17} />
@@ -641,20 +520,13 @@ function App() {
 
   function renderPage() {
     switch (activePage) {
-      case "schedule":
-        return renderSchedule();
-      case "photos":
-        return renderPhotos();
-      case "tasks":
-        return renderTasks();
-      case "gpa":
-        return renderGpa();
-      case "profile":
-        return renderProfile();
-      case "course":
-        return renderCourse();
-      default:
-        return renderHome();
+      case "schedule": return renderSchedule();
+      case "photos": return renderPhotos();
+      case "tasks": return renderTasks();
+      case "gpa": return renderGpa();
+      case "profile": return renderProfile();
+      case "course": return renderCourse();
+      default: return renderHome();
     }
   }
 
@@ -670,13 +542,8 @@ function App() {
 
       <aside className={`sidebar ${mobileMenuOpen ? "sidebar-open" : ""}`}>
         <div className="brand">
-          <div className="brand-mark">
-            <Rocket size={23} />
-          </div>
-          <div>
-            <strong>ULPA</strong>
-            <span>STUDENT SPACE</span>
-          </div>
+          <div className="brand-mark"><Rocket size={23} /></div>
+          <div><strong>ULPA</strong><span>STUDENT SPACE</span></div>
           <button
             className="sidebar-close icon-button"
             onClick={() => setMobileMenuOpen(false)}
@@ -709,17 +576,13 @@ function App() {
         <div className="sidebar-bottom">
           <div className="sidebar-note">
             <GraduationCap size={20} />
-            <div>
-              <strong>ҒТТ · 1 топ</strong>
-              <span>Space Engineering</span>
-            </div>
+            <div><strong>ҒТТ · 1 топ</strong><span>Space Engineering</span></div>
           </div>
           <button
             className={`nav-item ${activePage === "profile" ? "active" : ""}`}
             onClick={() => navigate("profile")}
           >
-            <UserRound size={19} />
-            <span>Профиль</span>
+            <UserRound size={19} /><span>Профиль</span>
           </button>
           <div className="sidebar-version">ULPA · 1.0</div>
         </div>
@@ -740,11 +603,7 @@ function App() {
               <h1>{pageTitles[activePage] || "ULPA"}</h1>
             </div>
           </div>
-          <button
-            className="user-chip"
-            onClick={() => navigate("profile")}
-            title="Профильді ашу"
-          >
+          <button className="user-chip" onClick={() => navigate("profile")} title="Профильді ашу">
             <span className="user-avatar">Қ</span>
             <span className="user-chip-name">Қайнар</span>
             <ChevronRight size={16} />
