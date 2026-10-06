@@ -1,0 +1,50 @@
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
+
+/** Accessible modal: Esc closes, page scroll locked, focus moved inside. */
+export default function Modal({ title, onClose, children, variant = "sheet", labelledBy }) {
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
+    document.body.style.overflow = "hidden";
+    panelRef.current?.focus();
+
+    function onKey(event) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className={`modal modal--${variant}`} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <div
+        ref={panelRef}
+        className="modal__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={labelledBy ? undefined : title}
+        aria-labelledby={labelledBy}
+        tabIndex={-1}
+      >
+        {title && (
+          <div className="modal__head">
+            <h2>{title}</h2>
+            <button type="button" className="icon-button" onClick={onClose} aria-label="Жабу">
+              <X size={18} />
+            </button>
+          </div>
+        )}
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}

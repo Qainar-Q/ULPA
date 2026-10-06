@@ -11,6 +11,8 @@ import NotFoundPage from "./pages/NotFoundPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import ActivatePage from "./pages/ActivatePage.jsx";
 import AdminStudentsPage from "./pages/AdminStudentsPage.jsx";
+import AdminLayout from "./pages/admin/AdminLayout.jsx";
+import AdminSchedulePage from "./pages/admin/AdminSchedulePage.jsx";
 import { GpaProvider } from "./features/gpa/GpaContext.jsx";
 import { AuthProvider } from "./features/auth/AuthContext.jsx";
 import { CatalogProvider } from "./features/catalog/CatalogContext.jsx";
@@ -39,7 +41,10 @@ export default function App() {
               <Route path="profile" element={<ProfilePage />} />
               <Route path="courses/:slug" element={<CourseDetailPage />} />
               <Route element={<RequireAdmin />}>
-                <Route path="admin" element={<AdminStudentsPage />} />
+                <Route path="admin" element={<AdminLayout />}>
+                  <Route index element={<AdminStudentsPage />} />
+                  <Route path="schedule" element={<AdminSchedulePage />} />
+                </Route>
               </Route>
               <Route path="*" element={<NotFoundPage />} />
             </Route>
