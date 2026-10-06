@@ -19,6 +19,7 @@ import { CatalogProvider } from "./features/catalog/CatalogContext.jsx";
 import { TasksProvider } from "./features/tasks/TasksContext.jsx";
 import TaskDetailPage from "./pages/TaskDetailPage.jsx";
 import AnnouncementsPage from "./pages/AnnouncementsPage.jsx";
+import GuestPage from "./pages/GuestPage.jsx";
 import { RedirectIfSignedIn, RequireAdmin, RequireAuth } from "./features/auth/guards.jsx";
 
 export default function App() {
@@ -28,7 +29,10 @@ export default function App() {
       <TasksProvider>
       <GpaProvider>
         <Routes>
-          {/* Public: sign-in and activation only */}
+          {/* Public guest overview: counts only, no content */}
+          <Route path="guest" element={<GuestPage />} />
+
+          {/* Public: sign-in and activation */}
           <Route element={<RedirectIfSignedIn />}>
             <Route path="login" element={<LoginPage />} />
             <Route path="activate" element={<ActivatePage />} />

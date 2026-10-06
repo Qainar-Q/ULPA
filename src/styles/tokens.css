@@ -1,5 +1,7 @@
-/* ULPA design tokens — the single source for color, type, spacing and shape. */
-:root {
+/* ULPA design tokens — the single source for color, type, spacing and shape.
+   Dark is the default. The sign-in page always stays dark (space photo). */
+:root,
+:root[data-theme="light"] .auth {
   color-scheme: dark;
 
   /* Surfaces: deep navy, layered */
@@ -69,4 +71,74 @@
   --bottom-nav-h: 64px;
 
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Theme-specific surfaces */
+  --bar-bg: rgba(5, 10, 20, 0.86);
+  --sidebar-bg: rgba(8, 16, 31, 0.7);
+  --panel-end: rgba(12, 22, 40, 0.75);
+  --empty-bg: rgba(12, 22, 40, 0.45);
+  --accent-hover: #5ff0e1;
+  --lecture-fg: #9fc0ff;
+  --lab-fg: #ffcf85;
+  --error-fg: #ffb3bd;
+  --course-l: 70%;
+}
+
+/* ---- Light theme ---- */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f3f5fa;
+  --bg-raised: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f1f4fa;
+  --surface-3: #e5eaf3;
+  --line: rgba(22, 40, 78, 0.1);
+  --line-strong: rgba(22, 40, 78, 0.18);
+
+  --text: #0e1628;
+  --text-2: #46536b;
+  --text-3: #76829a;
+
+  --accent: #0d9488;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(13, 148, 136, 0.1);
+  --accent-line: rgba(13, 148, 136, 0.35);
+  --accent-hover: #0b8077;
+  --blue: #2f6fe0;
+  --blue-soft: rgba(47, 111, 224, 0.1);
+
+  --success: #15955f;
+  --warning: #b86e00;
+  --warning-soft: rgba(184, 110, 0, 0.1);
+  --danger: #d1344a;
+  --gold: #a87a00;
+
+  --shadow-1: 0 1px 2px rgba(15, 30, 60, 0.06), 0 6px 18px -10px rgba(15, 30, 60, 0.18);
+  --shadow-2: 0 2px 4px rgba(15, 30, 60, 0.06), 0 18px 40px -20px rgba(15, 30, 60, 0.28);
+
+  --bar-bg: rgba(255, 255, 255, 0.9);
+  --sidebar-bg: #ffffff;
+  --panel-end: #ffffff;
+  --empty-bg: #f7f9fc;
+  --lecture-fg: #2856b8;
+  --lab-fg: #8f5400;
+  --error-fg: #b4233a;
+  --course-l: 40%;
+}
+
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(1100px 520px at 85% -10%, rgba(47, 111, 224, 0.08), transparent 60%),
+    radial-gradient(800px 420px at -10% 110%, rgba(13, 148, 136, 0.06), transparent 60%),
+    var(--bg);
+}
+
+:root[data-theme="light"] .score-card--presidential .score-card__value {
+  background: none;
+  color: var(--gold);
+}
+
+:root[data-theme="light"] .nav-badge {
+  color: #fff;
 }

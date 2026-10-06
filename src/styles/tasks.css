@@ -419,7 +419,7 @@
   height: 34px;
   border-radius: var(--r-sm);
   background: var(--blue-soft);
-  color: #9fc0ff;
+  color: var(--lecture-fg);
 }
 
 .announcement--pinned .announcement__icon {

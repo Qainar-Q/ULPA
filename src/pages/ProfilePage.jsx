@@ -4,6 +4,7 @@ import { ChevronRight, KeyRound, LogOut, ShieldCheck } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
 import PasskeySettings from "../components/PasskeySettings.jsx";
 import InstallApp from "../components/InstallApp.jsx";
+import ThemeSwitch from "../components/ThemeSwitch.jsx";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { PROGRAM_NAME } from "../config/app.js";
 
@@ -64,6 +65,11 @@ export default function ProfilePage() {
       <p className="muted small">
         Аты, тобы және туған күнін тек әкімші өзгерте алады. Туған күнің басқа студенттерге көрінбейді.
       </p>
+
+      <section className="panel">
+        <h2 className="panel-title">Көрініс</h2>
+        <ThemeSwitch />
+      </section>
 
       <section className="panel">
         <h2 className="panel-title">Face ID / саусақ ізі</h2>
