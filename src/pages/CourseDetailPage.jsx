@@ -5,6 +5,8 @@ import SectionTitle from "../components/ui/SectionTitle.jsx";
 import SessionItem from "../components/SessionItem.jsx";
 import CatalogState from "../components/CatalogState.jsx";
 import RecentPhotos from "../components/photos/RecentPhotos.jsx";
+import TaskCard from "../components/tasks/TaskCard.jsx";
+import { useTasks } from "../features/tasks/TasksContext.jsx";
 import NotFoundPage from "./NotFoundPage.jsx";
 import { courseAccent } from "../lib/courseStyle.js";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
@@ -16,6 +18,10 @@ function CourseDetail({ course }) {
     .filter((session) => session.course_id === course.id)
     .sort((a, b) => a.weekday - b.weekday || a.start_time.localeCompare(b.start_time));
   const days = WEEKDAYS.filter((day) => sessions.some((session) => session.weekday === day.id));
+  const { tasks, isDone } = useTasks();
+  const courseTasks = tasks
+    .filter((task) => task.course_id === course.id)
+    .sort((a, b) => Number(isDone(a.id)) - Number(isDone(b.id)) || (a.due_at ?? "9999").localeCompare(b.due_at ?? "9999"));
 
   return (
     <div className="stack-lg">
@@ -95,9 +101,17 @@ function CourseDetail({ course }) {
             title="Тапсырмалар"
             action={<Link to={`/tasks?course=${course.slug}`} className="text-link">Барлығы</Link>}
           />
-          <EmptyState icon={ClipboardList} title="Тапсырма жоқ" compact>
-            Оқытушы берген тапсырмалар осында шығады.
-          </EmptyState>
+          {courseTasks.length > 0 ? (
+            <ul className="task-list">
+              {courseTasks.map((task) => (
+                <TaskCard key={task.id} task={task} course={course} compact />
+              ))}
+            </ul>
+          ) : (
+            <EmptyState icon={ClipboardList} title="Тапсырма жоқ" compact>
+              Оқытушы берген тапсырмалар осында шығады.
+            </EmptyState>
+          )}
         </section>
       </div>
     </div>

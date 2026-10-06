@@ -6,9 +6,8 @@ import { WEEKDAYS } from "../lib/time.js";
 
 /**
  * Clickable course card. `next` = { session, daysAhead } from nextSession().
- * Task counts arrive in stage 6.
  */
-export default function CourseCard({ course, next, weeklyCount }) {
+export default function CourseCard({ course, next, openTasks = 0 }) {
   const nextLabel = next
     ? next.daysAhead === 0
       ? `Бүгін ${formatClock(next.session.start_time)}`
@@ -29,8 +28,8 @@ export default function CourseCard({ course, next, weeklyCount }) {
           <dd>{nextLabel}</dd>
         </div>
         <div>
-          <dt>Аптасына</dt>
-          <dd>{weeklyCount ?? 0} сабақ</dd>
+          <dt>Тапсырма</dt>
+          <dd className={openTasks > 0 ? "has-tasks" : undefined}>{openTasks > 0 ? `${openTasks} орындалмаған` : "—"}</dd>
         </div>
       </dl>
     </Link>

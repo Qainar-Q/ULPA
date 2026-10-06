@@ -16,12 +16,15 @@ import AdminSchedulePage from "./pages/admin/AdminSchedulePage.jsx";
 import { GpaProvider } from "./features/gpa/GpaContext.jsx";
 import { AuthProvider } from "./features/auth/AuthContext.jsx";
 import { CatalogProvider } from "./features/catalog/CatalogContext.jsx";
+import { TasksProvider } from "./features/tasks/TasksContext.jsx";
+import TaskDetailPage from "./pages/TaskDetailPage.jsx";
 import { RedirectIfSignedIn, RequireAdmin, RequireAuth } from "./features/auth/guards.jsx";
 
 export default function App() {
   return (
     <AuthProvider>
       <CatalogProvider>
+      <TasksProvider>
       <GpaProvider>
         <Routes>
           {/* Public: sign-in and activation only */}
@@ -37,6 +40,7 @@ export default function App() {
               <Route path="schedule" element={<SchedulePage />} />
               <Route path="photos" element={<PhotosPage />} />
               <Route path="tasks" element={<TasksPage />} />
+              <Route path="tasks/:id" element={<TaskDetailPage />} />
               <Route path="gpa" element={<GpaPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="courses/:slug" element={<CourseDetailPage />} />
@@ -51,6 +55,7 @@ export default function App() {
           </Route>
         </Routes>
       </GpaProvider>
+      </TasksProvider>
       </CatalogProvider>
     </AuthProvider>
   );
