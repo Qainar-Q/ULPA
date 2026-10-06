@@ -24,3 +24,7 @@ export const SESSION_TYPES = {
   lecture: "Дәріс",
   lab: "Зертханалық жұмыс",
 };
+
+// Supabase free plan file storage. Admins see a warning from 70 % onwards.
+export const STORAGE_LIMIT_BYTES = 1e9;
+export const STORAGE_WARN_RATIO = 0.7;

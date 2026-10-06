@@ -1,11 +1,13 @@
 // Prepare a photo in the browser before upload:
 //  * respects camera orientation
-//  * resizes (full ≤ 2048 px, thumbnail ≤ 480 px) so uploads are fast on mobile data
+//  * resizes (full ≤ 1400 px, thumbnail ≤ 400 px) so uploads are fast on mobile data
 //  * re-encodes to JPEG, which also strips EXIF metadata such as GPS location
 
 export const MAX_INPUT_BYTES = 30 * 1024 * 1024; // reject absurdly large source files
-const FULL_EDGE = 2048;
-const THUMB_EDGE = 480;
+// Sized from a real upload: 1536×2048 @ 0.85 was 1.19 MB. 1400 px @ 0.72 ≈ 0.35 MB,
+// so ~1,500 photos per semester fit in the 1 GB free storage.
+const FULL_EDGE = 1400;
+const THUMB_EDGE = 400;
 
 export class ImageError extends Error {
   constructor(code) {
@@ -62,8 +64,8 @@ export async function prepareImage(file) {
 
   const source = await decode(file);
   try {
-    const full = await render(source, FULL_EDGE, 0.85);
-    const thumb = await render(source, THUMB_EDGE, 0.72);
+    const full = await render(source, FULL_EDGE, 0.72);
+    const thumb = await render(source, THUMB_EDGE, 0.68);
     return { full, thumb };
   } finally {
     if (typeof source.close === "function") source.close();
