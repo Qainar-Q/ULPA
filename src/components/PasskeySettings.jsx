@@ -73,7 +73,7 @@ export default function PasskeySettings() {
           ))}
         </ul>
       )}
-      <button type="button" className="button button--ghost" onClick={register} disabled={busy}>
+      <button type="button" className="button button--ghost button--wrap" onClick={register} disabled={busy}>
         <Fingerprint size={17} /> {keys.length ? "Тағы бір құрылғы қосу" : "Осы құрылғыда Face ID / саусақ ізін қосу"}
       </button>
       {message && <p className={message.tone === "ok" ? "passkeys__ok" : "form__error"}>{message.text}</p>}

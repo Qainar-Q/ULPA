@@ -30,7 +30,7 @@ export default function InstallApp() {
     return (
       <button
         type="button"
-        className="button button--ghost"
+        className="button button--ghost button--wrap"
         onClick={async () => {
           prompt.prompt();
           const { outcome } = await prompt.userChoice;

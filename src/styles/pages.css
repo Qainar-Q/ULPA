@@ -619,7 +619,7 @@
   gap: var(--s-3);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .gpa-layout {
     grid-template-columns: minmax(0, 1fr) 340px;
     grid-template-rows: auto 1fr;
