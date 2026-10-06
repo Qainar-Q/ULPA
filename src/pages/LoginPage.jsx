@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import AuthLayout from "../components/layout/AuthLayout.jsx";
 import PasswordField from "../components/ui/PasswordField.jsx";
+import StudentCodeField from "../components/StudentCodeField.jsx";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { authErrorMessage } from "../features/auth/errors.js";
 
@@ -43,23 +44,12 @@ export default function LoginPage() {
       }
     >
       <form className="form" onSubmit={handleSubmit} noValidate>
-        <div className="field">
-          <label className="field__label" htmlFor="login-code">
-            Студент коды
-          </label>
-          <input
-            id="login-code"
-            className="input input--code"
-            inputMode="numeric"
-            autoComplete="username"
-            placeholder="01"
-            maxLength={2}
-            value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-            aria-invalid={error === "code_format" || undefined}
-            required
-          />
-        </div>
+        <StudentCodeField
+          id="login-code"
+          value={code}
+          onChange={setCode}
+          invalid={error === "code_format"}
+        />
 
         <PasswordField
           id="login-password"

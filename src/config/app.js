@@ -1,7 +1,7 @@
 // Global app settings. Change values here instead of scattering them in components.
 
 export const APP_NAME = "ULPA";
-export const CLASS_LABEL = "ҒТТ · 1 топ";
+export const CLASS_LABEL = "ҒТТ"; // whole class (both groups)
 export const PROGRAM_NAME = "Ғарыштық техника және технология";
 
 // All dates and times are interpreted in Almaty local time.

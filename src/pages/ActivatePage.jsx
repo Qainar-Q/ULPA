@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { KeyRound } from "lucide-react";
 import AuthLayout from "../components/layout/AuthLayout.jsx";
 import PasswordField from "../components/ui/PasswordField.jsx";
+import StudentCodeField from "../components/StudentCodeField.jsx";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { authErrorMessage } from "../features/auth/errors.js";
 
@@ -53,41 +54,29 @@ export default function ActivatePage() {
       }
     >
       <form className="form" onSubmit={handleSubmit} noValidate>
-        <div className="form__row">
-          <div className="field field--narrow">
-            <label className="field__label" htmlFor="act-code">
-              Код
-            </label>
-            <input
-              id="act-code"
-              className="input input--code"
-              inputMode="numeric"
-              autoComplete="username"
-              placeholder="01"
-              maxLength={2}
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-              aria-invalid={error === "code_format" || undefined}
-              required
-            />
-          </div>
-          <div className="field">
-            <label className="field__label" htmlFor="act-access">
-              Белсендіру коды
-            </label>
-            <input
-              id="act-access"
-              className="input input--code"
-              autoComplete="one-time-code"
-              autoCapitalize="characters"
-              spellCheck={false}
-              placeholder="XXXX-XXXX"
-              value={accessCode}
-              onChange={(event) => setAccessCode(formatAccessCode(event.target.value))}
-              aria-invalid={error === "invalid_code" || error === "code_locked" || undefined}
-              required
-            />
-          </div>
+        <StudentCodeField
+          id="act-code"
+          value={code}
+          onChange={setCode}
+          invalid={error === "code_format"}
+        />
+
+        <div className="field">
+          <label className="field__label" htmlFor="act-access">
+            Белсендіру коды
+          </label>
+          <input
+            id="act-access"
+            className="input input--code"
+            autoComplete="one-time-code"
+            autoCapitalize="characters"
+            spellCheck={false}
+            placeholder="XXXX-XXXX"
+            value={accessCode}
+            onChange={(event) => setAccessCode(formatAccessCode(event.target.value))}
+            aria-invalid={error === "invalid_code" || error === "code_locked" || undefined}
+            required
+          />
         </div>
 
         <PasswordField
