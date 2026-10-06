@@ -69,7 +69,7 @@
   align-items: center;
   justify-content: space-between;
   padding: calc(var(--s-2) + env(safe-area-inset-top)) var(--gutter) var(--s-2);
-  background: rgba(5, 10, 20, 0.82);
+  background: var(--bar-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
@@ -88,7 +88,7 @@
   grid-template-columns: repeat(5, 1fr);
   height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
   padding: 0 var(--s-1) env(safe-area-inset-bottom);
-  background: rgba(8, 14, 27, 0.94);
+  background: var(--bar-bg);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-top: 1px solid var(--line);
@@ -182,7 +182,7 @@
     gap: var(--s-8);
     height: 100dvh;
     padding: var(--s-6) var(--s-4);
-    background: rgba(8, 16, 31, 0.7);
+    background: var(--sidebar-bg);
     border-right: 1px solid var(--line);
   }
 

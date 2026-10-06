@@ -12,6 +12,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ULPA" />
     <title>ULPA</title>
+    <script>
+      // Apply the saved theme before first paint (see src/lib/theme.js).
+      (function () {
+        try {
+          var pref = localStorage.getItem("ulpa-theme") || "dark";
+          var light = pref === "light" || (pref === "system" && matchMedia("(prefers-color-scheme: light)").matches);
+          document.documentElement.dataset.theme = light ? "light" : "dark";
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

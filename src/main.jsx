@@ -12,6 +12,10 @@ import "./styles/auth.css";
 import "./styles/photos.css";
 import "./styles/tasks.css";
 import App from "./App.jsx";
+import { applyTheme, watchSystemTheme } from "./lib/theme.js";
+
+applyTheme();
+watchSystemTheme();
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

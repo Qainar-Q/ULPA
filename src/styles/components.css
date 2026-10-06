@@ -30,7 +30,7 @@
 }
 
 .button--primary:hover:not(:disabled) {
-  background: #5ff0e1;
+  background: var(--accent-hover);
 }
 
 .button--ghost {
@@ -94,7 +94,7 @@
   padding: var(--s-4);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  background: linear-gradient(180deg, var(--surface) 0%, rgba(12, 22, 40, 0.75) 100%);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--panel-end) 100%);
   box-shadow: var(--shadow-1);
 }
 
@@ -186,7 +186,7 @@
   text-align: center;
   border: 1px dashed var(--line-strong);
   border-radius: var(--r-lg);
-  background: rgba(12, 22, 40, 0.45);
+  background: var(--empty-bg);
 }
 
 .empty-state--compact {

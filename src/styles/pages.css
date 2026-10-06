@@ -7,7 +7,7 @@
   border: 1px solid var(--line-strong);
   border-radius: var(--r-xl);
   background:
-    linear-gradient(135deg, rgba(91, 148, 255, 0.14) 0%, rgba(12, 22, 40, 0) 55%),
+    linear-gradient(135deg, var(--blue-soft) 0%, transparent 55%),
     linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%);
   box-shadow: var(--shadow-2);
 }
@@ -525,12 +525,12 @@
 
 .session__type--lecture {
   background: var(--blue-soft);
-  color: #9fc0ff;
+  color: var(--lecture-fg);
 }
 
 .session__type--lab {
   background: rgba(255, 181, 71, 0.12);
-  color: #ffcf85;
+  color: var(--lab-fg);
 }
 
 .session__room {
