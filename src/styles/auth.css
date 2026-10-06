@@ -796,3 +796,68 @@
   text-align: center;
   font-family: var(--font-mono);
 }
+
+/* ================= Storage usage ================= */
+.usage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.usage--loading {
+  height: 92px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
+  background-size: 200% 100%;
+  animation: skeleton 1.4s ease-in-out infinite;
+}
+
+.usage__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-sm);
+}
+
+.usage__head svg {
+  color: var(--accent);
+}
+
+.usage__numbers {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.usage__bar {
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.usage__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
+}
+
+.usage--warn {
+  border-color: rgba(255, 181, 71, 0.4);
+}
+
+.usage--warn .usage__bar span {
+  background: linear-gradient(90deg, var(--warning), var(--danger));
+}
+
+.usage__note {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.usage__warning {
+  font-size: var(--fs-xs);
+  color: var(--warning);
+}
