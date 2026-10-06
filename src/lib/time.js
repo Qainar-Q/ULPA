@@ -52,7 +52,12 @@ export const WEEKDAYS = [
   { id: 4, short: "Бс", label: "Бейсенбі" },
   { id: 5, short: "Жм", label: "Жұма" },
   { id: 6, short: "Сб", label: "Сенбі" },
+  { id: 7, short: "Жс", label: "Жексенбі" },
 ];
+
+export function weekdayLabel(id) {
+  return WEEKDAYS.find((day) => day.id === id)?.label ?? "";
+}
 
 /** ISO weekday (1 = Monday … 7 = Sunday) in Almaty. */
 export function almatyWeekday(date = new Date()) {

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Award, RotateCcw, Sparkles, Volume2, Vibrate } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
-import { COURSES, courseAccent } from "../data/courses.js";
-import { useGpa } from "../features/gpa/GpaContext.jsx";
+import { courseAccent } from "../lib/courseStyle.js";
+import { emptyEntry, useGpa } from "../features/gpa/GpaContext.jsx";
+import { useCatalog } from "../features/catalog/CatalogContext.jsx";
+import CatalogState from "../components/CatalogState.jsx";
 import { playChime, vibrate } from "../features/gpa/rewardFeedback.js";
 import {
   REWARD_RULES,
@@ -26,10 +28,11 @@ const STATUS_TEXT = {
 
 export default function GpaPage() {
   const { entries, updateEntry, clearAll, feedback, setFeedback } = useGpa();
+  const { courses } = useCatalog();
 
   const results = useMemo(
-    () => COURSES.map((course) => ({ course, ...calculateCourse(entries[course.slug]) })),
-    [entries]
+    () => courses.map((course) => ({ course, ...calculateCourse(entries[course.slug] ?? emptyEntry) })),
+    [entries, courses]
   );
   const average = averageOfCompleted(results);
   const completedCount = results.filter((result) => result.status === "complete").length;
@@ -62,8 +65,9 @@ export default function GpaPage() {
 
       <div className="gpa-layout">
         <div className="gpa-courses">
+          <CatalogState>
           {results.map(({ course, status, ongoing, examPart, final }) => {
-            const entry = entries[course.slug];
+            const entry = entries[course.slug] ?? emptyEntry;
             return (
               <section key={course.slug} className="gpa-row" style={courseAccent(course)}>
                 <div className="gpa-row__head">
@@ -110,6 +114,7 @@ export default function GpaPage() {
               </section>
             );
           })}
+          </CatalogState>
         </div>
 
         <aside className="gpa-score" aria-label="Орташа нәтиже">
@@ -119,7 +124,7 @@ export default function GpaPage() {
               {formatScore(average)}
             </div>
             <span className="score-card__scale">
-              100 баллдық жүйе · {completedCount}/{COURSES.length} пән толық
+              100 баллдық жүйе · {completedCount}/{courses.length} пән толық
             </span>
 
             {reward ? (
