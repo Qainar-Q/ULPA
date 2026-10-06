@@ -1,9 +1,10 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, CalendarDays, Camera, ClipboardList, FileText, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpen, CalendarDays, ClipboardList, FileText, UserRound } from "lucide-react";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
 import SessionItem from "../components/SessionItem.jsx";
 import CatalogState from "../components/CatalogState.jsx";
+import RecentPhotos from "../components/photos/RecentPhotos.jsx";
 import NotFoundPage from "./NotFoundPage.jsx";
 import { courseAccent } from "../lib/courseStyle.js";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
@@ -86,7 +87,7 @@ function CourseDetail({ course }) {
             title="Фото"
             action={<Link to={`/photos?course=${course.slug}`} className="text-link">EASYФОТО</Link>}
           />
-          <EmptyState icon={Camera} title="Фото жоқ" compact />
+          <RecentPhotos courseId={course.id} limit={6} />
         </section>
 
         <section className="panel" id="tasks">

@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
-import { ClipboardList, Camera, Calculator, ChevronRight, Coffee } from "lucide-react";
+import { ClipboardList, Calculator, ChevronRight, Coffee } from "lucide-react";
 import CourseCard from "../components/CourseCard.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
 import SessionItem from "../components/SessionItem.jsx";
 import CatalogState from "../components/CatalogState.jsx";
+import RecentPhotos from "../components/photos/RecentPhotos.jsx";
 import { PROGRAM_NAME } from "../config/app.js";
 import { almatyWeekday, formatLongDate, greetingFor, weekdayLabel } from "../lib/time.js";
 import { formatClock, nextSession, sessionState, sessionsOnDay } from "../lib/schedule.js";
@@ -115,9 +116,7 @@ export default function HomePage() {
           title="Соңғы фотолар"
           action={<Link to="/photos" className="text-link">EASYФОТО <ChevronRight size={14} /></Link>}
         />
-        <EmptyState icon={Camera} title="Әзірге фото жүктелмеген" tag="Келесі кезеңде" compact>
-          Дәріс және зертханалық жұмыс фотолары осында көрінеді.
-        </EmptyState>
+        <RecentPhotos limit={6} />
       </section>
     </div>
   );
