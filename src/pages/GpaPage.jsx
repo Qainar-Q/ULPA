@@ -8,10 +8,13 @@ import CatalogState from "../components/CatalogState.jsx";
 import { playChime, vibrate } from "../features/gpa/rewardFeedback.js";
 import {
   REWARD_RULES,
+  averageGpa,
   averageOfCompleted,
   calculateCourse,
+  formatGpa,
   formatScore,
   rewardFor,
+  toGpa,
 } from "../lib/gpa.js";
 
 const FIELDS = [
@@ -27,7 +30,7 @@ const STATUS_TEXT = {
 };
 
 export default function GpaPage() {
-  const { entries, updateEntry, clearAll, feedback, setFeedback } = useGpa();
+  const { entries, updateEntry, clearAll, feedback, setFeedback, saveState } = useGpa();
   const { courses } = useCatalog();
 
   const results = useMemo(
@@ -35,6 +38,7 @@ export default function GpaPage() {
     [entries, courses]
   );
   const average = averageOfCompleted(results);
+  const gpa = averageGpa(results);
   const completedCount = results.filter((result) => result.status === "complete").length;
   const reward = rewardFor(average);
 
@@ -55,7 +59,7 @@ export default function GpaPage() {
       <PageHeader
         eyebrow="Семестр нәтижесі"
         title="GPA калькуляторы"
-        description="Бағаларды енгізсең, нәтиже бірден есептеледі. Бос қалған баға 0 деп саналмайды."
+        description={`Бағаларың тек өзіңе көрінеді және автоматты сақталады${saveState === "saving" ? " · сақталуда…" : saveState === "saved" ? " · сақталды ✓" : saveState === "error" ? " · сақталмады!" : ""}. Бос баға 0 деп саналмайды.`}
         actions={
           <button type="button" className="button button--ghost" onClick={clearAll}>
             <RotateCcw size={16} /> Тазалау
@@ -102,9 +106,11 @@ export default function GpaPage() {
                 <div className={`gpa-row__result gpa-row__result--${status}`}>
                   {status === "complete" ? (
                     <>
-                      <strong>{formatScore(final)}</strong>
+                      <span className="grade-chip">
+                        <b>{toGpa(final).letter}</b> {formatGpa(toGpa(final).points)}
+                      </span>
                       <small>
-                        {formatScore(ongoing)} + {formatScore(examPart)}
+                        {formatScore(final)} балл
                       </small>
                     </>
                   ) : (
@@ -119,12 +125,12 @@ export default function GpaPage() {
 
         <aside className="gpa-score" aria-label="Орташа нәтиже">
           <div className={`score-card${reward ? ` score-card--${reward.id}` : ""}`}>
-            <span className="eyebrow">Орташа нәтиже</span>
+            <span className="eyebrow">GPA · 4,0 жүйесі</span>
             <div className="score-card__value" aria-live="polite">
-              {formatScore(average)}
+              {formatGpa(gpa)}
             </div>
             <span className="score-card__scale">
-              100 баллдық жүйе · {completedCount}/{courses.length} пән толық
+              Орташа балл: {formatScore(average)} / 100 · {completedCount}/{courses.length} пән толық
             </span>
 
             {reward ? (
@@ -151,6 +157,16 @@ export default function GpaPage() {
               <li><span>Ағымдағы бағалар</span><strong>60%</strong></li>
               <li><span>Емтихан</span><strong>40%</strong></li>
             </ul>
+            <details className="gpa-scale">
+              <summary>4,0 шкаласы</summary>
+              <table>
+                <tbody>
+                  {[["95–100","A","4,00"],["90–94","A-","3,67"],["85–89","B+","3,33"],["80–84","B","3,00"],["75–79","B-","2,67"],["70–74","C+","2,33"],["65–69","C","2,00"],["60–64","C-","1,67"],["55–59","D+","1,33"],["50–54","D","1,00"],["0–49","FX/F","0"]].map(([range, letter, pts]) => (
+                    <tr key={letter}><td>{range}</td><td>{letter}</td><td>{pts}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
             <p className="formula__note">
               Белгілер платформаның ескертуі ғана, ресми шәкіртақы шешімі емес.
             </p>

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
+import { Megaphone, ShieldCheck } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
 import { NAV_ITEMS } from "./navItems.js";
 import { useTasks } from "../../features/tasks/TasksContext.jsx";
@@ -28,6 +28,10 @@ export default function Sidebar() {
             {to === "/tasks" && openTasks.length > 0 && <span className="side-nav__count">{openTasks.length}</span>}
           </NavLink>
         ))}
+        <NavLink to="/announcements" className="side-nav__item">
+          <Megaphone size={18} strokeWidth={1.8} />
+          <span>Хабарландырулар</span>
+        </NavLink>
         {isAdmin && (
           <NavLink to="/admin" className="side-nav__item">
             <ShieldCheck size={18} strokeWidth={1.8} />

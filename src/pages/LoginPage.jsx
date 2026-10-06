@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LogIn } from "lucide-react";
+import { Fingerprint, LogIn } from "lucide-react";
 import AuthLayout from "../components/layout/AuthLayout.jsx";
 import PasswordField from "../components/ui/PasswordField.jsx";
 import StudentCodeField from "../components/StudentCodeField.jsx";
@@ -8,7 +8,19 @@ import { useAuth } from "../features/auth/AuthContext.jsx";
 import { authErrorMessage } from "../features/auth/errors.js";
 
 export default function LoginPage() {
-  const { signIn, notice, clearNotice } = useAuth();
+  const { signIn, signInWithPasskey, notice, clearNotice } = useAuth();
+  const passkeySupported = typeof window !== "undefined" && Boolean(window.PublicKeyCredential);
+
+  async function handlePasskey() {
+    setBusy(true);
+    setError(null);
+    clearNotice();
+    const result = await signInWithPasskey();
+    if (result.error) {
+      setError(result.error);
+      setBusy(false);
+    }
+  }
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -69,6 +81,15 @@ export default function LoginPage() {
         <button type="submit" className="button button--primary button--block" disabled={busy}>
           {busy ? "Тексерілуде…" : <><LogIn size={17} /> Кіру</>}
         </button>
+
+        {passkeySupported && (
+          <>
+            <div className="divider"><span>немесе</span></div>
+            <button type="button" className="button button--ghost button--block" onClick={handlePasskey} disabled={busy}>
+              <Fingerprint size={18} /> Face ID / саусақ ізімен кіру
+            </button>
+          </>
+        )}
       </form>
     </AuthLayout>
   );
