@@ -6,6 +6,8 @@ import SectionTitle from "../components/ui/SectionTitle.jsx";
 import SessionItem from "../components/SessionItem.jsx";
 import CatalogState from "../components/CatalogState.jsx";
 import RecentPhotos from "../components/photos/RecentPhotos.jsx";
+import TaskCard from "../components/tasks/TaskCard.jsx";
+import { useTasks } from "../features/tasks/TasksContext.jsx";
 import { PROGRAM_NAME } from "../config/app.js";
 import { almatyWeekday, formatLongDate, greetingFor, weekdayLabel } from "../lib/time.js";
 import { formatClock, nextSession, sessionState, sessionsOnDay } from "../lib/schedule.js";
@@ -21,6 +23,10 @@ export default function HomePage() {
   const todaySessions = sessionsOnDay(mySessions, today);
   const upcoming = nextSession(mySessions, now);
   const upcomingTodayId = upcoming?.daysAhead === 0 ? upcoming.session.id : null;
+  const { openTasks, status: tasksStatus } = useTasks();
+  const upcomingTasks = [...openTasks]
+    .sort((a, b) => (a.due_at ?? "9999").localeCompare(b.due_at ?? "9999"))
+    .slice(0, 4);
 
   return (
     <div className="stack-lg">
@@ -86,9 +92,17 @@ export default function HomePage() {
             title="Жақын тапсырмалар"
             action={<Link to="/tasks" className="text-link">Барлығы <ChevronRight size={14} /></Link>}
           />
-          <EmptyState icon={ClipboardList} title="Тапсырма жоқ" tag="Келесі кезеңде" compact>
-            Мерзімі жақындаған тапсырмалар осында шығады.
-          </EmptyState>
+          {upcomingTasks.length > 0 ? (
+            <ul className="task-list">
+              {upcomingTasks.map((task) => (
+                <TaskCard key={task.id} task={task} course={courseById(task.course_id)} compact />
+              ))}
+            </ul>
+          ) : (
+            <EmptyState icon={ClipboardList} title={tasksStatus === "ready" ? "Орындалмаған тапсырма жоқ" : "Жүктелуде…"} compact>
+              {tasksStatus === "ready" ? "Жаңа тапсырма берілгенде осында шығады." : null}
+            </EmptyState>
+          )}
         </section>
       </div>
 
@@ -103,7 +117,7 @@ export default function HomePage() {
                   key={course.slug}
                   course={course}
                   next={nextSession(courseSessions, now)}
-                  weeklyCount={courseSessions.length}
+                  openTasks={openTasks.filter((task) => task.course_id === course.id).length}
                 />
               );
             })}

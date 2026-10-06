@@ -2,11 +2,13 @@ import { NavLink } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
 import { NAV_ITEMS } from "./navItems.js";
+import { useTasks } from "../../features/tasks/TasksContext.jsx";
 import { APP_NAME, CLASS_LABEL } from "../../config/app.js";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 
 export default function Sidebar() {
   const { student, isAdmin } = useAuth();
+  const { openTasks } = useTasks();
 
   return (
     <aside className="sidebar" aria-label="Негізгі мәзір">
@@ -23,6 +25,7 @@ export default function Sidebar() {
           <NavLink key={to} to={to} end={end} className="side-nav__item">
             <Icon size={18} strokeWidth={1.8} />
             <span>{title}</span>
+            {to === "/tasks" && openTasks.length > 0 && <span className="side-nav__count">{openTasks.length}</span>}
           </NavLink>
         ))}
         {isAdmin && (
