@@ -4,11 +4,13 @@ import CourseCard from "../components/CourseCard.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
 import { COURSES } from "../data/courses.js";
-import { PROGRAM_NAME, CLASS_LABEL } from "../config/app.js";
+import { PROGRAM_NAME } from "../config/app.js";
 import { formatLongDate, greetingFor } from "../lib/time.js";
+import { useAuth } from "../features/auth/AuthContext.jsx";
 
 export default function HomePage() {
   const now = new Date();
+  const { student } = useAuth();
 
   return (
     <div className="stack-lg">
@@ -22,9 +24,11 @@ export default function HomePage() {
         </div>
         <div className="hero__content">
           <span className="eyebrow">{formatLongDate(now)}</span>
-          <h1 className="hero__title">{greetingFor(now)}!</h1>
+          <h1 className="hero__title">
+            {greetingFor(now)}, {student?.full_name}!
+          </h1>
           <p className="hero__text">
-            {PROGRAM_NAME} · {CLASS_LABEL}. Пәндер, кесте, тапсырмалар мен оқу фотолары бір жерде.
+            {PROGRAM_NAME} · {student?.group_no}-топ. Пәндер, кесте, тапсырмалар мен оқу фотолары бір жерде.
           </p>
           <div className="hero__actions">
             <Link to="/schedule" className="button button--primary">

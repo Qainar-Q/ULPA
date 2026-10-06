@@ -78,27 +78,6 @@
   font-size: 1rem;
 }
 
-/* ---- Preview banner ---- */
-.preview-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  max-width: var(--content-max);
-  margin: var(--s-3) auto 0;
-  padding: 0 var(--gutter);
-  font-size: var(--fs-xs);
-  color: var(--warning);
-}
-
-.preview-banner__dot {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--warning);
-  box-shadow: 0 0 0 3px var(--warning-soft);
-}
-
 /* ---- Bottom navigation (phones/tablets) ---- */
 .bottom-nav {
   position: fixed;
@@ -192,10 +171,6 @@
 
   .page {
     padding-top: var(--s-6);
-  }
-
-  .preview-banner {
-    margin-top: var(--s-6);
   }
 
   .sidebar {

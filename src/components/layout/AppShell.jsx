@@ -17,10 +17,6 @@ export default function AppShell() {
       <Sidebar />
       <div className="app-main">
         <MobileTopbar />
-        <div className="preview-banner" role="status">
-          <span className="preview-banner__dot" aria-hidden="true" />
-          Алдын ала нұсқа: кіру жүйесі мен дерекқор келесі кезеңде қосылады.
-        </div>
         <main className="page" id="main">
           <Outlet />
         </main>

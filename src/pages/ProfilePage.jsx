@@ -1,31 +1,83 @@
-import { KeyRound, ShieldCheck, UserRound } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { ChevronRight, KeyRound, LogOut, ShieldCheck } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
-import EmptyState from "../components/ui/EmptyState.jsx";
+import { useAuth } from "../features/auth/AuthContext.jsx";
+import { PROGRAM_NAME } from "../config/app.js";
+
+const MONTHS_KK = [
+  "қаңтар", "ақпан", "наурыз", "сәуір", "мамыр", "маусым",
+  "шілде", "тамыз", "қыркүйек", "қазан", "қараша", "желтоқсан",
+];
 
 export default function ProfilePage() {
+  const { student, isAdmin, signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  if (!student) return null;
+
+  const birthday =
+    student.birth_month && student.birth_day
+      ? `${student.birth_day} ${MONTHS_KK[student.birth_month - 1]}`
+      : "Енгізілмеген";
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    await signOut();
+  }
+
   return (
     <div className="stack-lg">
       <PageHeader eyebrow="Жеке ақпарат" title="Профиль" />
 
-      <EmptyState icon={UserRound} title="Профиль кіргеннен кейін көрінеді" tag="Кіру жүйесі күтілуде">
-        Студент коды (01–18), аты, тобы және баптаулар нақты аккаунтқа кіргенде ғана көрсетіледі.
-      </EmptyState>
+      <section className="profile-card">
+        <span className="avatar avatar--lg" aria-hidden="true">
+          {student.full_name.slice(0, 1)}
+        </span>
+        <div>
+          <h2 className="profile-card__name">{student.full_name}</h2>
+          <p className="profile-card__program">{PROGRAM_NAME}</p>
+          <div className="profile-card__tags">
+            <span className="tag">{student.group_no}-топ</span>
+            {isAdmin && <span className="tag tag--admin">Әкімші</span>}
+          </div>
+        </div>
+      </section>
 
-      <div className="feature-list">
-        <div className="feature-list__item">
+      <dl className="info-list panel">
+        <div>
+          <dt>Студент коды</dt>
+          <dd>{student.code}</dd>
+        </div>
+        <div>
+          <dt>Топ</dt>
+          <dd>{student.group_no}-топ</dd>
+        </div>
+        <div>
+          <dt>Туған күн</dt>
+          <dd>{birthday}</dd>
+        </div>
+      </dl>
+      <p className="muted small">
+        Аты, тобы және туған күнін тек әкімші өзгерте алады. Туған күнің басқа студенттерге көрінбейді.
+      </p>
+
+      <div className="action-list panel">
+        {isAdmin && (
+          <Link to="/admin" className="action-list__item">
+            <ShieldCheck size={18} />
+            <span>Әкімші панелі</span>
+            <ChevronRight size={16} />
+          </Link>
+        )}
+        <div className="action-list__item action-list__item--static">
           <KeyRound size={18} />
-          <div>
-            <strong>Кодпен кіру</strong>
-            <p>Әр студенттің жеке коды мен өзі орнатқан құпия сөзі болады.</p>
-          </div>
+          <span>Құпия сөзді өзгерту үшін әкімшіден қалпына келтіру кодын сұра.</span>
         </div>
-        <div className="feature-list__item">
-          <ShieldCheck size={18} />
-          <div>
-            <strong>Қорғалған деректер</strong>
-            <p>Туған күн және жеке ақпарат тек өзіңе және әкімшіге көрінеді.</p>
-          </div>
-        </div>
+        <button type="button" className="action-list__item action-list__item--danger" onClick={handleSignOut} disabled={signingOut}>
+          <LogOut size={18} />
+          <span>{signingOut ? "Шығуда…" : "Шығу"}</span>
+        </button>
       </div>
     </div>
   );
