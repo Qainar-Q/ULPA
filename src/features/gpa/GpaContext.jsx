@@ -1,17 +1,15 @@
 import { createContext, useContext, useMemo, useState } from "react";
-import { COURSES } from "../../data/courses.js";
 
 // Keeps calculator inputs while the student moves between pages.
 // Inputs are NOT saved to the server yet; that comes in stage 7.
 
 const GpaContext = createContext(null);
 
-const emptyEntry = { ab1: "", ab2: "", exam: "" };
+export const emptyEntry = { ab1: "", ab2: "", exam: "" };
 
 export function GpaProvider({ children }) {
-  const [entries, setEntries] = useState(() =>
-    Object.fromEntries(COURSES.map((course) => [course.slug, { ...emptyEntry }]))
-  );
+  // { [courseSlug]: { ab1, ab2, exam } } — missing courses mean "nothing entered yet".
+  const [entries, setEntries] = useState({});
   const [feedback, setFeedback] = useState({ sound: false, vibration: false });
 
   const value = useMemo(
@@ -20,10 +18,10 @@ export function GpaProvider({ children }) {
       feedback,
       setFeedback,
       updateEntry(slug, field, raw) {
-        setEntries((current) => ({ ...current, [slug]: { ...current[slug], [field]: raw } }));
+        setEntries((current) => ({ ...current, [slug]: { ...emptyEntry, ...current[slug], [field]: raw } }));
       },
       clearAll() {
-        setEntries(Object.fromEntries(COURSES.map((course) => [course.slug, { ...emptyEntry }])));
+        setEntries({});
       },
     }),
     [entries, feedback]

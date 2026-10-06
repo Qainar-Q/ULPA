@@ -1,23 +1,20 @@
 import { Link, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  BookOpen,
-  CalendarDays,
-  Camera,
-  ClipboardList,
-  FileText,
-  UserRound,
-} from "lucide-react";
+import { ArrowLeft, BookOpen, CalendarDays, Camera, ClipboardList, FileText, UserRound } from "lucide-react";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
+import SessionItem from "../components/SessionItem.jsx";
+import CatalogState from "../components/CatalogState.jsx";
 import NotFoundPage from "./NotFoundPage.jsx";
-import { courseAccent, findCourse } from "../data/courses.js";
+import { courseAccent } from "../lib/courseStyle.js";
+import { useCatalog } from "../features/catalog/CatalogContext.jsx";
+import { WEEKDAYS } from "../lib/time.js";
 
-export default function CourseDetailPage() {
-  const { slug } = useParams();
-  const course = findCourse(slug);
-
-  if (!course) return <NotFoundPage />;
+function CourseDetail({ course }) {
+  const { mySessions } = useCatalog();
+  const sessions = mySessions
+    .filter((session) => session.course_id === course.id)
+    .sort((a, b) => a.weekday - b.weekday || a.start_time.localeCompare(b.start_time));
+  const days = WEEKDAYS.filter((day) => sessions.some((session) => session.weekday === day.id));
 
   return (
     <div className="stack-lg">
@@ -36,24 +33,45 @@ export default function CourseDetailPage() {
       </section>
 
       <nav className="chip-nav" aria-label="Пән бөлімдері">
-        <a href="#about">Сипаттама</a>
         <a href="#schedule">Кесте</a>
+        <a href="#about">Сипаттама</a>
         <a href="#materials">Материалдар</a>
         <a href="#photos">Фото</a>
         <a href="#tasks">Тапсырма</a>
       </nav>
 
       <div className="detail-grid">
-        <section className="panel" id="about">
-          <SectionTitle title="Пән туралы" />
-          <EmptyState icon={BookOpen} title="Сипаттама қосылмаған" compact>
-            Пән сипаттамасын әкімші қоса алады.
-          </EmptyState>
+        <section className="panel detail-grid__wide" id="schedule">
+          <SectionTitle title="Апталық кесте" meta={`${sessions.length} сабақ`} />
+          {sessions.length > 0 ? (
+            <div className="course-week">
+              {days.map((day) => (
+                <div key={day.id} className="course-week__day">
+                  <h3>{day.label}</h3>
+                  <ul className="session-list">
+                    {sessions
+                      .filter((session) => session.weekday === day.id)
+                      .map((session) => (
+                        <SessionItem key={session.id} session={session} course={course} compact />
+                      ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState icon={CalendarDays} title="Бұл пәннен сабақ жоқ" compact />
+          )}
         </section>
 
-        <section className="panel" id="schedule">
-          <SectionTitle title="Кесте" />
-          <EmptyState icon={CalendarDays} title="Сабақ уақыттары енгізілмеген" tag="Дерекқор күтілуде" compact />
+        <section className="panel" id="about">
+          <SectionTitle title="Пән туралы" />
+          {course.description ? (
+            <p className="prose">{course.description}</p>
+          ) : (
+            <EmptyState icon={BookOpen} title="Сипаттама қосылмаған" compact>
+              Пән сипаттамасын әкімші қоса алады.
+            </EmptyState>
+          )}
         </section>
 
         <section className="panel" id="materials">
@@ -71,7 +89,7 @@ export default function CourseDetailPage() {
           <EmptyState icon={Camera} title="Фото жоқ" compact />
         </section>
 
-        <section className="panel detail-grid__wide" id="tasks">
+        <section className="panel" id="tasks">
           <SectionTitle
             title="Тапсырмалар"
             action={<Link to={`/tasks?course=${course.slug}`} className="text-link">Барлығы</Link>}
@@ -83,4 +101,14 @@ export default function CourseDetailPage() {
       </div>
     </div>
   );
+}
+
+export default function CourseDetailPage() {
+  const { slug } = useParams();
+  const { status, courseBySlug } = useCatalog();
+  const course = courseBySlug(slug);
+
+  if (status !== "ready") return <CatalogState />;
+  if (!course) return <NotFoundPage />;
+  return <CourseDetail course={course} />;
 }

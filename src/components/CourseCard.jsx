@@ -1,12 +1,20 @@
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
-import { courseAccent } from "../data/courses.js";
+import { courseAccent } from "../lib/courseStyle.js";
+import { formatClock } from "../lib/schedule.js";
+import { WEEKDAYS } from "../lib/time.js";
 
 /**
- * Clickable course card. "Next class" and "open tasks" show a dash until
- * the schedule and tasks are stored in the database (stages 4 and 6).
+ * Clickable course card. `next` = { session, daysAhead } from nextSession().
+ * Task counts arrive in stage 6.
  */
-export default function CourseCard({ course }) {
+export default function CourseCard({ course, next, weeklyCount }) {
+  const nextLabel = next
+    ? next.daysAhead === 0
+      ? `Бүгін ${formatClock(next.session.start_time)}`
+      : `${WEEKDAYS[next.session.weekday - 1].short} ${formatClock(next.session.start_time)}`
+    : "—";
+
   return (
     <Link to={`/courses/${course.slug}`} className="course-card" style={courseAccent(course)}>
       <div className="course-card__top">
@@ -18,11 +26,11 @@ export default function CourseCard({ course }) {
       <dl className="course-card__meta">
         <div>
           <dt>Келесі сабақ</dt>
-          <dd>—</dd>
+          <dd>{nextLabel}</dd>
         </div>
         <div>
-          <dt>Тапсырма</dt>
-          <dd>—</dd>
+          <dt>Аптасына</dt>
+          <dd>{weeklyCount ?? 0} сабақ</dd>
         </div>
       </dl>
     </Link>

@@ -13,11 +13,13 @@ import ActivatePage from "./pages/ActivatePage.jsx";
 import AdminStudentsPage from "./pages/AdminStudentsPage.jsx";
 import { GpaProvider } from "./features/gpa/GpaContext.jsx";
 import { AuthProvider } from "./features/auth/AuthContext.jsx";
+import { CatalogProvider } from "./features/catalog/CatalogContext.jsx";
 import { RedirectIfSignedIn, RequireAdmin, RequireAuth } from "./features/auth/guards.jsx";
 
 export default function App() {
   return (
     <AuthProvider>
+      <CatalogProvider>
       <GpaProvider>
         <Routes>
           {/* Public: sign-in and activation only */}
@@ -44,6 +46,7 @@ export default function App() {
           </Route>
         </Routes>
       </GpaProvider>
+      </CatalogProvider>
     </AuthProvider>
   );
 }
