@@ -8,23 +8,42 @@ import GpaPage from "./pages/GpaPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import CourseDetailPage from "./pages/CourseDetailPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
+import ActivatePage from "./pages/ActivatePage.jsx";
+import AdminStudentsPage from "./pages/AdminStudentsPage.jsx";
 import { GpaProvider } from "./features/gpa/GpaContext.jsx";
+import { AuthProvider } from "./features/auth/AuthContext.jsx";
+import { RedirectIfSignedIn, RequireAdmin, RequireAuth } from "./features/auth/guards.jsx";
 
 export default function App() {
   return (
-    <GpaProvider>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route index element={<HomePage />} />
-          <Route path="schedule" element={<SchedulePage />} />
-          <Route path="photos" element={<PhotosPage />} />
-          <Route path="tasks" element={<TasksPage />} />
-          <Route path="gpa" element={<GpaPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="courses/:slug" element={<CourseDetailPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
-    </GpaProvider>
+    <AuthProvider>
+      <GpaProvider>
+        <Routes>
+          {/* Public: sign-in and activation only */}
+          <Route element={<RedirectIfSignedIn />}>
+            <Route path="login" element={<LoginPage />} />
+            <Route path="activate" element={<ActivatePage />} />
+          </Route>
+
+          {/* Everything else requires a signed-in student */}
+          <Route element={<RequireAuth />}>
+            <Route element={<AppShell />}>
+              <Route index element={<HomePage />} />
+              <Route path="schedule" element={<SchedulePage />} />
+              <Route path="photos" element={<PhotosPage />} />
+              <Route path="tasks" element={<TasksPage />} />
+              <Route path="gpa" element={<GpaPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="courses/:slug" element={<CourseDetailPage />} />
+              <Route element={<RequireAdmin />}>
+                <Route path="admin" element={<AdminStudentsPage />} />
+              </Route>
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+          </Route>
+        </Routes>
+      </GpaProvider>
+    </AuthProvider>
   );
 }

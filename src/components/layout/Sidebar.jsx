@@ -1,10 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { UserRound } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
 import { NAV_ITEMS } from "./navItems.js";
 import { APP_NAME, CLASS_LABEL } from "../../config/app.js";
+import { useAuth } from "../../features/auth/AuthContext.jsx";
 
 export default function Sidebar() {
+  const { student, isAdmin } = useAuth();
+
   return (
     <aside className="sidebar" aria-label="Негізгі мәзір">
       <NavLink to="/" className="brand" aria-label="ULPA басты бет">
@@ -22,14 +25,29 @@ export default function Sidebar() {
             <span>{title}</span>
           </NavLink>
         ))}
+        {isAdmin && (
+          <NavLink to="/admin" className="side-nav__item">
+            <ShieldCheck size={18} strokeWidth={1.8} />
+            <span>Әкімші</span>
+          </NavLink>
+        )}
       </nav>
 
       <div className="sidebar__footer">
-        <NavLink to="/profile" className="side-nav__item">
-          <UserRound size={18} strokeWidth={1.8} />
-          <span>Профиль</span>
-        </NavLink>
-        <p className="sidebar__version">ULPA · v0.2</p>
+        {student && (
+          <NavLink to="/profile" className="user-chip">
+            <span className="avatar" aria-hidden="true">
+              {student.full_name.slice(0, 1)}
+            </span>
+            <span className="user-chip__text">
+              <strong>{student.full_name}</strong>
+              <small>
+                {student.code} · {student.group_no}-топ
+              </small>
+            </span>
+          </NavLink>
+        )}
+        <p className="sidebar__version">ULPA · v0.3</p>
       </div>
     </aside>
   );
