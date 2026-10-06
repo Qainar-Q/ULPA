@@ -82,3 +82,42 @@ export function formatScore(value) {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return value.toFixed(2).replace(".", ",");
 }
+
+// ---------------------------------------------------------------------------
+// 4.0 scale (credit-system table used by Kazakhstan universities).
+// The 100-point course result is rounded to a whole number, then looked up.
+// ---------------------------------------------------------------------------
+export const GPA_SCALE = [
+  { min: 95, letter: "A", points: 4.0 },
+  { min: 90, letter: "A-", points: 3.67 },
+  { min: 85, letter: "B+", points: 3.33 },
+  { min: 80, letter: "B", points: 3.0 },
+  { min: 75, letter: "B-", points: 2.67 },
+  { min: 70, letter: "C+", points: 2.33 },
+  { min: 65, letter: "C", points: 2.0 },
+  { min: 60, letter: "C-", points: 1.67 },
+  { min: 55, letter: "D+", points: 1.33 },
+  { min: 50, letter: "D", points: 1.0 },
+  { min: 25, letter: "FX", points: 0 },
+  { min: 0, letter: "F", points: 0 },
+];
+
+export function toGpa(score) {
+  if (score === null || score === undefined || Number.isNaN(score)) return null;
+  const rounded = Math.round(score);
+  return GPA_SCALE.find((row) => rounded >= row.min) ?? GPA_SCALE[GPA_SCALE.length - 1];
+}
+
+/** Average GPA points over completed courses (equal weight per course). */
+export function averageGpa(results) {
+  const points = results
+    .filter((result) => result.status === "complete")
+    .map((result) => toGpa(result.final).points);
+  if (points.length === 0) return null;
+  return points.reduce((sum, value) => sum + value, 0) / points.length;
+}
+
+export function formatGpa(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  return value.toFixed(2).replace(".", ",");
+}

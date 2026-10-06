@@ -8,5 +8,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
+    // Face ID / fingerprint sign-in (WebAuthn passkeys). Experimental in supabase-js.
+    experimental: { passkey: true },
   },
 });

@@ -25,14 +25,32 @@ export function CatalogProvider({ children }) {
         .order("start_time"),
     ]);
 
+    const cacheKey = `ulpa-catalog-${student?.id ?? "anon"}`;
     if (coursesResult.error || sessionsResult.error) {
+      // Offline: show the last copy this student loaded (read-only cache of real data).
+      try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) ?? "null");
+        if (cached?.courses?.length) {
+          setCourses(cached.courses);
+          setSessions(cached.sessions);
+          setStatus("ready");
+          return;
+        }
+      } catch {
+        /* storage unavailable */
+      }
       setStatus("error");
       return;
     }
     setCourses(coursesResult.data);
     setSessions(sessionsResult.data);
     setStatus("ready");
-  }, []);
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ courses: coursesResult.data, sessions: sessionsResult.data }));
+    } catch {
+      /* storage full or blocked */
+    }
+  }, [student?.id]);
 
   useEffect(() => {
     if (authStatus === "signedIn") load();

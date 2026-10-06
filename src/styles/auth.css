@@ -861,3 +861,85 @@
   font-size: var(--fs-xs);
   color: var(--warning);
 }
+
+/* ================= Passkeys / install ================= */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.passkeys {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+
+.passkeys__list {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.passkeys__list li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.passkeys__list svg {
+  color: var(--accent);
+}
+
+.passkeys__name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.passkeys__name small {
+  font-weight: 400;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.passkeys__ok {
+  font-size: var(--fs-sm);
+  color: var(--success);
+}
+
+.install-steps {
+  margin: 0;
+  padding-left: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.install-steps svg {
+  display: inline;
+  vertical-align: -2px;
+  color: var(--accent);
+}

@@ -18,6 +18,7 @@ import { AuthProvider } from "./features/auth/AuthContext.jsx";
 import { CatalogProvider } from "./features/catalog/CatalogContext.jsx";
 import { TasksProvider } from "./features/tasks/TasksContext.jsx";
 import TaskDetailPage from "./pages/TaskDetailPage.jsx";
+import AnnouncementsPage from "./pages/AnnouncementsPage.jsx";
 import { RedirectIfSignedIn, RequireAdmin, RequireAuth } from "./features/auth/guards.jsx";
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="tasks/:id" element={<TaskDetailPage />} />
               <Route path="gpa" element={<GpaPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="courses/:slug" element={<CourseDetailPage />} />
               <Route element={<RequireAdmin />}>
                 <Route path="admin" element={<AdminLayout />}>

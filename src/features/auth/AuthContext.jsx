@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase.js";
-import { classifyAuthError } from "./errors.js";
+import { classifyAuthError, classifyPasskeyError } from "./errors.js";
 import { normalizeStudentCode, studentEmail } from "./studentCode.js";
 
 const AuthContext = createContext(null);
@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
     // RLS returns only the caller's own row (admins can read all, so filter by user_id).
     const { data, error } = await supabase
       .from("students")
-      .select("id, code, full_name, group_no, role, birth_month, birth_day, avatar_path, activated_at")
+      .select("id, code, full_name, group_no, role, is_monitor, birth_month, birth_day, avatar_path, activated_at")
       .eq("user_id", nextSession.user.id)
       .maybeSingle();
 
@@ -116,6 +116,18 @@ export function AuthProvider({ children }) {
     [signIn]
   );
 
+  const signInWithPasskey = useCallback(async () => {
+    if (!window.PublicKeyCredential) return { error: "passkey_unsupported" };
+    setNotice(null);
+    try {
+      const { error } = await supabase.auth.signInWithPasskey();
+      if (error) return { error: classifyPasskeyError(error) };
+      return { error: null };
+    } catch (error) {
+      return { error: classifyPasskeyError(error) };
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
@@ -134,11 +146,12 @@ export function AuthProvider({ children }) {
       notice,
       clearNotice: () => setNotice(null),
       signIn,
+      signInWithPasskey,
       activate,
       signOut,
       refreshStudent,
     }),
-    [status, session, student, notice, signIn, activate, signOut, refreshStudent]
+    [status, session, student, notice, signIn, signInWithPasskey, activate, signOut, refreshStudent]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
