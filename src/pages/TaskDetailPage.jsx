@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, Clock3, Download, Paperclip, Pencil, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Check, Clock3, Download, Eye, Paperclip, Pencil, Trash2, Users } from "lucide-react";
+import ImageLightbox from "../components/ui/ImageLightbox.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import TaskForm from "../components/tasks/TaskForm.jsx";
 import NotFoundPage from "./NotFoundPage.jsx";
@@ -8,7 +9,7 @@ import { useTasks } from "../features/tasks/TasksContext.jsx";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { useClassSize } from "../features/tasks/useClassSize.js";
-import { attachmentUrl, deleteTask } from "../features/tasks/taskApi.js";
+import { attachmentUrl, attachmentViewUrls, deleteTask } from "../features/tasks/taskApi.js";
 import { courseAccent } from "../lib/courseStyle.js";
 import { dueInfo, formatDateTime } from "../lib/due.js";
 
@@ -17,26 +18,95 @@ function formatSize(bytes) {
   return bytes > 1e6 ? `${(bytes / 1e6).toFixed(1)} МБ` : `${Math.ceil(bytes / 1e3)} КБ`;
 }
 
-function AttachmentRow({ file }) {
-  const [busy, setBusy] = useState(false);
-  async function open() {
-    setBusy(true);
-    try {
-      window.location.assign(await attachmentUrl(file));
-    } catch {
-      window.alert("Файл ашылмады. Қайта көр.");
-    }
-    setBusy(false);
+export function isImageFile(file) {
+  return (file.mime_type ?? "").startsWith("image/") || /\.(jpe?g|png|webp|gif)$/i.test(file.file_name ?? "");
+}
+
+async function download(file) {
+  try {
+    window.location.assign(await attachmentUrl(file));
+  } catch {
+    window.alert("Файл ашылмады. Қайта көр.");
   }
+}
+
+function AttachmentRow({ file, viewUrl }) {
   return (
-    <li>
-      <button type="button" className="attachment" onClick={open} disabled={busy}>
-        <Paperclip size={16} aria-hidden="true" />
-        <span className="attachment__name">{file.file_name}</span>
-        <span className="attachment__size">{formatSize(file.size_bytes)}</span>
-        <Download size={16} aria-hidden="true" />
+    <li className="attachment-row">
+      {viewUrl ? (
+        <a className="attachment" href={viewUrl} target="_blank" rel="noreferrer">
+          <Paperclip size={16} aria-hidden="true" />
+          <span className="attachment__name">{file.file_name}</span>
+          <span className="attachment__size">{formatSize(file.size_bytes)}</span>
+          <Eye size={16} aria-hidden="true" />
+        </a>
+      ) : (
+        <span className="attachment is-loading">
+          <Paperclip size={16} aria-hidden="true" />
+          <span className="attachment__name">{file.file_name}</span>
+          <span className="attachment__size">{formatSize(file.size_bytes)}</span>
+        </span>
+      )}
+      <button type="button" className="icon-button" onClick={() => download(file)} aria-label="Жүктеп алу">
+        <Download size={17} />
       </button>
     </li>
+  );
+}
+
+function Attachments({ files }) {
+  const [urls, setUrls] = useState({});
+  const [failed, setFailed] = useState(false);
+  const [openIndex, setOpenIndex] = useState(null);
+  const key = files.map((file) => file.storage_path).join("|");
+
+  useEffect(() => {
+    let cancelled = false;
+    setFailed(false);
+    attachmentViewUrls(files)
+      .then((result) => !cancelled && setUrls(result))
+      .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+
+  const images = files.filter(isImageFile);
+  const others = files.filter((file) => !isImageFile(file));
+  const slides = images.filter((file) => urls[file.storage_path]).map((file) => ({ url: urls[file.storage_path], name: file.file_name, file }));
+
+  if (files.length === 0) return <EmptyState icon={Paperclip} title="Файл тіркелмеген" compact />;
+
+  return (
+    <div className="attachments">
+      {failed && <p className="muted small">Файлдар жүктелмеді. Бетті жаңартып көр.</p>}
+      {images.length > 0 && (
+        <ul className="attachment-images">
+          {images.map((file) => {
+            const url = urls[file.storage_path];
+            const slideIndex = slides.findIndex((slide) => slide.file === file);
+            return (
+              <li key={file.id}>
+                <button type="button" onClick={() => setOpenIndex(slideIndex)} disabled={!url} aria-label={`${file.file_name} ашу`}>
+                  {url ? <img src={url} alt={file.file_name} loading="lazy" /> : <span className="attachment-images__ph" />}
+                  <span className="attachment-images__size">{formatSize(file.size_bytes)}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {others.length > 0 && (
+        <ul className="attachment-list">
+          {others.map((file) => (
+            <AttachmentRow key={file.id} file={file} viewUrl={urls[file.storage_path]} />
+          ))}
+        </ul>
+      )}
+      {openIndex !== null && slides[openIndex] && (
+        <ImageLightbox images={slides} index={openIndex} onIndexChange={setOpenIndex} onClose={() => setOpenIndex(null)} />
+      )}
+    </div>
   );
 }
 
@@ -117,11 +187,7 @@ export default function TaskDetailPage() {
 
       <section className="panel">
         <h2 className="panel-title">Файлдар</h2>
-        {files.length > 0 ? (
-          <ul className="attachment-list">{files.map((file) => <AttachmentRow key={file.id} file={file} />)}</ul>
-        ) : (
-          <EmptyState icon={Paperclip} title="Файл тіркелмеген" compact />
-        )}
+        <Attachments files={files} />
       </section>
 
       {isAdmin && (

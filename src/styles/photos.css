@@ -378,3 +378,21 @@
   font-size: var(--fs-sm);
   color: var(--text-2);
 }
+
+.viewer__save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin-top: var(--s-3);
+}
+
+.viewer__save .button {
+  min-width: 180px;
+}
+
+@media (max-width: 480px) {
+  .viewer__save .button {
+    flex: 1 1 100%;
+  }
+}

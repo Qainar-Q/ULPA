@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Download, FileArchive, FileImage, FileSpreadsheet, FileText, Presentation, Trash2 } from "lucide-react";
-import { deleteMaterial, materialUrl } from "../../features/materials/materialApi.js";
+import { Download, Eye, FileArchive, FileImage, FileSpreadsheet, FileText, Presentation, Trash2 } from "lucide-react";
+import { deleteMaterial, materialUrl, materialViewUrl } from "../../features/materials/materialApi.js";
+import ImageLightbox from "../ui/ImageLightbox.jsx";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 import { courseAccent } from "../../lib/courseStyle.js";
 import { formatDateTime } from "../../lib/due.js";
@@ -24,14 +25,32 @@ function MaterialRow({ item, course, showCourse, onDeleted }) {
   const Icon = iconFor(item.mime_type);
   const canDelete = isAdmin || item.uploaded_by === student?.id;
 
+  const isImage = (item.mime_type ?? "").startsWith("image/");
+  const [imageUrl, setImageUrl] = useState(null);
+
+  // Preview in the page: images in the viewer, PDFs and others in a new browser tab.
   async function open() {
     setBusy(true);
+    // Open the tab synchronously inside the tap so popup blockers allow it.
+    const tab = isImage ? null : window.open("", "_blank");
     try {
-      window.location.assign(await materialUrl(item));
+      const url = await materialViewUrl(item);
+      if (isImage) setImageUrl(url);
+      else if (tab) tab.location.href = url;
+      else window.location.assign(url);
     } catch {
+      tab?.close();
       window.alert("Файл ашылмады. Қайта көр.");
     }
     setBusy(false);
+  }
+
+  async function download() {
+    try {
+      window.location.assign(await materialUrl(item));
+    } catch {
+      window.alert("Файл жүктелмеді. Қайта көр.");
+    }
   }
 
   async function remove() {
@@ -61,12 +80,23 @@ function MaterialRow({ item, course, showCourse, onDeleted }) {
             <span>{formatDateTime(item.created_at)}</span>
           </span>
         </span>
-        <Download size={18} className="material__dl" aria-hidden="true" />
+        <Eye size={18} className="material__dl" aria-hidden="true" />
+      </button>
+      <button type="button" className="icon-button material__download" onClick={download} aria-label="Жүктеп алу">
+        <Download size={16} />
       </button>
       {canDelete && (
         <button type="button" className="icon-button icon-button--danger material__delete" onClick={remove} aria-label="Жою">
           <Trash2 size={15} />
         </button>
+      )}
+      {imageUrl && (
+        <ImageLightbox
+          images={[{ url: imageUrl, name: item.file_name, caption: item.title }]}
+          index={0}
+          onIndexChange={() => {}}
+          onClose={() => setImageUrl(null)}
+        />
       )}
     </li>
   );

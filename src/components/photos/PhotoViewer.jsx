@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, ExternalLink, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ExternalLink, Trash2, X } from "lucide-react";
+import { canShareFiles, fetchImageFile, saveImageFile } from "../../lib/saveImage.js";
 import { deletePhoto, signUrls } from "../../features/photos/photoApi.js";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 import { APP_TIME_ZONE, SESSION_TYPES } from "../../config/app.js";
@@ -23,6 +24,28 @@ export default function PhotoViewer({ photos, index, thumbs, courseById, onIndex
   const [fullUrl, setFullUrl] = useState(null);
   const [failed, setFailed] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [file, setFile] = useState(null); // pre-fetched so the share sheet opens within the tap
+  const [saveState, setSaveState] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFile(null);
+    setSaveState(null);
+    if (!fullUrl) return undefined;
+    const date = (photo.created_at ?? "").slice(0, 10);
+    fetchImageFile(fullUrl, `ulpa-${date}-${photo.id.slice(0, 6)}.jpg`)
+      .then((result) => !cancelled && setFile(result))
+      .catch(() => !cancelled && setFile(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [fullUrl, photo.created_at, photo.id]);
+
+  async function save() {
+    if (!file) return;
+    const result = await saveImageFile(file);
+    setSaveState(result === "cancelled" ? null : result);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -138,6 +161,15 @@ export default function PhotoViewer({ photos, index, thumbs, courseById, onIndex
           {photo.uploader_name && <span>{photo.uploader_name}</span>}
         </div>
         {photo.caption && <p className="viewer__caption">{photo.caption}</p>}
+        {!failed && (
+          <div className="viewer__save">
+            <button type="button" className="button button--primary" onClick={save} disabled={!file}>
+              <Download size={17} /> {file ? (canShareFiles(file) ? "Альбомға сақтау" : "Жүктеп алу") : "Дайындалуда…"}
+            </button>
+            {saveState === "shared" && <span className="passkeys__ok">Мәзірден «Сохранить изображение» таңда ✓</span>}
+            {saveState === "downloaded" && <span className="passkeys__ok">Жүктелді ✓</span>}
+          </div>
+        )}
       </div>
     </div>,
     document.body
