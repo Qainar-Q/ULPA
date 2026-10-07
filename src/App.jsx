@@ -13,6 +13,7 @@ import ActivatePage from "./pages/ActivatePage.jsx";
 import AdminStudentsPage from "./pages/AdminStudentsPage.jsx";
 import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import AdminSchedulePage from "./pages/admin/AdminSchedulePage.jsx";
+import AdminOverviewPage from "./pages/admin/AdminOverviewPage.jsx";
 import { GpaProvider } from "./features/gpa/GpaContext.jsx";
 import { AuthProvider } from "./features/auth/AuthContext.jsx";
 import { CatalogProvider } from "./features/catalog/CatalogContext.jsx";
@@ -20,6 +21,7 @@ import { TasksProvider } from "./features/tasks/TasksContext.jsx";
 import TaskDetailPage from "./pages/TaskDetailPage.jsx";
 import AnnouncementsPage from "./pages/AnnouncementsPage.jsx";
 import GuestPage from "./pages/GuestPage.jsx";
+import MaterialsPage from "./pages/MaterialsPage.jsx";
 import { RedirectIfSignedIn, RequireAdmin, RequireAuth } from "./features/auth/guards.jsx";
 
 export default function App() {
@@ -49,11 +51,13 @@ export default function App() {
               <Route path="gpa" element={<GpaPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="announcements" element={<AnnouncementsPage />} />
+              <Route path="materials" element={<MaterialsPage />} />
               <Route path="courses/:slug" element={<CourseDetailPage />} />
               <Route element={<RequireAdmin />}>
                 <Route path="admin" element={<AdminLayout />}>
                   <Route index element={<AdminStudentsPage />} />
                   <Route path="schedule" element={<AdminSchedulePage />} />
+                  <Route path="overview" element={<AdminOverviewPage />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFoundPage />} />

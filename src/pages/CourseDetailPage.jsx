@@ -1,10 +1,16 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, CalendarDays, ClipboardList, FileText, UserRound } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, BookOpen, CalendarDays, ClipboardList, FileText, Pencil, Plus, UserRound } from "lucide-react";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
 import SessionItem from "../components/SessionItem.jsx";
 import CatalogState from "../components/CatalogState.jsx";
 import RecentPhotos from "../components/photos/RecentPhotos.jsx";
+import MaterialList from "../components/materials/MaterialList.jsx";
+import MaterialUploadDialog from "../components/materials/MaterialUploadDialog.jsx";
+import CourseInfoForm from "../components/CourseInfoForm.jsx";
+import { useMaterials } from "../features/materials/materialApi.js";
+import { useAuth } from "../features/auth/AuthContext.jsx";
 import TaskCard from "../components/tasks/TaskCard.jsx";
 import { useTasks } from "../features/tasks/TasksContext.jsx";
 import NotFoundPage from "./NotFoundPage.jsx";
@@ -13,7 +19,11 @@ import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 import { WEEKDAYS } from "../lib/time.js";
 
 function CourseDetail({ course }) {
-  const { mySessions } = useCatalog();
+  const { mySessions, courseById, reload: reloadCatalog } = useCatalog();
+  const { isAdmin } = useAuth();
+  const materials = useMaterials({ courseId: course.id });
+  const [uploading, setUploading] = useState(false);
+  const [editingInfo, setEditingInfo] = useState(false);
   const sessions = mySessions
     .filter((session) => session.course_id === course.id)
     .sort((a, b) => a.weekday - b.weekday || a.start_time.localeCompare(b.start_time));
@@ -71,7 +81,16 @@ function CourseDetail({ course }) {
         </section>
 
         <section className="panel" id="about">
-          <SectionTitle title="Пән туралы" />
+          <SectionTitle
+            title="Пән туралы"
+            action={
+              isAdmin && (
+                <button type="button" className="text-link" onClick={() => setEditingInfo(true)}>
+                  <Pencil size={14} /> Өзгерту
+                </button>
+              )
+            }
+          />
           {course.description ? (
             <p className="prose">{course.description}</p>
           ) : (
@@ -82,10 +101,22 @@ function CourseDetail({ course }) {
         </section>
 
         <section className="panel" id="materials">
-          <SectionTitle title="Оқу материалдары" />
-          <EmptyState icon={FileText} title="Материал жоқ" compact>
-            Лекция файлдары мен құжаттар осында жиналады.
-          </EmptyState>
+          <SectionTitle
+            title="Оқу материалдары"
+            meta={materials.items.length ? `${materials.items.length}` : undefined}
+            action={
+              <button type="button" className="text-link" onClick={() => setUploading(true)}>
+                <Plus size={14} /> Қосу
+              </button>
+            }
+          />
+          {materials.status === "ready" && materials.items.length > 0 ? (
+            <MaterialList items={materials.items} courseById={courseById} onDeleted={materials.reload} />
+          ) : (
+            <EmptyState icon={FileText} title={materials.status === "loading" ? "Жүктелуде…" : "Материал жоқ"} compact>
+              {materials.status === "ready" ? "Лекция файлдары мен құжаттарды бөліс." : null}
+            </EmptyState>
+          )}
         </section>
 
         <section className="panel" id="photos">
@@ -114,6 +145,9 @@ function CourseDetail({ course }) {
           )}
         </section>
       </div>
+
+      {uploading && <MaterialUploadDialog defaultCourseId={course.id} onClose={() => setUploading(false)} onUploaded={materials.reload} />}
+      {editingInfo && <CourseInfoForm course={course} onClose={() => setEditingInfo(false)} onSaved={reloadCatalog} />}
     </div>
   );
 }
