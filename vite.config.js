@@ -6,7 +6,9 @@ export default defineConfig({
   plugins: [
     react(),
     // Installable app ("Add to Home Screen") + offline app shell.
-    // Only the app's own files are cached; Supabase data is never cached by the service worker.
+    // App files are precached. Private images (photos, attachment pictures) are kept in a
+    // device-only cache keyed by file path (the signed token is stripped), cleared on sign-out.
+    // Supabase data (tables, auth) is never cached by the service worker.
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
@@ -31,6 +33,32 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,woff2,webp,png,svg}"],
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url, request }) =>
+              url.pathname.includes("/storage/v1/object/sign/") &&
+              !url.searchParams.has("download") &&
+              (request.destination === "image" || /\.(jpe?g|png|webp)$/i.test(url.pathname)),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "ulpa-private-images",
+              expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 60, purgeOnQuotaError: true },
+              cacheableResponse: { statuses: [200] },
+              plugins: [
+                {
+                  // Same file = same cache entry, whatever the signature token.
+                  cacheKeyWillBeUsed: async ({ request }) => {
+                    const url = new URL(request.url);
+                    url.search = "";
+                    return url.href;
+                  },
+                  // <img> requests are no-cors; fetch with CORS so the response is cacheable and small.
+                  requestWillFetch: async ({ request }) => new Request(request.url, { mode: "cors", credentials: "omit" }),
+                },
+              ],
+            },
+          },
+        ],
       },
     }),
   ],
