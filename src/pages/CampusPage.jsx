@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, MapPin, Move, RotateCcw, X } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
-import { BUILDINGS, KINDS, OUR_BUILDING, ROOM_BUILDINGS, buildingForRoom, guessLatLng, twoGisUrl } from "../features/campus/campusData.js";
+import { BUILDINGS, KINDS, OUR_BUILDING, ROOM_BUILDINGS, buildingForRoom, placeBuildings, twoGisUrl } from "../features/campus/campusData.js";
 import { useQueryParam } from "../lib/useQueryParam.js";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { supabase } from "../lib/supabase.js";
@@ -49,15 +49,8 @@ export default function CampusPage() {
       .then(({ data }) => setPositions(Object.fromEntries((data ?? []).map((row) => [row.id, { lat: row.lat, lng: row.lng }]))));
   }, []);
 
-  const placed = useMemo(
-    () =>
-      BUILDINGS.map((b) => ({
-        ...b,
-        ...(positions?.[b.id] ?? guessLatLng(b.px, b.py)),
-        corrected: Boolean(positions?.[b.id]),
-      })),
-    [positions]
-  );
+  // Saved → calibrated from ≥3 saved markers → first guess from the illustration.
+  const { items: placed, calibrated } = useMemo(() => placeBuildings(BUILDINGS, positions), [positions]);
 
   // Build the map once positions are known (the map engine is only downloaded here).
   useEffect(() => {
@@ -99,6 +92,12 @@ export default function CampusPage() {
   useEffect(() => {
     apiRef.current?.setFilter(FILTERS.find((item) => item.id === filter)?.test ?? null);
   }, [filter, status]);
+
+  // After each saved drag, the other markers follow the new calibration.
+  useEffect(() => {
+    if (status !== "ready") return;
+    apiRef.current?.setPositions(Object.fromEntries(placed.map((b) => [b.id, { lat: b.lat, lng: b.lng }])));
+  }, [placed, status]);
 
   useEffect(() => {
     apiRef.current?.setEditable(editing);
@@ -144,7 +143,14 @@ export default function CampusPage() {
         <p className="campus-room">
           <Move size={16} aria-hidden="true" />
           <span>
-            Белгіні саусақпен ұстап, дұрыс ғимаратқа сүйре — бірден сақталады. Түзетілгені: {corrected}/{placed.length}.
+            {calibrated ? (
+              <>Калибрленді ✓ Қалған белгілер өздері орнына келді. Әлі қате тұрғанын сүйреп түзе. Түзетілгені: {corrected}/{placed.length}.</>
+            ) : (
+              <>
+                Алдымен оңай танылатын 3 белгіні дұрыс ғимаратқа сүйре: <strong>көк 1</strong> (Студенттер сарайы, сегіз бұрышты), <strong>көк 7</strong> (стадион) және{" "}
+                <strong>13</strong> (Халықаралық қатынастар). Бір сызықта жатпайтын кез келген 3 белгі де болады. Сонда қалғандары өздері орнына келеді. Түзетілгені: {corrected}/3.
+              </>
+            )}
           </span>
         </p>
       )}

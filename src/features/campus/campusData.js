@@ -109,11 +109,63 @@ export const CAMPUS_CENTER = { lat: 43.225, lng: 76.9211 };
 const M_PER_DEG_LAT = 111320;
 const M_PER_DEG_LNG = 111320 * Math.cos((CAMPUS_CENTER.lat * Math.PI) / 180);
 
-/** Illustration pixel → approximate real coordinate (campus ≈ 1 km across, north up). */
+/**
+ * Illustration pixel → approximate real coordinate. The official illustration is drawn
+ * SOUTH-UP (Al-Farabi Ave at the top, Timiryazev St at the bottom), so image-right is
+ * west and image-down is north.
+ */
 export function guessLatLng(px, py) {
-  const east = (px - 650) * 1.15;
-  const north = -(py - 330) * 1.6 * 1.0;
+  const east = -(px - 650) * 1.15;
+  const north = (py - 330) * 1.6;
   return { lat: CAMPUS_CENTER.lat + north / M_PER_DEG_LAT, lng: CAMPUS_CENTER.lng + east / M_PER_DEG_LNG };
+}
+
+function solve3(m, v) {
+  const det = (a) =>
+    a[0][0] * (a[1][1] * a[2][2] - a[1][2] * a[2][1]) - a[0][1] * (a[1][0] * a[2][2] - a[1][2] * a[2][0]) + a[0][2] * (a[1][0] * a[2][1] - a[1][1] * a[2][0]);
+  const d = det(m);
+  if (Math.abs(d) < 1e-9) return null;
+  return [0, 1, 2].map((col) => det(m.map((row, i) => row.map((value, j) => (j === col ? v[i] : value)))) / d);
+}
+
+/**
+ * Calibration: from markers the admin already dragged into place ([{px, py, lat, lng}]),
+ * fit an affine map illustration → real coordinates (least squares). Needs ≥3 points that
+ * are not on one line; returns null otherwise. The result places every other marker.
+ */
+export function fitAffine(points) {
+  if (!points || points.length < 3) return null;
+  // Centre and scale for numerical stability.
+  const mx = points.reduce((s, p) => s + p.px, 0) / points.length;
+  const my = points.reduce((s, p) => s + p.py, 0) / points.length;
+  const rows = points.map((p) => [(p.px - mx) / 100, (p.py - my) / 100, 1]);
+  const ata = [0, 1, 2].map((i) => [0, 1, 2].map((j) => rows.reduce((s, r) => s + r[i] * r[j], 0)));
+  // Reject (near-)collinear sets: the spread across the weakest direction must be real.
+  const sxx = ata[0][0], syy = ata[1][1], sxy = ata[0][1];
+  const minSpread = (sxx + syy) / 2 - Math.sqrt(((sxx - syy) / 2) ** 2 + sxy ** 2);
+  if (minSpread / points.length < 0.01) return null; // < ~10 px off the line
+  const fit = (key) => solve3(ata, [0, 1, 2].map((i) => rows.reduce((s, r, k) => s + r[i] * points[k][key], 0)));
+  const lat = fit("lat");
+  const lng = fit("lng");
+  if (!lat || !lng) return null;
+  return (px, py) => {
+    const x = (px - mx) / 100;
+    const y = (py - my) / 100;
+    return { lat: lat[0] * x + lat[1] * y + lat[2], lng: lng[0] * x + lng[1] * y + lng[2] };
+  };
+}
+
+/** Best known position for every building: saved → calibrated → first guess. */
+export function placeBuildings(buildings, saved) {
+  const anchors = buildings.filter((b) => saved?.[b.id]).map((b) => ({ px: b.px, py: b.py, ...saved[b.id] }));
+  const fitted = fitAffine(anchors);
+  return {
+    calibrated: Boolean(fitted),
+    items: buildings.map((b) => {
+      if (saved?.[b.id]) return { ...b, ...saved[b.id], corrected: true };
+      return { ...b, ...(fitted ? fitted(b.px, b.py) : guessLatLng(b.px, b.py)), corrected: false };
+    }),
+  };
 }
 
 /** 2GIS link that opens the place in the app (or on 2gis.kz). */
