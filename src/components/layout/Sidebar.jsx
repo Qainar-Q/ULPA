@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { FolderOpen, GraduationCap, Megaphone, ShieldCheck, Vote } from "lucide-react";
+import { FolderOpen, GraduationCap, Megaphone, Search, ShieldCheck, Vote } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
 import { NAV_ITEMS } from "./navItems.js";
 import { useTasks } from "../../features/tasks/TasksContext.jsx";
@@ -21,6 +21,12 @@ export default function Sidebar() {
           <strong>{APP_NAME}</strong>
           <small>{CLASS_LABEL}</small>
         </span>
+      </NavLink>
+
+      <NavLink to="/search" className="side-search">
+        <Search size={16} aria-hidden="true" />
+        <span>Іздеу</span>
+        <kbd>/</kbd>
       </NavLink>
 
       <nav className="side-nav">
