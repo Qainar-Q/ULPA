@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, MapPin, Move, RotateCcw, X } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
-import { BUILDINGS, KINDS, OUR_BUILDING, ROOM_BUILDINGS, buildingForRoom, placeBuildings, twoGisUrl } from "../features/campus/campusData.js";
+import { BUILDINGS, KINDS, OFF_CAMPUS, OUR_BUILDING, ROOM_BUILDINGS, buildingForRoom, twoGisUrl } from "../features/campus/campusData.js";
 import { useQueryParam } from "../lib/useQueryParam.js";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { supabase } from "../lib/supabase.js";
@@ -11,12 +11,12 @@ const FILTERS = [
   { id: "all", label: "Барлығы", test: null },
   { id: "ours", label: "★ Біздің корпус", test: (b) => b.id === OUR_BUILDING },
   { id: "faculty", label: "Факультеттер", test: (b) => b.kind === "faculty" },
-  { id: "facility", label: "Кітапхана, тамақ, спорт", test: (b) => b.kind === "facility" },
+  { id: "facility", label: "Кітапхана, спорт, қызметтер", test: (b) => b.kind === "facility" },
   { id: "dorm", label: "Жатақханалар", test: (b) => b.kind === "dorm" },
 ];
 
 const roomsIn = (id) => Object.entries(ROOM_BUILDINGS).filter(([, building]) => building === id).map(([room]) => room);
-const badgeText = (b) => b.num ?? b.symbol ?? (b.kind === "dorm" ? "⌂" : "•");
+const badgeText = (b) => b.symbol ?? b.num ?? "•";
 
 function supportsWebGL() {
   try {
@@ -49,8 +49,8 @@ export default function CampusPage() {
       .then(({ data }) => setPositions(Object.fromEntries((data ?? []).map((row) => [row.id, { lat: row.lat, lng: row.lng }]))));
   }, []);
 
-  // Saved → calibrated from ≥3 saved markers → first guess from the illustration.
-  const { items: placed, calibrated } = useMemo(() => placeBuildings(BUILDINGS, positions), [positions]);
+  // 2GIS point, or the admin's saved correction.
+  const placed = useMemo(() => BUILDINGS.map((b) => ({ ...b, ...(positions?.[b.id] ?? {}), corrected: Boolean(positions?.[b.id]) })), [positions]);
 
   // Build the map once positions are known (the map engine is only downloaded here).
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function CampusPage() {
         const theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
         apiRef.current = createCampusMap(mapRef.current, {
           theme,
-          markers: placed.map((b) => ({ id: b.id, lat: b.lat, lng: b.lng, kind: b.kind, text: badgeText(b), label: b.name, ours: b.id === OUR_BUILDING })),
+          markers: placed.map((b) => ({ id: b.id, lat: b.lat, lng: b.lng, kind: b.kind, text: badgeText(b), label: b.name, short: b.short, ours: b.id === OUR_BUILDING })),
           onSelect: (id) => setSelected(id),
           onMove: async (id, position) => {
             const { error } = await supabase.from("campus_markers").upsert({ id, lat: position.lat, lng: position.lng });
@@ -93,12 +93,6 @@ export default function CampusPage() {
     apiRef.current?.setFilter(FILTERS.find((item) => item.id === filter)?.test ?? null);
   }, [filter, status]);
 
-  // After each saved drag, the other markers follow the new calibration.
-  useEffect(() => {
-    if (status !== "ready") return;
-    apiRef.current?.setPositions(Object.fromEntries(placed.map((b) => [b.id, { lat: b.lat, lng: b.lng }])));
-  }, [placed, status]);
-
   useEffect(() => {
     apiRef.current?.setEditable(editing);
   }, [editing, status]);
@@ -120,7 +114,7 @@ export default function CampusPage() {
   const groups = Object.entries(KINDS).map(([kind, meta]) => ({
     kind,
     meta,
-    items: placed.filter((item) => item.kind === kind && (editing || !(kind === "dorm" && item.id !== "dorm-1")) && (editing || !(item.id.startsWith("parking") && item.id !== "parking-1"))),
+    items: placed.filter((item) => item.kind === kind),
   }));
   const corrected = placed.filter((b) => b.corrected).length;
 
@@ -129,7 +123,7 @@ export default function CampusPage() {
       <PageHeader
         eyebrow="ҚазҰУ"
         title="Кампус картасы"
-        description="Нақты карта: ғимараттарды басып, не орналасқанын көр. Біздің мехмат корпусы ★ белгіленген."
+        description="ҚазҰУ кампусы ғана. Белгілер 2GIS-тегі нақты орындарда. Біздің мехмат ★ белгіленген."
         actions={
           isAdmin && (
             <button type="button" className={`button ${editing ? "button--primary" : "button--ghost"}`} onClick={() => setEditing(!editing)}>
@@ -143,14 +137,7 @@ export default function CampusPage() {
         <p className="campus-room">
           <Move size={16} aria-hidden="true" />
           <span>
-            {calibrated ? (
-              <>Калибрленді ✓ Қалған белгілер өздері орнына келді. Әлі қате тұрғанын сүйреп түзе. Түзетілгені: {corrected}/{placed.length}.</>
-            ) : (
-              <>
-                Алдымен оңай танылатын 3 белгіні дұрыс ғимаратқа сүйре: <strong>көк 1</strong> (Студенттер сарайы, сегіз бұрышты), <strong>көк 7</strong> (стадион) және{" "}
-                <strong>13</strong> (Халықаралық қатынастар). Бір сызықта жатпайтын кез келген 3 белгі де болады. Сонда қалғандары өздері орнына келеді. Түзетілгені: {corrected}/3.
-              </>
-            )}
+            Белгіні ұстап, дұрыс ғимаратқа сүйре — ғимараттың ортасына өзі «жабысады» және бірден сақталады. Түзетілгені: {corrected}.
           </span>
         </p>
       )}
@@ -194,6 +181,7 @@ export default function CampusPage() {
             <div className="campus-card__body">
               <strong>{building.name}</strong>
               <span>{KINDS[building.kind].label}</span>
+              {building.address && <p>{building.address}</p>}
               {building.note && <p>{building.note}</p>}
               {roomsIn(building.id).length > 0 && <p>Біздің аудиториялар: {roomsIn(building.id).join(", ")}</p>}
               <a className="campus-card__2gis" href={twoGisUrl(building)} target="_blank" rel="noreferrer">
@@ -207,7 +195,7 @@ export default function CampusPage() {
         )}
       </div>
       <p className="muted small">
-        Карта: OpenStreetMap деректері (OpenFreeMap). Белгілер дұрыс тұрмаса, әкімшіге айт. Жаяу бару үшін «2GIS-те ашу» батырмасын қолдан.
+        Карта: OpenStreetMap (OpenFreeMap), орындар: 2GIS. Картаны екі саусақпен бұруға болады — белгілер ғимараттан тайып кетпейді. Белгі қате тұрса, әкімшіге айт.
       </p>
 
       <section className="panel">
@@ -223,7 +211,7 @@ export default function CampusPage() {
                   <li key={item.id}>
                     <button type="button" className={`campus-list__item${item.id === selected ? " is-on" : ""}`} onClick={() => choose(item.id)}>
                       <span className={`campus-badge campus-badge--${item.kind}`}>{badgeText(item)}</span>
-                      <span>{item.kind === "dorm" && !editing ? "Студенттер жатақханалары" : item.name}</span>
+                      <span>{item.name}</span>
                       {item.id === OUR_BUILDING && <span className="tag">★ біздікі</span>}
                       {editing && !item.corrected && <span className="tag tag--pending">түзетілмеген</span>}
                     </button>
@@ -233,6 +221,19 @@ export default function CampusPage() {
             </div>
           ))}
         </div>
+        <h3 className="campus-list__title">
+          <MapPin size={14} aria-hidden="true" /> Кампустан тыс
+        </h3>
+        <ul className="campus-offsite">
+          {OFF_CAMPUS.map((place) => (
+            <li key={place.name}>
+              <a href={twoGisUrl(place)} target="_blank" rel="noreferrer">
+                <span>{place.name}</span>
+                <span className="muted small">{place.address}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
       </section>
       <p className="muted small">
         Сабақ кестесінде аудитория нөмірін бассаң, карта сол ғимаратты көрсетеді. <Link to="/schedule">Кестеге өту</Link>
