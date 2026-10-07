@@ -28,3 +28,6 @@ export const SESSION_TYPES = {
 // Supabase free plan file storage. Admins see a warning from 70 % onwards.
 export const STORAGE_LIMIT_BYTES = 1e9;
 export const STORAGE_WARN_RATIO = 0.7;
+
+// First day counted by the personal attendance log (change if the semester started on another day).
+export const SEMESTER_START = "2026-09-01";

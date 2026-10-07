@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { CalendarDays, Coffee } from "lucide-react";
+import { Link } from "react-router-dom";
+import { CalendarCheck, CalendarDays, Coffee } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
 import Segmented from "../components/ui/Segmented.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
@@ -44,6 +45,11 @@ export default function SchedulePage() {
         eyebrow={`Алматы уақыты · ${viewerGroup ?? "—"}-топ`}
         title="Сабақ кестесі"
         description="Дәрістер екі топқа ортақ. Зертханалық жұмыстар тек өз тобыңа көрсетіледі."
+        actions={
+          <Link to="/attendance" className="button button--ghost">
+            <CalendarCheck size={17} /> Қатысуым
+          </Link>
+        }
       />
 
       <div className="toolbar">

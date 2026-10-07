@@ -46,7 +46,7 @@ const STEPS = [
   {
     targets: [".quick-links", '.side-nav a[href="/announcements"]'],
     title: "Тағы не бар",
-    text: "Материалдар, оқытушылардың байланысы, хабарландырулар және сынып дауыс беруі. Қызыл нүкте — жаңа нәрсе бар деген сөз.",
+    text: "Материалдар, оқытушылардың байланысы, хабарландырулар, сынып дауыс беруі және жеке қатысу есебің. Қызыл нүкте — жаңа нәрсе бар деген сөз.",
   },
   {
     targets: [".topbar-search", ".side-search"],
@@ -65,27 +65,43 @@ const STEPS = [
   },
 ];
 
-// Shown once to students who finished the tour before these features existed.
-// When adding features later: put new steps here and move NEWS_SINCE to the release time.
-const NEWS_SINCE = "2026-10-07T18:15:00Z";
+// "What's new" for students who finished the tour earlier. Each feature step has the
+// time it was released; a student sees only the steps newer than their last tour.
+// When adding a feature: append a step with `since` = release time (UTC).
+const NEWS_INTRO = {
+  title: "ULPA жаңарды ✨",
+  text: "Сен соңғы рет кіргеннен бері жаңа мүмкіндіктер қосылды. Қысқаша көрсетейін.",
+};
 const NEWS_STEPS = [
   {
-    title: "ULPA жаңарды ✨",
-    text: "Сен соңғы рет кіргеннен бері жаңа мүмкіндіктер қосылды. Екі қадамда көрсетейін.",
-  },
-  {
+    since: "2026-10-07T18:15:00Z",
     targets: ['.quick-links a[href="/teachers"]', '.side-nav a[href="/teachers"]'],
     title: "Оқытушылар",
     text: "Әр пәннің оқытушысы: фотосы, кабинеті, кеңес уақыты. Бір басумен қоңырау шал, WhatsApp-қа немесе поштаға жаз.",
   },
   {
+    since: "2026-10-07T18:15:00Z",
     targets: [".topbar-search", ".side-search"],
     title: "Іздеу",
     text: "Тапсырма, материал, оқытушы — бәрін осы жерден тез тап. Қазақ әріптерін теру міндетті емес: «канат» → «қанат».",
-    last: true,
-    cta: "Түсінікті!",
+  },
+  {
+    since: "2026-10-07T18:35:00Z",
+    targets: ['.quick-links a[href="/attendance"]', '.side-nav a[href="/attendance"]'],
+    title: "Қатысуым",
+    text: "Қай сабаққа бармағаныңды, кешіккеніңді белгіле — әр пән бойынша қатысу пайызы есептеледі. Мұны тек сен көресің.",
   },
 ];
+const NEWEST = Math.max(...NEWS_STEPS.map((step) => Date.parse(step.since)));
+
+function newsSince(doneAt) {
+  const done = Date.parse(doneAt);
+  const fresh = NEWS_STEPS.filter((step) => Date.parse(step.since) > done);
+  if (fresh.length === 0) return null;
+  const steps = [NEWS_INTRO, ...fresh];
+  steps[steps.length - 1] = { ...steps[steps.length - 1], last: true, cta: "Түсінікті!" };
+  return steps;
+}
 
 const LOCAL_KEY = "ulpa-tour-done";
 const PAD = 6;
@@ -118,10 +134,9 @@ export default function OnboardingTour() {
     if (status !== "signedIn" || !student || pathname !== "/" || checkedRef.current) return;
     checkedRef.current = true;
     const localKey = `${LOCAL_KEY}:${student.id}`;
-    const newsSince = Date.parse(NEWS_SINCE);
     try {
       const local = Date.parse(localStorage.getItem(localKey) ?? "");
-      if (local >= newsSince) return; // finished after the latest features → nothing to show
+      if (local >= NEWEST) return; // finished after the latest features → nothing to show
     } catch {
       /* storage unavailable */
     }
@@ -137,7 +152,8 @@ export default function OnboardingTour() {
       .then(({ data, error }) => {
         if (error) return; // offline or server issue: try again next time
         if (!data) return show(STEPS); // first time: full tour
-        if (Date.parse(data.done_at) < newsSince) return show(NEWS_STEPS); // seen an older tour: only what's new
+        const news = newsSince(data.done_at); // seen an older tour: only what's new since then
+        if (news) return show(news);
         try {
           localStorage.setItem(localKey, data.done_at);
         } catch {
