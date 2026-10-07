@@ -22,6 +22,7 @@ import TaskDetailPage from "./pages/TaskDetailPage.jsx";
 import AnnouncementsPage from "./pages/AnnouncementsPage.jsx";
 import GuestPage from "./pages/GuestPage.jsx";
 import MaterialsPage from "./pages/MaterialsPage.jsx";
+import PollsPage from "./pages/PollsPage.jsx";
 import { RedirectIfSignedIn, RequireAdmin, RequireAuth } from "./features/auth/guards.jsx";
 
 export default function App() {
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="profile" element={<ProfilePage />} />
               <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="materials" element={<MaterialsPage />} />
+              <Route path="polls" element={<PollsPage />} />
               <Route path="courses/:slug" element={<CourseDetailPage />} />
               <Route element={<RequireAdmin />}>
                 <Route path="admin" element={<AdminLayout />}>

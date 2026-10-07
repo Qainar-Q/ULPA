@@ -557,3 +557,232 @@
 .material__download:last-child {
   margin-right: var(--s-2);
 }
+
+.quick-links__item--wide {
+  grid-column: 1 / -1;
+}
+
+/* ================= Polls ================= */
+.poll-list {
+  display: grid;
+  gap: var(--s-3);
+}
+
+@media (min-width: 1280px) {
+  .poll-list {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.poll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.poll--closed {
+  opacity: 0.88;
+}
+
+.poll__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.poll__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.poll__badges .tag {
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+
+.poll__badges .tag--live {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.poll__manage {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: none;
+}
+
+.poll__manage .icon-button {
+  width: 36px;
+  height: 36px;
+}
+
+.poll__question {
+  font-size: var(--fs-lg);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.poll__details {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.poll__choices,
+.poll__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.poll__choice {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 48px;
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  text-align: left;
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.poll__choice:hover {
+  border-color: var(--accent-line);
+}
+
+.poll__choice.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.poll__mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--bg);
+}
+
+.poll__choice.is-multi .poll__mark {
+  border-radius: 6px;
+}
+
+.poll__choice.is-selected .poll__mark {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.poll__result {
+  position: relative;
+  overflow: hidden;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+}
+
+.poll__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--w);
+  background: var(--surface-3);
+  transition: width 0.5s var(--ease);
+}
+
+.poll__result.is-leading .poll__bar {
+  background: var(--accent-soft);
+}
+
+.poll__result.is-mine {
+  border-color: var(--accent-line);
+}
+
+.poll__result-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 28px;
+  font-size: var(--fs-sm);
+}
+
+.poll__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.poll__label svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.poll__count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.poll__voters {
+  position: relative;
+  margin-top: 2px;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.poll__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.poll-form__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+
+.poll-form__option {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.poll-form__option .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.poll-form__option .icon-button {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}

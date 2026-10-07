@@ -10,27 +10,26 @@ import {
   uploadAttachment,
 } from "../../features/tasks/taskApi.js";
 import { isoToLocalInput, localInputToIso } from "../../lib/due.js";
+import { useAuth } from "../../features/auth/AuthContext.jsx";
+import { groupChoices } from "../../lib/permissions.js";
 
-const GROUP_OPTIONS = [
-  { id: "both", label: "Екі топқа" },
-  { id: "1", label: "1-топ" },
-  { id: "2", label: "2-топ" },
-];
 
 function formatSize(bytes) {
   if (!bytes) return "";
   return bytes > 1e6 ? `${(bytes / 1e6).toFixed(1)} МБ` : `${Math.ceil(bytes / 1e3)} КБ`;
 }
 
-/** Admin: create or edit an assignment, with attachments. */
+/** Create or edit an assignment, with attachments (anyone in the class; own group or shared). */
 export default function TaskForm({ task, defaultCourseId, onClose, onSaved }) {
   const { courses } = useCatalog();
+  const { student, isAdmin } = useAuth();
+  const groupOptions = groupChoices(student, isAdmin);
   const [values, setValues] = useState({
     courseId: task?.course_id ?? defaultCourseId ?? "",
     title: task?.title ?? "",
     description: task?.description ?? "",
     due: isoToLocalInput(task?.due_at),
-    groupNo: task?.group_no ? String(task.group_no) : "both",
+    groupNo: task?.group_no ? String(task.group_no) : isAdmin ? "both" : String(student?.group_no ?? "both"),
   });
   const [existing, setExisting] = useState((task?.assignment_attachments ?? []).filter((file) => file.uploaded));
   const [newFiles, setNewFiles] = useState([]);
@@ -77,7 +76,13 @@ export default function TaskForm({ task, defaultCourseId, onClose, onSaved }) {
       await onSaved(id);
       onClose();
     } catch (saveError) {
-      setError(saveError?.code === "42501" ? "Рұқсат жоқ." : "Сақталмады. Интернетті тексеріп, қайта көр.");
+      setError(
+        saveError?.code === "42501"
+          ? "Бұл топқа тапсырма қосуға рұқсатың жоқ."
+          : saveError?.message?.includes("daily task limit")
+            ? "Бүгінге лимит бітті (күніне 20 тапсырма). Ертең қайта көр."
+            : "Сақталмады. Интернетті тексеріп, қайта көр."
+      );
       setBusy(null);
     }
   }
@@ -115,7 +120,7 @@ export default function TaskForm({ task, defaultCourseId, onClose, onSaved }) {
 
         <div className="field">
           <span className="field__label">Кімге</span>
-          <Segmented label="Кімге" options={GROUP_OPTIONS} value={values.groupNo} onChange={set("groupNo")} />
+          <Segmented label="Кімге" options={groupOptions} value={values.groupNo} onChange={set("groupNo")} />
           <p className="field__hint">
             {values.groupNo === "both" ? "Ортақ тапсырма: екі топқа да көрінеді." : `Тек ${values.groupNo}-топқа көрінеді.`}
           </p>

@@ -57,11 +57,9 @@ export default function TasksPage() {
         title="Тапсырмалар"
         description="Белгің тек өзіңе тиесілі — сен «орындалды» деп белгілесең, басқаларға әсер етпейді."
         actions={
-          isAdmin && (
-            <button type="button" className="button button--primary" onClick={() => setCreating(true)}>
-              <Plus size={17} /> Тапсырма қосу
-            </button>
-          )
+          <button type="button" className="button button--primary" onClick={() => setCreating(true)}>
+            <Plus size={17} /> Тапсырма қосу
+          </button>
         }
       />
 
@@ -87,7 +85,7 @@ export default function TasksPage() {
           )}
           {visible.length === 0 ? (
             <EmptyState icon={ClipboardList} title={status === "open" ? "Орындалмаған тапсырма жоқ 🎉" : "Тапсырма жоқ"} compact>
-              {isAdmin ? "Жаңа тапсырманы «Тапсырма қосу» батырмасымен қос." : "Жаңа тапсырма берілгенде осында шығады."}
+              Жаңа тапсырманы «Тапсырма қосу» батырмасымен қос — ол сенің тобыңа немесе екі топқа көрінеді.
             </EmptyState>
           ) : (
             <ul className="task-list">

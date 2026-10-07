@@ -11,6 +11,7 @@ import { useAuth } from "../features/auth/AuthContext.jsx";
 import { useClassSize } from "../features/tasks/useClassSize.js";
 import { attachmentUrl, attachmentViewUrls, deleteTask } from "../features/tasks/taskApi.js";
 import { courseAccent } from "../lib/courseStyle.js";
+import { canManageItem } from "../lib/permissions.js";
 import { dueInfo, formatDateTime } from "../lib/due.js";
 
 function formatSize(bytes) {
@@ -115,7 +116,7 @@ export default function TaskDetailPage() {
   const navigate = useNavigate();
   const { tasks, status, isDone, toggleDone, doneCount, reload } = useTasks();
   const { courseById } = useCatalog();
-  const { isAdmin } = useAuth();
+  const { isAdmin, student } = useAuth();
   const classSize = useClassSize();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -128,6 +129,7 @@ export default function TaskDetailPage() {
   const done = isDone(task.id);
   const due = dueInfo(task.due_at);
   const files = (task.assignment_attachments ?? []).filter((file) => file.uploaded);
+  const canManage = canManageItem(student, isAdmin, task.created_by, task.group_no);
 
   async function toggle() {
     setBusy(true);
@@ -183,6 +185,7 @@ export default function TaskDetailPage() {
         <h2 className="panel-title">Сипаттама</h2>
         {task.description ? <p className="prose">{task.description}</p> : <p className="muted">Сипаттама жоқ.</p>}
         {task.due_at && <p className="muted small task-due-exact">Мерзімі: {formatDateTime(task.due_at)} (Алматы уақыты)</p>}
+        {task.creator_name && <p className="muted small">Қосқан: {task.creator_name}</p>}
       </section>
 
       <section className="panel">
@@ -190,7 +193,7 @@ export default function TaskDetailPage() {
         <Attachments files={files} />
       </section>
 
-      {isAdmin && (
+      {canManage && (
         <div className="admin-actions">
           <button type="button" className="button button--ghost" onClick={() => setEditing(true)}>
             <Pencil size={16} /> Өзгерту
