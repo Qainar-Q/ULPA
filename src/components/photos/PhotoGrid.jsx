@@ -5,7 +5,7 @@ import { PHOTO_TYPES } from "../../config/app.js";
 const TYPE_LABEL = Object.fromEntries(PHOTO_TYPES.map((type) => [type.id, type.label]));
 
 /** Thumbnail grid. Clicking a tile calls onOpen(index). */
-export default function PhotoGrid({ photos, thumbs, courseById, onOpen, engagement = {}, compact = false }) {
+export default function PhotoGrid({ photos, thumbs, courseById, onOpen, engagement = {}, compact = false, ranked = false }) {
   return (
     <ul className={`photo-grid${compact ? " photo-grid--compact" : ""}`}>
       {photos.map((photo, index) => {
@@ -19,6 +19,7 @@ export default function PhotoGrid({ photos, thumbs, courseById, onOpen, engageme
               ) : (
                 <span className="photo-tile__missing" />
               )}
+              {ranked && <span className={`photo-tile__rank photo-tile__rank--${index + 1}`}>{index + 1}</span>}
               {social && (
                 <span className="photo-tile__social" aria-label={`${social.reactions} реакция, ${social.comments} пікір`}>
                   {social.reactions > 0 && <span><Heart size={11} fill="currentColor" /> {social.reactions}</span>}

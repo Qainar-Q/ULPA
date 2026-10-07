@@ -7,8 +7,9 @@ const PHOTO_FIELDS =
   "id, course_id, photo_type, group_no, caption, storage_path, thumb_path, width, height, uploaded_by, uploader_name, created_at";
 
 /** Visible photos (RLS decides which), newest first. */
-export async function listPhotos({ courseId, type, limit = 60 } = {}) {
+export async function listPhotos({ courseId, type, ids, limit = 60 } = {}) {
   let query = supabase.from("course_photos").select(PHOTO_FIELDS).eq("uploaded", true).order("created_at", { ascending: false }).limit(limit);
+  if (ids) query = query.in("id", ids);
   if (courseId) query = query.eq("course_id", courseId);
   if (type) query = query.eq("photo_type", type);
   const { data, error } = await query;
@@ -75,4 +76,17 @@ export async function updateCaption(photoId, caption) {
     .update({ caption: caption.trim() || null })
     .eq("id", photoId);
   if (error) throw error;
+}
+
+/** This week's most-reacted photos, in rank order, with weekly counts. */
+export async function listTopPhotos(limit = 6) {
+  const { data: ranking, error } = await supabase.rpc("weekly_top_photos", { p_limit: limit });
+  if (error) throw error;
+  if (ranking.length === 0) return { photos: [], weekly: {} };
+  const ids = ranking.map((row) => row.photo_id);
+  const order = new Map(ids.map((id, index) => [id, index]));
+  const photos = (await listPhotos({ ids, limit })).filter((photo) => order.has(photo.id));
+  photos.sort((a, b) => order.get(a.id) - order.get(b.id));
+  const weekly = Object.fromEntries(ranking.map((row) => [row.photo_id, { reactions: row.reactions, comments: row.comments }]));
+  return { photos, weekly };
 }

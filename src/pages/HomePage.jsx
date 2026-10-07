@@ -6,6 +6,7 @@ import SectionTitle from "../components/ui/SectionTitle.jsx";
 import SessionItem from "../components/SessionItem.jsx";
 import CatalogState from "../components/CatalogState.jsx";
 import RecentPhotos from "../components/photos/RecentPhotos.jsx";
+import TopPhotos from "../components/photos/TopPhotos.jsx";
 import TaskCard from "../components/tasks/TaskCard.jsx";
 import SpaceCard from "../components/space/SpaceCard.jsx";
 import { useTasks } from "../features/tasks/TasksContext.jsx";
@@ -198,6 +199,8 @@ export default function HomePage() {
       </section>
 
       <SpaceCard />
+
+      <TopPhotos limit={6} />
 
       <section className="panel">
         <SectionTitle
