@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { FolderOpen, Megaphone, ShieldCheck } from "lucide-react";
+import { FolderOpen, Megaphone, ShieldCheck, Vote } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
 import { NAV_ITEMS } from "./navItems.js";
 import { useTasks } from "../../features/tasks/TasksContext.jsx";
@@ -35,6 +35,10 @@ export default function Sidebar() {
         <NavLink to="/announcements" className="side-nav__item">
           <Megaphone size={18} strokeWidth={1.8} />
           <span>Хабарландырулар</span>
+        </NavLink>
+        <NavLink to="/polls" className="side-nav__item">
+          <Vote size={18} strokeWidth={1.8} />
+          <span>Дауыс беру</span>
         </NavLink>
         {isAdmin && (
           <NavLink to="/admin" className="side-nav__item">

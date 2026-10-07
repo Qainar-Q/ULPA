@@ -19,7 +19,7 @@ export const ALLOWED_ATTACHMENT_TYPES = [
 ];
 
 export const TASK_FIELDS =
-  "id, course_id, title, description, due_at, group_no, created_at, updated_at, assignment_attachments(id, file_name, mime_type, size_bytes, storage_path, uploaded)";
+  "id, course_id, title, description, due_at, group_no, created_by, creator_name, created_at, updated_at, assignment_attachments(id, file_name, mime_type, size_bytes, storage_path, uploaded)";
 
 export async function fetchTasks() {
   const [tasks, statuses] = await Promise.all([
