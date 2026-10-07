@@ -13,6 +13,7 @@ import { useTasks } from "../features/tasks/TasksContext.jsx";
 import AnnouncementCard from "../components/AnnouncementCard.jsx";
 import { useAnnouncements } from "../features/announcements/useAnnouncements.js";
 import { useBirthdays } from "../features/birthdays/useBirthdays.js";
+import { useUnread } from "../features/unread/UnreadContext.jsx";
 
 const MONTHS_SHORT = ["қаң", "ақп", "нау", "сәу", "мам", "мау", "шіл", "там", "қыр", "қаз", "қар", "жел"];
 import { PROGRAM_NAME } from "../config/app.js";
@@ -23,6 +24,7 @@ import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 
 export default function HomePage() {
   const now = new Date();
+  const { counts: unread } = useUnread();
   const { student } = useAuth();
   const { courses, mySessions, courseById } = useCatalog();
 
@@ -71,12 +73,15 @@ export default function HomePage() {
       <nav className="quick-links" aria-label="Жылдам сілтемелер">
         <Link to="/materials" className="quick-links__item">
           <FolderOpen size={18} aria-hidden="true" /> Материалдар
+          {unread.materials > 0 && <span className="quick-links__new">{unread.materials}</span>}
         </Link>
         <Link to="/announcements" className="quick-links__item">
           <Megaphone size={18} aria-hidden="true" /> Хабарландырулар
+          {unread.announcements > 0 && <span className="quick-links__new">{unread.announcements}</span>}
         </Link>
         <Link to="/polls" className="quick-links__item quick-links__item--wide">
           <Vote size={18} aria-hidden="true" /> Дауыс беру
+          {unread.polls > 0 && <span className="quick-links__new">{unread.polls}</span>}
         </Link>
       </nav>
 

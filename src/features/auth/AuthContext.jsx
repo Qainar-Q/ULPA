@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase.js";
 import { clearPrivateFileCache } from "../../lib/signedUrls.js";
+import { disablePush } from "../../lib/push.js";
 import { classifyAuthError, classifyPasskeyError } from "./errors.js";
 import { normalizeStudentCode, studentEmail } from "./studentCode.js";
 
@@ -130,6 +131,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // This device should stop receiving this student's notifications.
+    await disablePush().catch(() => {});
     await clearPrivateFileCache();
     await supabase.auth.signOut();
   }, []);
