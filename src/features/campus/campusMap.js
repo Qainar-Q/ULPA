@@ -12,7 +12,7 @@ const BUILDING_COLORS = {
   dark: { fill: "#c3cee0", opacity: 0.82 },
   light: { fill: "#e9e4da", opacity: 0.9 },
 };
-const START = { center: [CAMPUS_CENTER.lng, CAMPUS_CENTER.lat], zoom: 16.1, pitch: 55, bearing: -18 };
+const START = { center: [CAMPUS_CENTER.lng, CAMPUS_CENTER.lat], zoom: 16.1, pitch: 50, bearing: 180 }; // south-up, like the official campus map
 
 maplibregl.setWorkerUrl(workerUrl);
 
@@ -50,7 +50,7 @@ function add3dBuildings(map, theme) {
 /**
  * Real campus map in `container`.
  * markers: [{ id, lat, lng, kind, text, label, ours }]
- * Returns { select(id), setFilter(fn), setEditable(bool), resetView(), dispose() }.
+ * Returns { select(id), setFilter(fn), setEditable(bool), setPositions(map), resetView(), dispose() }.
  */
 export function createCampusMap(container, { theme = "dark", markers, onSelect, onMove } = {}) {
   const map = new maplibregl.Map({
@@ -147,6 +147,17 @@ export function createCampusMap(container, { theme = "dark", markers, onSelect, 
       for (const entry of entries.values()) entry.marker.setDraggable(on);
       if (on) select(null);
       paint();
+    },
+    /** Move markers to new positions ({ id: {lat, lng} }) without rebuilding the map. */
+    setPositions(positions) {
+      for (const [id, entry] of entries) {
+        const next = positions[id];
+        if (!next) continue;
+        const current = entry.marker.getLngLat();
+        if (Math.abs(current.lat - next.lat) < 1e-9 && Math.abs(current.lng - next.lng) < 1e-9) continue;
+        entry.marker.setLngLat([next.lng, next.lat]);
+        entry.nameMarker?.setLngLat([next.lng, next.lat]);
+      }
     },
     resetView() {
       map.flyTo({ ...START, duration: 900, essential: true });
