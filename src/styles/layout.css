@@ -108,7 +108,8 @@
   transition: color 0.18s var(--ease);
 }
 
-.bottom-nav__item span {
+/* Only the text label is truncated; the icon wrapper must not clip its badge. */
+.bottom-nav__item > span:not(.nav-icon) {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;

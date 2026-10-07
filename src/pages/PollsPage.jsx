@@ -7,6 +7,7 @@ import Segmented from "../components/ui/Segmented.jsx";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { closePoll, createPoll, deletePoll, isPollOpen, usePolls, vote, withdrawVote } from "../features/polls/pollApi.js";
 import { canManageItem, groupChoices } from "../lib/permissions.js";
+import { useUnread } from "../features/unread/UnreadContext.jsx";
 import { formatDateTime, localInputToIso } from "../lib/due.js";
 
 function PollForm({ onClose, onSaved }) {
@@ -235,7 +236,12 @@ function PollCard({ poll, mine, results, total, onChanged }) {
 }
 
 export default function PollsPage() {
-  const { status, polls, mine, results, totals, reload } = usePolls();
+  const { status, polls, mine, results, totals, reload: reloadPolls } = usePolls();
+  const { refresh: refreshUnread } = useUnread();
+  const reload = async () => {
+    await reloadPolls();
+    refreshUnread();
+  };
   const [creating, setCreating] = useState(false);
   const [filter, setFilter] = useState("open");
   const now = new Date();

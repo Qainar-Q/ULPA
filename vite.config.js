@@ -33,6 +33,7 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,woff2,webp,png,svg}"],
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
+        importScripts: ["push-sw.js"], // push + notification click handlers
         runtimeCaching: [
           {
             urlPattern: ({ url, request }) =>

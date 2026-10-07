@@ -18,6 +18,7 @@ import { GpaProvider } from "./features/gpa/GpaContext.jsx";
 import { AuthProvider } from "./features/auth/AuthContext.jsx";
 import { CatalogProvider } from "./features/catalog/CatalogContext.jsx";
 import { TasksProvider } from "./features/tasks/TasksContext.jsx";
+import { UnreadProvider } from "./features/unread/UnreadContext.jsx";
 import TaskDetailPage from "./pages/TaskDetailPage.jsx";
 import AnnouncementsPage from "./pages/AnnouncementsPage.jsx";
 import GuestPage from "./pages/GuestPage.jsx";
@@ -30,6 +31,7 @@ export default function App() {
     <AuthProvider>
       <CatalogProvider>
       <TasksProvider>
+      <UnreadProvider>
       <GpaProvider>
         <Routes>
           {/* Public guest overview: counts only, no content */}
@@ -67,6 +69,7 @@ export default function App() {
           </Route>
         </Routes>
       </GpaProvider>
+      </UnreadProvider>
       </TasksProvider>
       </CatalogProvider>
     </AuthProvider>

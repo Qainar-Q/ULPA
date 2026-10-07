@@ -3,12 +3,15 @@ import { FolderOpen, Megaphone, ShieldCheck, Vote } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
 import { NAV_ITEMS } from "./navItems.js";
 import { useTasks } from "../../features/tasks/TasksContext.jsx";
+import { useUnread } from "../../features/unread/UnreadContext.jsx";
 import { APP_NAME, CLASS_LABEL } from "../../config/app.js";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 
 export default function Sidebar() {
   const { student, isAdmin } = useAuth();
   const { openTasks } = useTasks();
+  const { counts } = useUnread();
+  const NewCount = ({ n }) => (n > 0 ? <span className="side-nav__new">{n > 9 ? "9+" : n}</span> : null);
 
   return (
     <aside className="sidebar" aria-label="Негізгі мәзір">
@@ -25,20 +28,26 @@ export default function Sidebar() {
           <NavLink key={to} to={to} end={end} className="side-nav__item">
             <Icon size={18} strokeWidth={1.8} />
             <span>{title}</span>
-            {to === "/tasks" && openTasks.length > 0 && <span className="side-nav__count">{openTasks.length}</span>}
+            {to === "/tasks" && openTasks.length > 0 && (
+              <span className={`side-nav__count${counts.tasks > 0 ? " side-nav__count--new" : ""}`}>{openTasks.length}</span>
+            )}
+            {to === "/photos" && <NewCount n={counts.photos} />}
           </NavLink>
         ))}
         <NavLink to="/materials" className="side-nav__item">
           <FolderOpen size={18} strokeWidth={1.8} />
           <span>Материалдар</span>
+          <NewCount n={counts.materials} />
         </NavLink>
         <NavLink to="/announcements" className="side-nav__item">
           <Megaphone size={18} strokeWidth={1.8} />
           <span>Хабарландырулар</span>
+          <NewCount n={counts.announcements} />
         </NavLink>
         <NavLink to="/polls" className="side-nav__item">
           <Vote size={18} strokeWidth={1.8} />
           <span>Дауыс беру</span>
+          <NewCount n={counts.polls} />
         </NavLink>
         {isAdmin && (
           <NavLink to="/admin" className="side-nav__item">

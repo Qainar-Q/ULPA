@@ -11,10 +11,12 @@ import { useQueryParam } from "../lib/useQueryParam.js";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 import { usePhotos } from "../features/photos/usePhotos.js";
 import { PHOTO_TYPES } from "../config/app.js";
+import { useMarkSeen } from "../features/unread/UnreadContext.jsx";
 
 const TYPE_FILTERS = [{ id: "all", label: "Барлығы" }, ...PHOTO_TYPES];
 
 export default function PhotosPage() {
+  useMarkSeen("photos");
   const [type, setType] = useQueryParam("type", "all");
   const [courseSlug, setCourseSlug] = useQueryParam("course", "");
   const { courseBySlug, courseById, status: catalogStatus } = useCatalog();

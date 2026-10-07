@@ -11,6 +11,7 @@ import { useTasks } from "../features/tasks/TasksContext.jsx";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { useClassSize } from "../features/tasks/useClassSize.js";
+import { useMarkSeen } from "../features/unread/UnreadContext.jsx";
 
 const STATUS_FILTERS = [
   { id: "open", label: "Орындалмаған" },
@@ -29,6 +30,7 @@ function sortTasks(list, status) {
 }
 
 export default function TasksPage() {
+  useMarkSeen("tasks");
   const [status, setStatus] = useQueryParam("status", "open");
   const [courseSlug, setCourseSlug] = useQueryParam("course", "");
   const { tasks, isDone, doneCount, status: loadStatus, reload } = useTasks();

@@ -7,6 +7,7 @@ import Segmented from "../components/ui/Segmented.jsx";
 import AnnouncementCard from "../components/AnnouncementCard.jsx";
 import { deleteAnnouncement, saveAnnouncement, useAnnouncements } from "../features/announcements/useAnnouncements.js";
 import { useAuth } from "../features/auth/AuthContext.jsx";
+import { useMarkSeen } from "../features/unread/UnreadContext.jsx";
 
 function AnnouncementForm({ item, onClose, onSaved }) {
   const { isAdmin, student } = useAuth();
@@ -69,6 +70,7 @@ function AnnouncementForm({ item, onClose, onSaved }) {
 }
 
 export default function AnnouncementsPage() {
+  useMarkSeen("announcements");
   const { status, items, reload } = useAnnouncements();
   const { isAdmin, student } = useAuth();
   const canPost = isAdmin || student?.is_monitor;

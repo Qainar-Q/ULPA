@@ -8,8 +8,10 @@ import MaterialUploadDialog from "../components/materials/MaterialUploadDialog.j
 import { useMaterials } from "../features/materials/materialApi.js";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 import { useQueryParam } from "../lib/useQueryParam.js";
+import { useMarkSeen } from "../features/unread/UnreadContext.jsx";
 
 export default function MaterialsPage() {
+  useMarkSeen("materials");
   const [courseSlug, setCourseSlug] = useQueryParam("course", "");
   const [query, setQuery] = useState("");
   const [uploading, setUploading] = useState(false);
