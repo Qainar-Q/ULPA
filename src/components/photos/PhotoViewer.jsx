@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Download, ExternalLink, Trash2, X } from "lucide-react";
 import { canShareFiles, fetchImageFile, saveImageFile } from "../../lib/saveImage.js";
+import { preloadImage } from "../../lib/signedUrls.js";
 import { deletePhoto, signUrls } from "../../features/photos/photoApi.js";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 import { APP_TIME_ZONE, SESSION_TYPES } from "../../config/app.js";
@@ -58,6 +59,18 @@ export default function PhotoViewer({ photos, index, thumbs, courseById, onIndex
       cancelled = true;
     };
   }, [photo.storage_path]);
+
+  // Fetch the neighbours in the background so swiping feels instant.
+  useEffect(() => {
+    const around = [photos[index + 1], photos[index - 1]].filter(Boolean);
+    if (around.length === 0) return;
+    const timer = setTimeout(() => {
+      signUrls(around.map((item) => item.storage_path))
+        .then((urls) => Object.values(urls).forEach(preloadImage))
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [photos, index]);
 
   const go = useCallback(
     (step) => {

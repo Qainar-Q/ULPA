@@ -1,5 +1,6 @@
 import { supabase } from "../../lib/supabase.js";
 import { compressImageFile } from "../photos/imageProcessing.js";
+import { IMMUTABLE_CACHE, signedUrls } from "../../lib/signedUrls.js";
 
 export const TASK_BUCKET = "assignment-files";
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
@@ -86,7 +87,7 @@ export async function uploadAttachment(assignmentId, original) {
   if (error) throw error;
 
   const storage = supabase.storage.from(TASK_BUCKET);
-  const { error: uploadError } = await storage.upload(row.storage_path, file, { contentType: file.type, upsert: false });
+  const { error: uploadError } = await storage.upload(row.storage_path, file, { contentType: file.type, cacheControl: IMMUTABLE_CACHE, upsert: false });
   if (uploadError) {
     await supabase.from("assignment_attachments").delete().eq("id", row.id);
     throw uploadError;
@@ -103,12 +104,8 @@ export async function deleteAttachment(file) {
 }
 
 /** Short-lived link for showing a file inline (image preview, PDF in the browser). */
-export async function attachmentViewUrls(files) {
-  const paths = files.map((file) => file.storage_path);
-  if (paths.length === 0) return {};
-  const { data, error } = await supabase.storage.from(TASK_BUCKET).createSignedUrls(paths, 60 * 60);
-  if (error) throw error;
-  return Object.fromEntries(data.filter((item) => item.signedUrl).map((item) => [item.path, item.signedUrl]));
+export function attachmentViewUrls(files) {
+  return signedUrls(TASK_BUCKET, files.map((file) => file.storage_path));
 }
 
 /** Short-lived download link that saves under the original file name. */

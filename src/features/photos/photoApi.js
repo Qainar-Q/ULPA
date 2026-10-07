@@ -1,7 +1,7 @@
 import { supabase } from "../../lib/supabase.js";
+import { IMMUTABLE_CACHE, signedUrls } from "../../lib/signedUrls.js";
 
 export const PHOTO_BUCKET = "course-photos";
-const URL_TTL_SECONDS = 60 * 60;
 
 const PHOTO_FIELDS =
   "id, course_id, photo_type, group_no, caption, storage_path, thumb_path, width, height, uploaded_by, uploader_name, created_at";
@@ -16,13 +16,9 @@ export async function listPhotos({ courseId, type, limit = 60 } = {}) {
   return data;
 }
 
-/** Short-lived links for private files. Returns { path: url }. */
-export async function signUrls(paths) {
-  const unique = [...new Set(paths.filter(Boolean))];
-  if (unique.length === 0) return {};
-  const { data, error } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(unique, URL_TTL_SECONDS);
-  if (error) throw error;
-  return Object.fromEntries(data.filter((item) => item.signedUrl).map((item) => [item.path, item.signedUrl]));
+/** Signed links for private files (reused while valid). Returns { path: url }. */
+export function signUrls(paths) {
+  return signedUrls(PHOTO_BUCKET, paths);
 }
 
 /**
@@ -47,7 +43,7 @@ export async function uploadPhoto({ courseId, photoType, groupNo, caption, prepa
 
   const storage = supabase.storage.from(PHOTO_BUCKET);
   try {
-    const options = { contentType: "image/jpeg", cacheControl: "3600", upsert: false };
+    const options = { contentType: "image/jpeg", cacheControl: IMMUTABLE_CACHE, upsert: false };
     const [fullResult, thumbResult] = await Promise.all([
       storage.upload(row.storage_path, prepared.full.blob, options),
       storage.upload(row.thumb_path, prepared.thumb.blob, options),

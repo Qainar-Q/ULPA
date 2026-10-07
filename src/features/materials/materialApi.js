@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { ALLOWED_ATTACHMENT_TYPES } from "../tasks/taskApi.js";
 import { compressImageFile } from "../photos/imageProcessing.js";
+import { IMMUTABLE_CACHE, signedUrl } from "../../lib/signedUrls.js";
 
 export const MATERIAL_BUCKET = "course-materials";
 export const MAX_MATERIAL_BYTES = 25 * 1024 * 1024;
@@ -55,7 +56,7 @@ export async function uploadMaterial({ courseId, title, description, groupNo, fi
 
   const { error: uploadError } = await supabase.storage
     .from(MATERIAL_BUCKET)
-    .upload(row.storage_path, file, { contentType: file.type, upsert: false });
+    .upload(row.storage_path, file, { contentType: file.type, cacheControl: IMMUTABLE_CACHE, upsert: false });
   if (uploadError) {
     await supabase.from("course_materials").delete().eq("id", row.id);
     throw uploadError;
@@ -72,10 +73,8 @@ export async function deleteMaterial(item) {
 }
 
 /** Inline link (preview in the browser instead of downloading). */
-export async function materialViewUrl(item) {
-  const { data, error } = await supabase.storage.from(MATERIAL_BUCKET).createSignedUrl(item.storage_path, 60 * 60);
-  if (error) throw error;
-  return data.signedUrl;
+export function materialViewUrl(item) {
+  return signedUrl(MATERIAL_BUCKET, item.storage_path);
 }
 
 export async function materialUrl(item) {
