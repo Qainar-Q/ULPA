@@ -1522,3 +1522,51 @@
 :root[data-theme="light"] .search-hit mark {
   background: rgba(13, 148, 136, 0.18);
 }
+
+/* ================= New version toast ================= */
+.update-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 12px);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  font-size: var(--fs-sm);
+  transform: translateX(-50%);
+  animation: tour-in 0.3s var(--ease);
+}
+
+.update-toast > svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.update-toast span {
+  min-width: 0;
+}
+
+.update-toast__close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-3);
+}
+
+@media (min-width: 1024px) {
+  .update-toast {
+    bottom: var(--s-6);
+  }
+}
