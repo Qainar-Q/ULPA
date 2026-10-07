@@ -10,7 +10,10 @@ export default defineConfig({
     // device-only cache keyed by file path (the signed token is stripped), cleared on sign-out.
     // Supabase data (tables, auth) is never cached by the service worker.
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt": a new version waits until a safe moment (see src/lib/pwaUpdate.js)
+      // instead of reloading in the middle of typing.
+      registerType: "prompt",
+      injectRegister: false,
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
         name: "ULPA — ҒТТ оқу платформасы",

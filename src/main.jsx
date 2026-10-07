@@ -14,14 +14,18 @@ import "./styles/tasks.css";
 import "./styles/extras.css";
 import App from "./App.jsx";
 import { applyTheme, watchSystemTheme } from "./lib/theme.js";
+import { startPwaUpdates } from "./lib/pwaUpdate.js";
+import UpdateToast from "./components/UpdateToast.jsx";
 
 applyTheme();
 watchSystemTheme();
+startPwaUpdates();
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <App />
+      <UpdateToast />
     </BrowserRouter>
   </React.StrictMode>
 );
