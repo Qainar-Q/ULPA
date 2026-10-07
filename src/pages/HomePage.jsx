@@ -14,6 +14,7 @@ import AnnouncementCard from "../components/AnnouncementCard.jsx";
 import { useAnnouncements } from "../features/announcements/useAnnouncements.js";
 import { useBirthdays } from "../features/birthdays/useBirthdays.js";
 import { useUnread } from "../features/unread/UnreadContext.jsx";
+import { useNow } from "../lib/useNow.js";
 
 const MONTHS_SHORT = ["қаң", "ақп", "нау", "сәу", "мам", "мау", "шіл", "там", "қыр", "қаз", "қар", "жел"];
 import { PROGRAM_NAME } from "../config/app.js";
@@ -23,7 +24,7 @@ import { useAuth } from "../features/auth/AuthContext.jsx";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 
 export default function HomePage() {
-  const now = new Date();
+  const now = useNow();
   const { counts: unread } = useUnread();
   const { student } = useAuth();
   const { courses, mySessions, courseById } = useCatalog();
@@ -132,6 +133,7 @@ export default function HomePage() {
                     session={session}
                     course={courseById(session.course_id)}
                     state={sessionState(session, upcomingTodayId, now)}
+                    now={now}
                     compact
                   />
                 ))}

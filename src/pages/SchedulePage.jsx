@@ -11,7 +11,8 @@ import GroupSwitch from "../components/GroupSwitch.jsx";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 import { useQueryParam } from "../lib/useQueryParam.js";
 import { WEEKDAYS, almatyWeekday, weekdayLabel } from "../lib/time.js";
-import { formatClock, nextSession, sessionState, sessionsOnDay } from "../lib/schedule.js";
+import { currentSession, formatClock, nextSession, sessionState, sessionsOnDay } from "../lib/schedule.js";
+import { useNow } from "../lib/useNow.js";
 
 const VIEWS = [
   { id: "today", label: "Бүгін" },
@@ -23,7 +24,8 @@ const SCHOOL_DAYS = WEEKDAYS.slice(0, 6); // Mon–Sat
 export default function SchedulePage() {
   const [view, setView] = useQueryParam("view", "today");
   const [courseSlug, setCourseSlug] = useQueryParam("course", "");
-  const today = almatyWeekday();
+  const now = useNow();
+  const today = almatyWeekday(now);
   const [dayParam, setDayParam] = useQueryParam("day", "");
   const selectedDay = Number(dayParam) || (today <= 6 ? today : 1);
 
@@ -35,7 +37,8 @@ export default function SchedulePage() {
     [mySessions, filterCourse]
   );
 
-  const upcoming = nextSession(sessions);
+  const upcoming = nextSession(sessions, now);
+  const ongoing = currentSession(sessions, now);
   const todaySessions = sessionsOnDay(sessions, today);
   const daySessions = sessionsOnDay(sessions, view === "week" ? selectedDay : today);
 
@@ -94,7 +97,12 @@ export default function SchedulePage() {
                   key={session.id}
                   session={session}
                   course={courseById(session.course_id)}
-                  state={view === "today" ? sessionState(session, upcoming?.daysAhead === 0 ? upcoming.session.id : null) : undefined}
+                  state={
+                    view === "today" || selectedDay === today
+                      ? sessionState(session, upcoming?.daysAhead === 0 ? upcoming.session.id : null, now)
+                      : undefined
+                  }
+                  now={now}
                 />
               ))}
             </ul>
@@ -107,7 +115,7 @@ export default function SchedulePage() {
           )}
         </section>
 
-        {view === "today" && todaySessions.length > 0 && !todaySessions.some((s) => s.id === upcoming?.session.id) && upcoming && (
+        {view === "today" && todaySessions.length > 0 && !ongoing && !todaySessions.some((s) => s.id === upcoming?.session.id) && upcoming && (
           <p className="muted">
             Бүгінгі сабақтар аяқталды. Келесі: {weekdayLabel(upcoming.session.weekday)}, {formatClock(upcoming.session.start_time)} —{" "}
             {courseById(upcoming.session.course_id)?.name}

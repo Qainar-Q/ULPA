@@ -976,3 +976,61 @@
 .gpa-scale td:last-child {
   text-align: right;
 }
+
+/* ---- Class in progress ---- */
+.session--now {
+  border-color: var(--course-color);
+  background: linear-gradient(90deg, var(--course-soft), transparent 80%), var(--bg-raised);
+  box-shadow: 0 0 0 1px var(--course-line), 0 8px 24px -14px var(--course-color);
+  overflow: hidden;
+}
+
+.session--now::before {
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.session__now--live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.session__now--live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.session__left {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--course-color);
+}
+
+.session__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--course-soft);
+}
+
+.session__progress span {
+  display: block;
+  height: 100%;
+  background: var(--course-color);
+  transition: width 1s linear;
+}

@@ -1,15 +1,16 @@
 import { Link } from "react-router-dom";
 import { MapPin, UserRound } from "lucide-react";
 import { courseAccent } from "../lib/courseStyle.js";
-import { formatClock } from "../lib/schedule.js";
+import { formatClock, sessionProgress } from "../lib/schedule.js";
 import { SESSION_TYPES } from "../config/app.js";
 
 /**
  * One class in a schedule list.
- * state: "past" | "next" | "later" | undefined (week view)
+ * state: "now" | "past" | "next" | "later" | undefined (another day)
  */
-export default function SessionItem({ session, course, state, compact = false }) {
+export default function SessionItem({ session, course, state, now, compact = false }) {
   const shared = session.group_no === null;
+  const progress = state === "now" ? sessionProgress(session, now) : null;
 
   return (
     <li className={`session${state ? ` session--${state}` : ""}${compact ? " session--compact" : ""}`} style={courseAccent(course)}>
@@ -17,6 +18,7 @@ export default function SessionItem({ session, course, state, compact = false })
         <strong>{formatClock(session.start_time)}</strong>
         {session.end_time && <small>{formatClock(session.end_time)}</small>}
         {state === "next" && <span className="session__now">Келесі</span>}
+        {state === "now" && <span className="session__now session__now--live">Қазір</span>}
       </div>
       <div className="session__body">
         <Link to={`/courses/${course?.slug ?? ""}`} className="session__course">
@@ -32,6 +34,7 @@ export default function SessionItem({ session, course, state, compact = false })
               <MapPin size={13} aria-hidden="true" /> {session.room}
             </span>
           )}
+          {progress && <span className="session__left">{progress.minutesLeft} мин қалды</span>}
           {!compact && course?.teacher && (
             <span className="session__teacher">
               <UserRound size={13} aria-hidden="true" /> {course.teacher}
@@ -39,6 +42,11 @@ export default function SessionItem({ session, course, state, compact = false })
           )}
         </div>
       </div>
+      {progress && (
+        <span className="session__progress" aria-hidden="true">
+          <span style={{ width: `${Math.round(progress.ratio * 100)}%` }} />
+        </span>
+      )}
     </li>
   );
 }

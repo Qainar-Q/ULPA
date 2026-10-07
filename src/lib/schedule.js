@@ -48,8 +48,35 @@ export function nextSession(sessions, date = new Date()) {
   return null;
 }
 
-/** "past" | "next" | "later" for today's list. */
+export const DEFAULT_LESSON_MINUTES = 50;
+
+/** End of a class in minutes since midnight (end_time, or start + 50 min when missing). */
+export function endMinutes(session) {
+  return session.end_time ? toMinutes(session.end_time) : toMinutes(session.start_time) + DEFAULT_LESSON_MINUTES;
+}
+
+/** True while the class is in progress (today only — pass today's sessions). */
+export function isInProgress(session, date = new Date()) {
+  const now = almatyMinutes(date);
+  return toMinutes(session.start_time) <= now && now < endMinutes(session);
+}
+
+/** The class happening right now, if any. */
+export function currentSession(sessions, date = new Date()) {
+  return sessionsOnDay(sessions, almatyWeekday(date)).find((session) => isInProgress(session, date)) ?? null;
+}
+
+/** 0–1 share of the class already gone, and whole minutes left. */
+export function sessionProgress(session, date = new Date()) {
+  const start = toMinutes(session.start_time);
+  const end = endMinutes(session);
+  const now = almatyMinutes(date);
+  return { ratio: Math.min(1, Math.max(0, (now - start) / (end - start))), minutesLeft: Math.max(0, end - now) };
+}
+
+/** "now" | "past" | "next" | "later" for today's list. */
 export function sessionState(session, nextId, date = new Date()) {
+  if (isInProgress(session, date)) return "now";
   if (session.id === nextId) return "next";
-  return toMinutes(session.start_time) <= almatyMinutes(date) ? "past" : "later";
+  return endMinutes(session) <= almatyMinutes(date) ? "past" : "later";
 }
