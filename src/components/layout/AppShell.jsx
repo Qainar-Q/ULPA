@@ -1,4 +1,6 @@
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
+import PageLoading from "../ui/PageLoading.jsx";
+import { prefetchPages } from "../../lib/prefetch.js";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import BottomNav from "./BottomNav.jsx";
@@ -8,6 +10,9 @@ import OnboardingTour from "../OnboardingTour.jsx";
 export default function AppShell() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+
+  // After the first screen is shown, quietly fetch the most used pages.
+  useEffect(() => prefetchPages(), []);
 
   // "/" or Ctrl/⌘+K opens search (computers), unless typing somewhere.
   useEffect(() => {
@@ -34,7 +39,10 @@ export default function AppShell() {
       <div className="app-main">
         <MobileTopbar />
         <main className="page" id="main">
-          <Outlet />
+          {/* Navigation stays visible while a page's code loads */}
+          <Suspense fallback={<PageLoading />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       <BottomNav />

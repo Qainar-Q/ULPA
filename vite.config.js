@@ -3,6 +3,30 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        // Libraries change rarely: separate files stay cached across ULPA updates.
+        codeSplitting: {
+          groups: [
+            { name: "react", test: /node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|cookie|set-cookie-parser)[\\/]/ },
+            { name: "supabase", test: /node_modules[\\/](@supabase|tslib|iceberg-js)[\\/]/ },
+            { name: "icons", test: /node_modules[\\/]lucide-react[\\/]/ },
+            // Shared app code and components. Pages import this instead of the entry file, so changing
+            // one page no longer renames every other page file. (Layout + prefetch.js name the pages, so they stay out.)
+            {
+              name: (id) =>
+                /[\\/]src[\\/](lib|features|config|components)[\\/]/.test(id) &&
+                !/[\\/]components[\\/]layout[\\/]/.test(id) &&
+                !/prefetch\.js$/.test(id)
+                  ? "core"
+                  : null,
+            },
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     // Installable app ("Add to Home Screen") + offline app shell.
@@ -34,6 +58,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,woff2,webp,png,svg}"],
+        // Login backgrounds are only needed before signing in — don't download them for everyone.
+        globIgnores: ["**/login-bg-*"],
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
         importScripts: ["push-sw.js"], // push + notification click handlers
