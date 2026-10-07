@@ -49,6 +49,11 @@ const STEPS = [
     text: "Материалдар, оқытушылардың байланысы, хабарландырулар және сынып дауыс беруі. Қызыл нүкте — жаңа нәрсе бар деген сөз.",
   },
   {
+    targets: [".topbar-search", ".side-search"],
+    title: "Іздеу",
+    text: "Тапсырма, материал, оқытушы, хабарландыру — бәрін осы жерден тез тап. Қазақ әріптерін теру міндетті емес: «канат» деп жазсаң, «қанат» та табылады.",
+  },
+  {
     targets: [".avatar-button", ".user-chip"],
     title: "Профиль",
     text: "Мұнда хабарландыруларды қосасың, Face ID / саусақ ізімен кіруді баптайсың және ақ/қара тақырыпты таңдайсың.",
@@ -57,6 +62,28 @@ const STEPS = [
     title: "Дайынсың! 🚀",
     text: "Кеңес: ULPA-ны телефонның басты экранына қос (Профиль → Телефонға орнату) — сонда қосымша сияқты ашылады және хабарландырулар келеді.",
     last: true,
+  },
+];
+
+// Shown once to students who finished the tour before these features existed.
+// When adding features later: put new steps here and move NEWS_SINCE to the release time.
+const NEWS_SINCE = "2026-10-07T18:15:00Z";
+const NEWS_STEPS = [
+  {
+    title: "ULPA жаңарды ✨",
+    text: "Сен соңғы рет кіргеннен бері жаңа мүмкіндіктер қосылды. Екі қадамда көрсетейін.",
+  },
+  {
+    targets: ['.quick-links a[href="/teachers"]', '.side-nav a[href="/teachers"]'],
+    title: "Оқытушылар",
+    text: "Әр пәннің оқытушысы: фотосы, кабинеті, кеңес уақыты. Бір басумен қоңырау шал, WhatsApp-қа немесе поштаға жаз.",
+  },
+  {
+    targets: [".topbar-search", ".side-search"],
+    title: "Іздеу",
+    text: "Тапсырма, материал, оқытушы — бәрін осы жерден тез тап. Қазақ әріптерін теру міндетті емес: «канат» → «қанат».",
+    last: true,
+    cta: "Түсінікті!",
   },
 ];
 
@@ -79,6 +106,7 @@ export default function OnboardingTour() {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const [steps, setSteps] = useState(STEPS);
   const [rect, setRect] = useState(null);
   const [cardPos, setCardPos] = useState(null);
   const cardRef = useRef(null);
@@ -90,33 +118,38 @@ export default function OnboardingTour() {
     if (status !== "signedIn" || !student || pathname !== "/" || checkedRef.current) return;
     checkedRef.current = true;
     const localKey = `${LOCAL_KEY}:${student.id}`;
+    const newsSince = Date.parse(NEWS_SINCE);
     try {
-      if (localStorage.getItem(localKey)) return;
+      const local = Date.parse(localStorage.getItem(localKey) ?? "");
+      if (local >= newsSince) return; // finished after the latest features → nothing to show
     } catch {
       /* storage unavailable */
     }
+    const show = (list) => {
+      setSteps(list);
+      setStep(0);
+      setTimeout(() => setOpen(true), 600); // let the home page render first
+    };
     supabase
       .from("onboarding_done")
-      .select("student_id")
+      .select("done_at")
       .maybeSingle()
       .then(({ data, error }) => {
         if (error) return; // offline or server issue: try again next time
-        if (data) {
-          try {
-            localStorage.setItem(localKey, "1");
-          } catch {
-            /* ignore */
-          }
-          return;
+        if (!data) return show(STEPS); // first time: full tour
+        if (Date.parse(data.done_at) < newsSince) return show(NEWS_STEPS); // seen an older tour: only what's new
+        try {
+          localStorage.setItem(localKey, data.done_at);
+        } catch {
+          /* ignore */
         }
-        setStep(0);
-        setTimeout(() => setOpen(true), 600); // let the home page render first
       });
   }, [status, student, pathname]);
 
   // Replay from the profile page.
   useEffect(() => {
     function replay() {
+      setSteps(STEPS);
       setStep(0);
       setOpen(true);
     }
@@ -128,7 +161,7 @@ export default function OnboardingTour() {
     setOpen(false);
     if (student) {
       try {
-        localStorage.setItem(`${LOCAL_KEY}:${student.id}`, "1");
+        localStorage.setItem(`${LOCAL_KEY}:${student.id}`, new Date().toISOString());
       } catch {
         /* ignore */
       }
@@ -136,7 +169,7 @@ export default function OnboardingTour() {
     supabase.rpc("complete_onboarding").then(() => {}, () => {});
   }, [student]);
 
-  const current = STEPS[step];
+  const current = steps[step];
 
   // Find and measure the highlighted element.
   const measure = useCallback(() => {
@@ -186,12 +219,12 @@ export default function OnboardingTour() {
     nextRef.current?.focus({ preventScroll: true });
     function onKey(event) {
       if (event.key === "Escape") finish();
-      if (event.key === "ArrowRight") setStep((value) => Math.min(value + 1, STEPS.length - 1));
+      if (event.key === "ArrowRight") setStep((value) => Math.min(value + 1, steps.length - 1));
       if (event.key === "ArrowLeft") setStep((value) => Math.max(value - 1, 0));
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, step, finish]);
+  }, [open, step, steps, finish]);
 
   if (!open || !current) return null;
 
@@ -211,7 +244,7 @@ export default function OnboardingTour() {
       >
         <div className="tour__head">
           <span className="tour__count">
-            {step + 1} / {STEPS.length}
+            {step + 1} / {steps.length}
           </span>
           {!current.last && (
             <button type="button" className="tour__skip" onClick={finish}>
@@ -222,7 +255,7 @@ export default function OnboardingTour() {
         <h2 id="tour-title" className="tour__title">{current.title}</h2>
         <p className="tour__text">{current.text}</p>
         <div className="tour__dots" aria-hidden="true">
-          {STEPS.map((_, index) => (
+          {steps.map((_, index) => (
             <span key={index} className={index === step ? "is-active" : index < step ? "is-done" : undefined} />
           ))}
         </div>
@@ -238,7 +271,7 @@ export default function OnboardingTour() {
             className="button button--primary tour__next"
             onClick={() => (current.last ? finish() : setStep(step + 1))}
           >
-            {step === 0 ? "Бастау" : current.last ? "Бастадық!" : "Келесі"} {!current.last && <ArrowRight size={16} />}
+            {current.last ? current.cta ?? "Бастадық!" : step === 0 ? "Бастау" : "Келесі"} {!current.last && <ArrowRight size={16} />}
           </button>
         </div>
       </div>
