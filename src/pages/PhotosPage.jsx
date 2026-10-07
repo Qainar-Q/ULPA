@@ -20,7 +20,7 @@ export default function PhotosPage() {
   const { courseBySlug, courseById, status: catalogStatus } = useCatalog();
   const course = courseSlug ? courseBySlug(courseSlug) : null;
 
-  const { status, photos, thumbs, reload } = usePhotos({
+  const { status, photos, thumbs, engagement, reload, refreshEngagement } = usePhotos({
     courseId: course?.id,
     type: type === "all" ? undefined : type,
     limit: 120,
@@ -82,7 +82,7 @@ export default function PhotosPage() {
       )}
 
       {status === "ready" && photos.length > 0 && (
-        <PhotoGrid photos={photos} thumbs={thumbs} courseById={courseById} onOpen={setViewerIndex} />
+        <PhotoGrid photos={photos} thumbs={thumbs} courseById={courseById} onOpen={setViewerIndex} engagement={engagement} />
       )}
 
       {viewerIndex !== null && photos[viewerIndex] && (
@@ -92,6 +92,7 @@ export default function PhotosPage() {
           thumbs={thumbs}
           courseById={courseById}
           onIndexChange={setViewerIndex}
+          onEngagementChange={refreshEngagement}
           onClose={() => setViewerIndex(null)}
           onDeleted={() => {
             setViewerIndex(null);

@@ -9,7 +9,7 @@ import { useCatalog } from "../../features/catalog/CatalogContext.jsx";
 /** Small photo strip for the home page and course pages. */
 export default function RecentPhotos({ courseId, limit = 6 }) {
   const { courseById } = useCatalog();
-  const { status, photos, thumbs, reload } = usePhotos({ courseId, limit });
+  const { status, photos, thumbs, engagement, reload, refreshEngagement } = usePhotos({ courseId, limit });
   const [viewerIndex, setViewerIndex] = useState(null);
 
   if (status === "loading") {
@@ -34,7 +34,7 @@ export default function RecentPhotos({ courseId, limit = 6 }) {
 
   return (
     <>
-      <PhotoGrid photos={photos} thumbs={thumbs} courseById={courseById} onOpen={setViewerIndex} compact />
+      <PhotoGrid photos={photos} thumbs={thumbs} courseById={courseById} onOpen={setViewerIndex} engagement={engagement} compact />
       {viewerIndex !== null && photos[viewerIndex] && (
         <PhotoViewer
           photos={photos}
@@ -42,6 +42,7 @@ export default function RecentPhotos({ courseId, limit = 6 }) {
           thumbs={thumbs}
           courseById={courseById}
           onIndexChange={setViewerIndex}
+          onEngagementChange={refreshEngagement}
           onClose={() => setViewerIndex(null)}
           onDeleted={() => {
             setViewerIndex(null);
