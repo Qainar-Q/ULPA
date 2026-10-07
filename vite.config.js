@@ -12,8 +12,8 @@ export default defineConfig({
             { name: "react", test: /node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|cookie|set-cookie-parser)[\\/]/ },
             { name: "supabase", test: /node_modules[\\/](@supabase|tslib|iceberg-js)[\\/]/ },
             { name: "icons", test: /node_modules[\\/]lucide-react[\\/]/ },
-            // 3D campus map: only downloaded when the map page is opened.
-            { name: "campus3d", test: /(node_modules[\\/]three[\\/]|[\\/]features[\\/]campus[\\/]campusScene)/ },
+            // Campus map engine: only downloaded when the map page is opened.
+            { name: "campusmap", test: /(node_modules[\\/]maplibre-gl[\\/]|[\\/]features[\\/]campus[\\/]campusMap)/ },
             // Shared app code and components. Pages import this instead of the entry file, so changing
             // one page no longer renames every other page file. (Layout + prefetch.js name the pages, so they stay out.)
             {
@@ -21,7 +21,7 @@ export default defineConfig({
                 /[\\/]src[\\/](lib|features|config|components)[\\/]/.test(id) &&
                 !/[\\/]components[\\/]layout[\\/]/.test(id) &&
                 !/prefetch\.js$/.test(id) &&
-                !/campusScene/.test(id)
+                !/campusMap/.test(id)
                   ? "core"
                   : null,
             },
@@ -62,8 +62,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,woff2,webp,png,svg}"],
         // Login backgrounds are only needed before signing in — don't download them for everyone.
-        // The 3D campus library is fetched only by people who open the map.
-        globIgnores: ["**/login-bg-*", "**/campus3d-*"],
+        // The map engine is fetched only by people who open the campus map.
+        globIgnores: ["**/login-bg-*", "**/campusmap-*", "**/maplibre-gl-worker*"],
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
         importScripts: ["push-sw.js"], // push + notification click handlers

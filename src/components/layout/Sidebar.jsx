@@ -89,7 +89,7 @@ export default function Sidebar() {
             </span>
           </NavLink>
         )}
-        <p className="sidebar__version">ULPA · v0.6</p>
+        <p className="sidebar__version">ULPA · v0.7</p>
       </div>
     </aside>
   );
