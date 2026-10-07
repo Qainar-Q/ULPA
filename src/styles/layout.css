@@ -69,10 +69,16 @@
   align-items: center;
   justify-content: space-between;
   padding: calc(var(--s-2) + env(safe-area-inset-top)) var(--gutter) var(--s-2);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.mobile-topbar.is-scrolled {
   background: var(--bar-bg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-bottom-color: var(--line);
 }
 
 .brand--compact strong {
