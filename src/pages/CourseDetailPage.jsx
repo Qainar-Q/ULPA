@@ -17,11 +17,15 @@ import NotFoundPage from "./NotFoundPage.jsx";
 import { courseAccent } from "../lib/courseStyle.js";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 import { WEEKDAYS } from "../lib/time.js";
+import TeacherCard from "../components/teachers/TeacherCard.jsx";
+import { useTeachers } from "../features/teachers/teacherApi.js";
 
 function CourseDetail({ course }) {
   const { mySessions, courseById, reload: reloadCatalog } = useCatalog();
   const { isAdmin } = useAuth();
   const materials = useMaterials({ courseId: course.id });
+  const teacherData = useTeachers();
+  const courseTeachers = teacherData.teachers.filter((teacher) => teacher.courseIds.includes(course.id));
   const [uploading, setUploading] = useState(false);
   const [editingInfo, setEditingInfo] = useState(false);
   const sessions = mySessions
@@ -44,7 +48,17 @@ function CourseDetail({ course }) {
         <div>
           <h1 className="course-hero__title">{course.name}</h1>
           <p className="course-hero__teacher">
-            <UserRound size={15} /> {course.teacher}
+            <UserRound size={15} />{" "}
+            {courseTeachers.length > 0 ? (
+              courseTeachers.map((teacher, index) => (
+                <span key={teacher.id}>
+                  {index > 0 && ", "}
+                  <Link to={`/teachers#teacher-${teacher.id}`}>{teacher.full_name}</Link>
+                </span>
+              ))
+            ) : (
+              course.teacher
+            )}
           </p>
         </div>
       </section>
@@ -99,6 +113,23 @@ function CourseDetail({ course }) {
             </EmptyState>
           )}
         </section>
+
+        {courseTeachers.length > 0 && (
+          <section className="panel" id="teacher">
+            <SectionTitle title="Оқытушы" action={<Link to="/teachers" className="text-link">Барлығы</Link>} />
+            <div className="teacher-list teacher-list--compact">
+              {courseTeachers.map((teacher) => (
+                <TeacherCard
+                  key={teacher.id}
+                  teacher={teacher}
+                  photoUrl={teacherData.photos[teacher.photo_path]}
+                  courses={teacher.courseIds.map(courseById).filter(Boolean)}
+                  compact
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="panel" id="materials">
           <SectionTitle
