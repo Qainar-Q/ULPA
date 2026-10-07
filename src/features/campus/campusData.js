@@ -1,9 +1,8 @@
-// al-Farabi KazNU campus, modelled from the official campus illustration.
-// The illustration is not to scale: positions and sizes are approximate, but
-// neighbours and relative placement match. Coordinates are pixels on that image
-// (px, py); campusScene.js turns them into a top-down plan.
-//   L / W  — length / width in plan units, orient — long side along the main
-//   boulevard ("u") or across it ("v"), floors — storeys (height).
+// al-Farabi KazNU campus (Al-Farabi Ave 71, Almaty — 43.2250 N, 76.9211 E).
+// The real map (buildings, roads) comes from OpenStreetMap. The numbered markers start
+// at positions estimated from the official campus illustration (px, py on that image);
+// the admin drags them onto the right buildings and the corrected positions are saved
+// in the database (campus_markers), so these defaults are only a first guess.
 
 export const KINDS = {
   faculty: { label: "Факультеттер", color: "#ff6b8a" },
@@ -103,4 +102,21 @@ export function buildingForRoom(room) {
   const key = String(room).trim();
   const id = ROOM_BUILDINGS[key];
   return id ? BUILDINGS.find((building) => building.id === id) ?? null : null;
+}
+
+// ---- Default marker positions from the illustration (first guess only) ----
+export const CAMPUS_CENTER = { lat: 43.225, lng: 76.9211 };
+const M_PER_DEG_LAT = 111320;
+const M_PER_DEG_LNG = 111320 * Math.cos((CAMPUS_CENTER.lat * Math.PI) / 180);
+
+/** Illustration pixel → approximate real coordinate (campus ≈ 1 km across, north up). */
+export function guessLatLng(px, py) {
+  const east = (px - 650) * 1.15;
+  const north = -(py - 330) * 1.6 * 1.0;
+  return { lat: CAMPUS_CENTER.lat + north / M_PER_DEG_LAT, lng: CAMPUS_CENTER.lng + east / M_PER_DEG_LNG };
+}
+
+/** 2GIS link that opens the place in the app (or on 2gis.kz). */
+export function twoGisUrl({ lat, lng }) {
+  return `https://2gis.kz/almaty?m=${lng.toFixed(6)}%2C${lat.toFixed(6)}%2F18`;
 }

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Hand, LocateFixed, MapPin, X } from "lucide-react";
+import { ExternalLink, MapPin, Move, RotateCcw, X } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
-import { BUILDINGS, KINDS, OUR_BUILDING, ROOM_BUILDINGS, buildingForRoom } from "../features/campus/campusData.js";
+import { BUILDINGS, KINDS, OUR_BUILDING, ROOM_BUILDINGS, buildingForRoom, guessLatLng, twoGisUrl } from "../features/campus/campusData.js";
 import { useQueryParam } from "../lib/useQueryParam.js";
+import { useAuth } from "../features/auth/AuthContext.jsx";
+import { supabase } from "../lib/supabase.js";
 
 const FILTERS = [
   { id: "all", label: "Барлығы", test: null },
@@ -14,6 +16,7 @@ const FILTERS = [
 ];
 
 const roomsIn = (id) => Object.entries(ROOM_BUILDINGS).filter(([, building]) => building === id).map(([room]) => room);
+const badgeText = (b) => b.num ?? b.symbol ?? (b.kind === "dorm" ? "⌂" : "•");
 
 function supportsWebGL() {
   try {
@@ -25,73 +28,128 @@ function supportsWebGL() {
 }
 
 export default function CampusPage() {
+  const { isAdmin } = useAuth();
   const mapRef = useRef(null);
-  const sceneRef = useRef(null);
+  const apiRef = useRef(null);
   const [room] = useQueryParam("room", "");
   const [buildingParam, setBuildingParam] = useQueryParam("b", "");
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState("all");
   const [status, setStatus] = useState(() => (supportsWebGL() ? "loading" : "unsupported"));
-  const [hint, setHint] = useState(true);
+  const [positions, setPositions] = useState(null); // { id: {lat, lng} } saved by the admin
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(null);
   const roomBuilding = buildingForRoom(room);
 
-  // Build the 3D scene (three.js is only downloaded for this page).
+  // Saved marker positions (falls back to the first guess from the illustration).
   useEffect(() => {
-    if (status === "unsupported" || !mapRef.current) return undefined;
+    supabase
+      .from("campus_markers")
+      .select("id, lat, lng")
+      .then(({ data }) => setPositions(Object.fromEntries((data ?? []).map((row) => [row.id, { lat: row.lat, lng: row.lng }]))));
+  }, []);
+
+  const placed = useMemo(
+    () =>
+      BUILDINGS.map((b) => ({
+        ...b,
+        ...(positions?.[b.id] ?? guessLatLng(b.px, b.py)),
+        corrected: Boolean(positions?.[b.id]),
+      })),
+    [positions]
+  );
+
+  // Build the map once positions are known (the map engine is only downloaded here).
+  useEffect(() => {
+    if (status === "unsupported" || !positions || !mapRef.current) return undefined;
     let disposed = false;
-    import("../features/campus/campusScene.js")
-      .then(({ createCampusScene }) => {
+    import("../features/campus/campusMap.js")
+      .then(({ createCampusMap }) => {
         if (disposed) return;
         const theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
-        sceneRef.current = createCampusScene(mapRef.current, { theme, onSelect: setSelected });
+        apiRef.current = createCampusMap(mapRef.current, {
+          theme,
+          markers: placed.map((b) => ({ id: b.id, lat: b.lat, lng: b.lng, kind: b.kind, text: badgeText(b), label: b.name, ours: b.id === OUR_BUILDING })),
+          onSelect: (id) => setSelected(id),
+          onMove: async (id, position) => {
+            const { error } = await supabase.from("campus_markers").upsert({ id, lat: position.lat, lng: position.lng });
+            setSaved(error ? "error" : id);
+            if (!error) setPositions((current) => ({ ...current, [id]: position }));
+          },
+        });
         setStatus("ready");
       })
       .catch(() => !disposed && setStatus("unsupported"));
-    const timer = setTimeout(() => setHint(false), 4500);
     return () => {
       disposed = true;
-      clearTimeout(timer);
-      sceneRef.current?.dispose();
-      sceneRef.current = null;
+      apiRef.current?.dispose();
+      apiRef.current = null;
     };
+    // Built once; later position changes come from dragging on this same map.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [positions === null, status === "unsupported"]);
 
-  // Deep links: ?room=114 or ?b=library → fly to that building.
+  // Deep links: ?room=114 or ?b=library → fly there.
   useEffect(() => {
     if (status !== "ready") return;
     const target = roomBuilding?.id ?? (BUILDINGS.some((b) => b.id === buildingParam) ? buildingParam : null);
-    if (target) setTimeout(() => sceneRef.current?.select(target, { focus: true }), 350);
+    if (target) setTimeout(() => apiRef.current?.select(target, { focus: true }), 400);
   }, [status, roomBuilding, buildingParam]);
 
   useEffect(() => {
-    sceneRef.current?.setFilter(FILTERS.find((item) => item.id === filter)?.test ?? null);
+    apiRef.current?.setFilter(FILTERS.find((item) => item.id === filter)?.test ?? null);
   }, [filter, status]);
 
-  const building = useMemo(() => BUILDINGS.find((item) => item.id === selected) ?? null, [selected]);
+  useEffect(() => {
+    apiRef.current?.setEditable(editing);
+  }, [editing, status]);
+
+  useEffect(() => {
+    if (!saved) return undefined;
+    const timer = setTimeout(() => setSaved(null), 2200);
+    return () => clearTimeout(timer);
+  }, [saved]);
+
+  const building = useMemo(() => placed.find((item) => item.id === selected) ?? null, [placed, selected]);
 
   function choose(id) {
     setBuildingParam(id);
-    if (sceneRef.current) sceneRef.current.select(id, { focus: true });
-    else setSelected(id);
+    if (apiRef.current) apiRef.current.select(id, { focus: true });
     mapRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
   const groups = Object.entries(KINDS).map(([kind, meta]) => ({
     kind,
     meta,
-    items: BUILDINGS.filter((item) => item.kind === kind && !(kind === "dorm" && item.id !== "dorm-1") && !(item.id.startsWith("parking") && item.id !== "parking-1")),
+    items: placed.filter((item) => item.kind === kind && (editing || !(kind === "dorm" && item.id !== "dorm-1")) && (editing || !(item.id.startsWith("parking") && item.id !== "parking-1"))),
   }));
+  const corrected = placed.filter((b) => b.corrected).length;
 
   return (
     <div className="stack-lg">
       <PageHeader
         eyebrow="ҚазҰУ"
         title="Кампус картасы"
-        description="Ғимаратты басып, не орналасқанын көр. Біздің мехмат корпусы ★ белгіленген."
+        description="Нақты карта: ғимараттарды басып, не орналасқанын көр. Біздің мехмат корпусы ★ белгіленген."
+        actions={
+          isAdmin && (
+            <button type="button" className={`button ${editing ? "button--primary" : "button--ghost"}`} onClick={() => setEditing(!editing)}>
+              <Move size={16} /> {editing ? "Дайын" : "Белгілерді түзету"}
+            </button>
+          )
+        }
       />
 
-      {room && (
+      {editing && (
+        <p className="campus-room">
+          <Move size={16} aria-hidden="true" />
+          <span>
+            Белгіні саусақпен ұстап, дұрыс ғимаратқа сүйре — бірден сақталады. Түзетілгені: {corrected}/{placed.length}.
+          </span>
+        </p>
+      )}
+
+      {room && !editing && (
         <p className={`campus-room${roomBuilding ? "" : " campus-room--unknown"}`}>
           <MapPin size={16} aria-hidden="true" />
           {roomBuilding ? (
@@ -114,38 +172,36 @@ export default function CampusPage() {
         ))}
       </div>
 
-      <div className="campus-map" ref={mapRef}>
-        {status === "loading" && <div className="campus-map__loading">3D карта жүктелуде…</div>}
-        {status === "unsupported" && <div className="campus-map__loading">Бұл құрылғы 3D картаны көрсете алмайды — төмендегі тізімді қолдан.</div>}
+      <div className={`campus-map${editing ? " is-editing" : ""}`}>
+        <div className="campus-map__canvas" ref={mapRef} />
+        {status === "loading" && <div className="campus-map__loading">Карта жүктелуде…</div>}
+        {status === "unsupported" && <div className="campus-map__loading">Бұл құрылғы картаны көрсете алмайды — төмендегі тізімді қолдан.</div>}
         {status === "ready" && (
-          <button type="button" className="icon-button campus-map__reset" onClick={() => sceneRef.current?.resetView()} aria-label="Бастапқы көрініс">
-            <LocateFixed size={18} />
+          <button type="button" className="icon-button campus-map__reset" onClick={() => apiRef.current?.resetView()} aria-label="Бастапқы көрініс">
+            <RotateCcw size={18} />
           </button>
         )}
-        {status === "ready" && hint && (
-          <div className="campus-map__hint" aria-hidden="true">
-            <Hand size={16} /> Жылжыту — бір саусақ · айналдыру, үлкейту — екі саусақ
-          </div>
-        )}
-        {building && (
+        {saved && <div className="campus-map__saved">{saved === "error" ? "Сақталмады" : "Сақталды ✓"}</div>}
+        {building && !editing && (
           <div className="campus-card" role="dialog" aria-label={building.name}>
-            <span className={`campus-badge campus-badge--${building.kind} campus-card__badge`}>
-              {building.num ?? building.symbol ?? (building.kind === "dorm" ? "⌂" : "•")}
-            </span>
+            <span className={`campus-badge campus-badge--${building.kind} campus-card__badge`}>{badgeText(building)}</span>
             <div className="campus-card__body">
               <strong>{building.name}</strong>
-              <span>{KINDS[building.kind].label}{building.floors ? ` · ${building.floors} қабат` : ""}</span>
+              <span>{KINDS[building.kind].label}</span>
               {building.note && <p>{building.note}</p>}
               {roomsIn(building.id).length > 0 && <p>Біздің аудиториялар: {roomsIn(building.id).join(", ")}</p>}
+              <a className="campus-card__2gis" href={twoGisUrl(building)} target="_blank" rel="noreferrer">
+                <ExternalLink size={14} /> 2GIS-те ашу · маршрут
+              </a>
             </div>
-            <button type="button" className="icon-button" onClick={() => sceneRef.current?.select(null)} aria-label="Жабу">
+            <button type="button" className="icon-button" onClick={() => apiRef.current?.select(null)} aria-label="Жабу">
               <X size={16} />
             </button>
           </div>
         )}
       </div>
       <p className="muted small">
-        Сұлба ресми кампус картасы бойынша жасалған: орналасуы дұрыс, бірақ масштабы шамамен. Аудитория дұрыс белгіленбесе, әкімшіге айт.
+        Карта: OpenStreetMap деректері (OpenFreeMap). Белгілер дұрыс тұрмаса, әкімшіге айт. Жаяу бару үшін «2GIS-те ашу» батырмасын қолдан.
       </p>
 
       <section className="panel">
@@ -160,9 +216,10 @@ export default function CampusPage() {
                 {items.map((item) => (
                   <li key={item.id}>
                     <button type="button" className={`campus-list__item${item.id === selected ? " is-on" : ""}`} onClick={() => choose(item.id)}>
-                      <span className={`campus-badge campus-badge--${item.kind}`}>{item.num ?? item.symbol ?? "⌂"}</span>
-                      <span>{item.kind === "dorm" ? "Студенттер жатақханалары" : item.name}</span>
+                      <span className={`campus-badge campus-badge--${item.kind}`}>{badgeText(item)}</span>
+                      <span>{item.kind === "dorm" && !editing ? "Студенттер жатақханалары" : item.name}</span>
                       {item.id === OUR_BUILDING && <span className="tag">★ біздікі</span>}
+                      {editing && !item.corrected && <span className="tag tag--pending">түзетілмеген</span>}
                     </button>
                   </li>
                 ))}
