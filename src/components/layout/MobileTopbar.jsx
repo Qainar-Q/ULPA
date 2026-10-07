@@ -1,4 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
+import { Search } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 
@@ -12,9 +13,14 @@ export default function MobileTopbar() {
         <BrandMark size={30} />
         <strong>ULPA</strong>
       </Link>
-      <NavLink to="/profile" className="avatar-button" aria-label="Профиль">
-        <span className="avatar">{student?.full_name.slice(0, 1) ?? "?"}</span>
-      </NavLink>
+      <div className="mobile-topbar__actions">
+        <NavLink to="/search" className="icon-button topbar-search" aria-label="Іздеу">
+          <Search size={19} />
+        </NavLink>
+        <NavLink to="/profile" className="avatar-button" aria-label="Профиль">
+          <span className="avatar">{student?.full_name.slice(0, 1) ?? "?"}</span>
+        </NavLink>
+      </div>
     </header>
   );
 }
