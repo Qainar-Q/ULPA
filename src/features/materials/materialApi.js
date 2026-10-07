@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { ALLOWED_ATTACHMENT_TYPES } from "../tasks/taskApi.js";
+import { compressImageFile } from "../photos/imageProcessing.js";
 
 export const MATERIAL_BUCKET = "course-materials";
 export const MAX_MATERIAL_BYTES = 25 * 1024 * 1024;
@@ -35,7 +36,8 @@ export function materialProblem(file) {
 }
 
 /** Row first (server decides uploader, group and path), then the file, then mark uploaded. */
-export async function uploadMaterial({ courseId, title, description, groupNo, file }) {
+export async function uploadMaterial({ courseId, title, description, groupNo, file: original }) {
+  const file = await compressImageFile(original);
   const { data: row, error } = await supabase
     .from("course_materials")
     .insert({
@@ -67,6 +69,13 @@ export async function deleteMaterial(item) {
   if (error) throw error;
   const { error: rowError } = await supabase.from("course_materials").delete().eq("id", item.id);
   if (rowError) throw rowError;
+}
+
+/** Inline link (preview in the browser instead of downloading). */
+export async function materialViewUrl(item) {
+  const { data, error } = await supabase.storage.from(MATERIAL_BUCKET).createSignedUrl(item.storage_path, 60 * 60);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 export async function materialUrl(item) {

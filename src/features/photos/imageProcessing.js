@@ -71,3 +71,28 @@ export async function prepareImage(file) {
     if (typeof source.close === "function") source.close();
   }
 }
+
+const ATTACHMENT_EDGE = 2000; // handwriting and printed tasks stay readable
+const ATTACHMENT_QUALITY = 0.8;
+
+/**
+ * Shrink an image attachment (homework photo, scanned page) before upload.
+ * Non-images, GIFs and files the browser cannot decode are returned unchanged,
+ * and so is any image that would not get smaller.
+ */
+export async function compressImageFile(file) {
+  if (!file?.type?.startsWith("image/") || file.type === "image/gif" || file.size < 400 * 1024) return file;
+  try {
+    const source = await decode(file);
+    try {
+      const { blob } = await render(source, ATTACHMENT_EDGE, ATTACHMENT_QUALITY);
+      if (blob.size >= file.size) return file;
+      const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+      return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
+    } finally {
+      if (typeof source.close === "function") source.close();
+    }
+  } catch {
+    return file; // e.g. HEIC on a browser that cannot read it: upload as is
+  }
+}

@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase.js";
+import { compressImageFile } from "../photos/imageProcessing.js";
 
 export const TASK_BUCKET = "assignment-files";
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
@@ -75,7 +76,8 @@ export function attachmentProblem(file) {
   return null;
 }
 
-export async function uploadAttachment(assignmentId, file) {
+export async function uploadAttachment(assignmentId, original) {
+  const file = await compressImageFile(original);
   const { data: row, error } = await supabase
     .from("assignment_attachments")
     .insert({ assignment_id: assignmentId, file_name: file.name.slice(0, 200), mime_type: file.type, size_bytes: file.size })
@@ -98,6 +100,15 @@ export async function deleteAttachment(file) {
   if (error) throw error;
   const { error: rowError } = await supabase.from("assignment_attachments").delete().eq("id", file.id);
   if (rowError) throw rowError;
+}
+
+/** Short-lived link for showing a file inline (image preview, PDF in the browser). */
+export async function attachmentViewUrls(files) {
+  const paths = files.map((file) => file.storage_path);
+  if (paths.length === 0) return {};
+  const { data, error } = await supabase.storage.from(TASK_BUCKET).createSignedUrls(paths, 60 * 60);
+  if (error) throw error;
+  return Object.fromEntries(data.filter((item) => item.signedUrl).map((item) => [item.path, item.signedUrl]));
 }
 
 /** Short-lived download link that saves under the original file name. */
