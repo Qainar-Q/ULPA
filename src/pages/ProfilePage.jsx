@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ChevronRight, KeyRound, LogOut, ShieldCheck } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronRight, Compass, KeyRound, LogOut, ShieldCheck } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
 import PasskeySettings from "../components/PasskeySettings.jsx";
 import InstallApp from "../components/InstallApp.jsx";
@@ -17,6 +17,12 @@ const MONTHS_KK = [
 export default function ProfilePage() {
   const { student, isAdmin, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const navigate = useNavigate();
+
+  function replayTour() {
+    navigate("/");
+    setTimeout(() => window.dispatchEvent(new Event("ulpa:tour")), 400);
+  }
 
   if (!student) return null;
 
@@ -95,6 +101,11 @@ export default function ProfilePage() {
             <ChevronRight size={16} />
           </Link>
         )}
+        <button type="button" className="action-list__item" onClick={replayTour}>
+          <Compass size={18} />
+          <span>Нұсқаулықты қайта көру</span>
+          <ChevronRight size={16} />
+        </button>
         <div className="action-list__item action-list__item--static">
           <KeyRound size={18} />
           <span>Құпия сөзді өзгерту үшін әкімшіден қалпына келтіру кодын сұра.</span>

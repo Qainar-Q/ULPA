@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import BottomNav from "./BottomNav.jsx";
 import MobileTopbar from "./MobileTopbar.jsx";
+import OnboardingTour from "../OnboardingTour.jsx";
 
 export default function AppShell() {
   const { pathname } = useLocation();
@@ -22,6 +23,7 @@ export default function AppShell() {
         </main>
       </div>
       <BottomNav />
+      <OnboardingTour />
     </div>
   );
 }
