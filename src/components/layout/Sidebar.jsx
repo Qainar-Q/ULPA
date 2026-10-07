@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { CalendarCheck, FolderOpen, GraduationCap, Megaphone, Search, ShieldCheck, Vote } from "lucide-react";
+import { CalendarCheck, FolderOpen, GraduationCap, Map, Megaphone, Search, ShieldCheck, Vote } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
 import { NAV_ITEMS } from "./navItems.js";
 import { useTasks } from "../../features/tasks/TasksContext.jsx";
@@ -44,6 +44,10 @@ export default function Sidebar() {
           <CalendarCheck size={18} strokeWidth={1.8} />
           <span>Қатысу</span>
         </NavLink>
+        <NavLink to="/campus" className="side-nav__item">
+          <Map size={18} strokeWidth={1.8} />
+          <span>Кампус картасы</span>
+        </NavLink>
         <NavLink to="/materials" className="side-nav__item">
           <FolderOpen size={18} strokeWidth={1.8} />
           <span>Материалдар</span>
@@ -85,7 +89,7 @@ export default function Sidebar() {
             </span>
           </NavLink>
         )}
-        <p className="sidebar__version">ULPA · v0.5</p>
+        <p className="sidebar__version">ULPA · v0.6</p>
       </div>
     </aside>
   );

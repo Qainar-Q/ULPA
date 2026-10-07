@@ -12,13 +12,16 @@ export default defineConfig({
             { name: "react", test: /node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|cookie|set-cookie-parser)[\\/]/ },
             { name: "supabase", test: /node_modules[\\/](@supabase|tslib|iceberg-js)[\\/]/ },
             { name: "icons", test: /node_modules[\\/]lucide-react[\\/]/ },
+            // 3D campus map: only downloaded when the map page is opened.
+            { name: "campus3d", test: /(node_modules[\\/]three[\\/]|[\\/]features[\\/]campus[\\/]campusScene)/ },
             // Shared app code and components. Pages import this instead of the entry file, so changing
             // one page no longer renames every other page file. (Layout + prefetch.js name the pages, so they stay out.)
             {
               name: (id) =>
                 /[\\/]src[\\/](lib|features|config|components)[\\/]/.test(id) &&
                 !/[\\/]components[\\/]layout[\\/]/.test(id) &&
-                !/prefetch\.js$/.test(id)
+                !/prefetch\.js$/.test(id) &&
+                !/campusScene/.test(id)
                   ? "core"
                   : null,
             },
@@ -59,7 +62,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,woff2,webp,png,svg}"],
         // Login backgrounds are only needed before signing in — don't download them for everyone.
-        globIgnores: ["**/login-bg-*"],
+        // The 3D campus library is fetched only by people who open the map.
+        globIgnores: ["**/login-bg-*", "**/campus3d-*"],
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
         importScripts: ["push-sw.js"], // push + notification click handlers

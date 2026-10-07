@@ -2024,3 +2024,327 @@ li.is-online .presence__who small {
     display: none;
   }
 }
+
+/* ================= Campus map ================= */
+.chip-row {
+  display: flex;
+  gap: var(--s-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 2px var(--gutter);
+}
+
+.chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip-row .search-chip {
+  flex: none;
+}
+
+.search-chip.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.campus-room {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  font-size: var(--fs-sm);
+}
+
+.campus-room svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.campus-room--unknown {
+  border-color: rgba(255, 181, 71, 0.4);
+  background: var(--warning-soft);
+}
+
+.campus-map {
+  position: relative;
+  height: clamp(380px, 62vh, 720px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  isolation: isolate; /* 3D labels use big z-indexes: keep them under the top bar */
+}
+
+.campus-canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.campus-labels {
+  position: absolute !important;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.campus-map__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--s-5);
+  text-align: center;
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+
+.campus-map__reset {
+  position: absolute;
+  top: var(--s-3);
+  right: var(--s-3);
+  z-index: 10000; /* above the 3D labels */
+  width: 42px;
+  height: 42px;
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.campus-map__hint {
+  position: absolute;
+  left: 50%;
+  top: var(--s-3);
+  z-index: 10000; /* above the 3D labels */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 80px);
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  background: rgba(3, 7, 15, 0.72);
+  color: #fff;
+  font-size: var(--fs-xs);
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: fade 0.3s ease;
+}
+
+.campus-badge {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border: 2px solid #fff;
+  border-radius: var(--r-pill);
+  background: var(--badge, #5b94ff);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.2s;
+}
+
+.campus-badge--faculty {
+  --badge: #b8344f;
+}
+
+.campus-badge--facility {
+  --badge: #2f5fc4;
+}
+
+.campus-badge--dorm {
+  --badge: #e08a12;
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.625rem;
+}
+
+.campus-badge--service {
+  --badge: #6b7890;
+}
+
+.campus-badge.is-ours {
+  --badge: #0fa898;
+  transform: scale(1.15);
+}
+
+.campus-badge.is-selected {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 4px rgba(53, 224, 207, 0.45), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.campus-badge.is-dim {
+  opacity: 0.25;
+}
+
+.campus-label {
+  max-width: 180px;
+  padding: 3px 9px;
+  border-radius: var(--r-md);
+  background: rgba(3, 7, 15, 0.82);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  pointer-events: none;
+}
+
+.campus-card {
+  position: absolute;
+  left: var(--s-3);
+  right: var(--s-3);
+  bottom: var(--s-3);
+  z-index: 10000; /* above the 3D labels */
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  max-width: 460px;
+  padding: var(--s-3);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  animation: sheet-up 0.22s var(--ease);
+}
+
+.campus-card__badge {
+  flex: none;
+  margin-top: 2px;
+  pointer-events: none;
+}
+
+.campus-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.campus-card__body strong {
+  line-height: 1.3;
+}
+
+.campus-card__body span,
+.campus-card__body p {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.campus-card .icon-button {
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+
+.campus-list {
+  display: grid;
+  gap: var(--s-4);
+}
+
+@media (min-width: 900px) {
+  .campus-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.campus-list__title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.campus-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2f5fc4;
+}
+
+.campus-dot--faculty {
+  background: #b8344f;
+}
+
+.campus-dot--dorm {
+  background: #e08a12;
+}
+
+.campus-dot--service {
+  background: #6b7890;
+}
+
+.campus-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campus-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: 40px;
+  padding: 4px var(--s-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-align: left;
+}
+
+.campus-list__item:hover,
+.campus-list__item.is-on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.campus-list__item .campus-badge {
+  flex: none;
+  pointer-events: none;
+}
+
+.campus-list__item .tag {
+  margin-left: auto;
+  color: var(--accent);
+}
+
+.session__room--link {
+  /* bigger tap area without changing the layout */
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  min-width: 32px;
+  margin: -8px -6px;
+  padding: 0 6px;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--text-3);
+  text-underline-offset: 3px;
+}
+
+.session__room--link:hover {
+  color: var(--accent);
+}

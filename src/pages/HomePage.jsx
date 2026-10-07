@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ClipboardList, Calculator, ChevronRight, Coffee, Cake, FolderOpen, GraduationCap, Megaphone, Vote, CalendarCheck } from "lucide-react";
+import { ClipboardList, Calculator, ChevronRight, Coffee, Cake, FolderOpen, GraduationCap, Megaphone, Vote, CalendarCheck, Map } from "lucide-react";
 import CourseCard from "../components/CourseCard.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
@@ -87,8 +87,11 @@ export default function HomePage() {
           <Vote size={18} aria-hidden="true" /> Дауыс беру
           {unread.polls > 0 && <span className="quick-links__new">{unread.polls}</span>}
         </Link>
-        <Link to="/attendance" className="quick-links__item quick-links__item--wide">
+        <Link to="/attendance" className="quick-links__item">
           <CalendarCheck size={18} aria-hidden="true" /> Қатысуым
+        </Link>
+        <Link to="/campus" className="quick-links__item">
+          <Map size={18} aria-hidden="true" /> Кампус картасы
         </Link>
       </nav>
 
