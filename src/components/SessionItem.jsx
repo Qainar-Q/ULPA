@@ -30,9 +30,9 @@ export default function SessionItem({ session, course, state, now, compact = fal
           </span>
           <span className="session__group">{shared ? "Екі топқа ортақ" : `${session.group_no}-топ`}</span>
           {session.room && (
-            <span className="session__room">
+            <Link to={`/campus?room=${encodeURIComponent(session.room)}`} className="session__room session__room--link" aria-label={`${session.room} аудиториясы картада`}>
               <MapPin size={13} aria-hidden="true" /> {session.room}
-            </span>
+            </Link>
           )}
           {progress && <span className="session__left">{progress.minutesLeft} мин қалды</span>}
           {!compact && course?.teacher && (

@@ -33,6 +33,7 @@ const PollsPage = lazyPage(() => import("./pages/PollsPage.jsx"));
 const TeachersPage = lazyPage(() => import("./pages/TeachersPage.jsx"));
 const SearchPage = lazyPage(() => import("./pages/SearchPage.jsx"));
 const AttendancePage = lazyPage(() => import("./pages/AttendancePage.jsx"));
+const CampusPage = lazyPage(() => import("./pages/CampusPage.jsx"));
 
 export default function App() {
   return (
@@ -68,6 +69,7 @@ export default function App() {
               <Route path="teachers" element={<TeachersPage />} />
               <Route path="search" element={<SearchPage />} />
               <Route path="attendance" element={<AttendancePage />} />
+              <Route path="campus" element={<CampusPage />} />
               <Route path="courses/:slug" element={<CourseDetailPage />} />
               <Route element={<RequireAdmin />}>
                 <Route path="admin" element={<AdminLayout />}>
