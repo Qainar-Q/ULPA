@@ -1,33 +1,38 @@
+import { Suspense } from "react";
+import { lazyPage } from "./lib/lazyPage.js";
 import { Route, Routes } from "react-router-dom";
+import PageLoading from "./components/ui/PageLoading.jsx";
 import AppShell from "./components/layout/AppShell.jsx";
 import HomePage from "./pages/HomePage.jsx";
-import SchedulePage from "./pages/SchedulePage.jsx";
-import PhotosPage from "./pages/PhotosPage.jsx";
-import TasksPage from "./pages/TasksPage.jsx";
-import GpaPage from "./pages/GpaPage.jsx";
-import ProfilePage from "./pages/ProfilePage.jsx";
-import CourseDetailPage from "./pages/CourseDetailPage.jsx";
-import NotFoundPage from "./pages/NotFoundPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
-import ActivatePage from "./pages/ActivatePage.jsx";
-import AdminStudentsPage from "./pages/AdminStudentsPage.jsx";
-import AdminLayout from "./pages/admin/AdminLayout.jsx";
-import AdminSchedulePage from "./pages/admin/AdminSchedulePage.jsx";
-import AdminOverviewPage from "./pages/admin/AdminOverviewPage.jsx";
 import { GpaProvider } from "./features/gpa/GpaContext.jsx";
 import { AuthProvider } from "./features/auth/AuthContext.jsx";
 import { CatalogProvider } from "./features/catalog/CatalogContext.jsx";
 import { TasksProvider } from "./features/tasks/TasksContext.jsx";
 import { UnreadProvider } from "./features/unread/UnreadContext.jsx";
-import TaskDetailPage from "./pages/TaskDetailPage.jsx";
-import AnnouncementsPage from "./pages/AnnouncementsPage.jsx";
-import GuestPage from "./pages/GuestPage.jsx";
-import MaterialsPage from "./pages/MaterialsPage.jsx";
-import PollsPage from "./pages/PollsPage.jsx";
-import TeachersPage from "./pages/TeachersPage.jsx";
-import SearchPage from "./pages/SearchPage.jsx";
-import AttendancePage from "./pages/AttendancePage.jsx";
 import { RedirectIfSignedIn, RequireAdmin, RequireAuth } from "./features/auth/guards.jsx";
+
+// Home and login load with the app; every other page is fetched when first opened.
+const SchedulePage = lazyPage(() => import("./pages/SchedulePage.jsx"));
+const PhotosPage = lazyPage(() => import("./pages/PhotosPage.jsx"));
+const TasksPage = lazyPage(() => import("./pages/TasksPage.jsx"));
+const GpaPage = lazyPage(() => import("./pages/GpaPage.jsx"));
+const ProfilePage = lazyPage(() => import("./pages/ProfilePage.jsx"));
+const CourseDetailPage = lazyPage(() => import("./pages/CourseDetailPage.jsx"));
+const NotFoundPage = lazyPage(() => import("./pages/NotFoundPage.jsx"));
+const ActivatePage = lazyPage(() => import("./pages/ActivatePage.jsx"));
+const AdminStudentsPage = lazyPage(() => import("./pages/AdminStudentsPage.jsx"));
+const AdminLayout = lazyPage(() => import("./pages/admin/AdminLayout.jsx"));
+const AdminSchedulePage = lazyPage(() => import("./pages/admin/AdminSchedulePage.jsx"));
+const AdminOverviewPage = lazyPage(() => import("./pages/admin/AdminOverviewPage.jsx"));
+const TaskDetailPage = lazyPage(() => import("./pages/TaskDetailPage.jsx"));
+const AnnouncementsPage = lazyPage(() => import("./pages/AnnouncementsPage.jsx"));
+const GuestPage = lazyPage(() => import("./pages/GuestPage.jsx"));
+const MaterialsPage = lazyPage(() => import("./pages/MaterialsPage.jsx"));
+const PollsPage = lazyPage(() => import("./pages/PollsPage.jsx"));
+const TeachersPage = lazyPage(() => import("./pages/TeachersPage.jsx"));
+const SearchPage = lazyPage(() => import("./pages/SearchPage.jsx"));
+const AttendancePage = lazyPage(() => import("./pages/AttendancePage.jsx"));
 
 export default function App() {
   return (
@@ -36,6 +41,7 @@ export default function App() {
       <TasksProvider>
       <UnreadProvider>
       <GpaProvider>
+        <Suspense fallback={<PageLoading />}>
         <Routes>
           {/* Public guest overview: counts only, no content */}
           <Route path="guest" element={<GuestPage />} />
@@ -74,6 +80,7 @@ export default function App() {
             </Route>
           </Route>
         </Routes>
+        </Suspense>
       </GpaProvider>
       </UnreadProvider>
       </TasksProvider>
