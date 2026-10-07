@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase.js";
 import { useCatalog } from "../../features/catalog/CatalogContext.jsx";
 import { courseAccent } from "../../lib/courseStyle.js";
 import { dueInfo } from "../../lib/due.js";
+import PresencePanel from "../../components/admin/PresencePanel.jsx";
 
 function Meter({ value, total }) {
   const ratio = total ? value / total : 0;
@@ -53,6 +54,8 @@ export default function AdminOverviewPage() {
         <div className="stat-tile"><span>Белсенді тапсырма</span><strong>{openAssignments.length}</strong></div>
         <div className="stat-tile"><span>Хабарландыру</span><strong>{d.announcements}</strong></div>
       </div>
+
+      <PresencePanel />
 
       <section className="panel">
         <h2 className="panel-title">Белсендірмегендер · {d.not_activated.length}</h2>
