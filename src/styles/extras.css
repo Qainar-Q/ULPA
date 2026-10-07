@@ -1570,3 +1570,326 @@
     bottom: var(--s-6);
   }
 }
+
+/* ================= Attendance ================= */
+.att-private {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: calc(var(--s-3) * -1);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.att-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+}
+
+.att-ring {
+  --c: var(--success);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  flex: none;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, var(--surface) 78%, transparent 79% 100%),
+    conic-gradient(var(--c) calc(var(--p) * 1%), var(--surface-3) 0);
+}
+
+.att-ring--warn {
+  --c: var(--warning);
+}
+
+.att-ring--bad {
+  --c: var(--danger);
+}
+
+.att-ring strong {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.att-ring span {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.att-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3) var(--s-4);
+  flex: 1;
+  margin: 0;
+}
+
+.att-totals dt {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.att-totals dd {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.att-totals dd.is-bad {
+  color: var(--danger);
+}
+
+@media (max-width: 380px) {
+  .att-hero {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .att-ring {
+    margin: 0 auto;
+  }
+}
+
+.att-courses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+  gap: var(--s-2);
+}
+
+@media (min-width: 768px) {
+  .att-courses {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--s-3);
+  }
+}
+
+.att-course {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  min-width: 0;
+}
+
+.att-course:hover,
+.att-course.is-active {
+  border-color: var(--course-color);
+}
+
+.att-course.is-active {
+  box-shadow: 0 0 0 2px var(--course-line, var(--accent-soft));
+}
+
+.att-course__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.att-course__rate {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.att-course__rate--good {
+  color: var(--success);
+}
+
+.att-course__rate--warn {
+  color: var(--warning);
+}
+
+.att-course__rate--bad {
+  color: var(--danger);
+}
+
+.att-course__name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+@media (min-width: 768px) {
+  .att-course__name {
+    font-size: var(--fs-sm);
+  }
+}
+
+.att-bar {
+  display: block;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.att-bar span {
+  display: block;
+  height: 100%;
+  background: var(--course-color);
+  transition: width 0.3s var(--ease);
+}
+
+.att-course__meta {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.att-course__meta b {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.att-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.att-days {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin-bottom: var(--s-3);
+}
+
+.att-day__title {
+  margin-bottom: var(--s-2);
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.att-day ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.att-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--course-color);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+}
+
+.att-row--absent {
+  background: rgba(255, 92, 112, 0.07);
+}
+
+.att-row--cancelled .att-row__body {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.att-row__time {
+  flex: none;
+  width: 44px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.att-row__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.att-row__body strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.att-row__body span {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.att-status {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+.att-status select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 36px;
+  max-width: 132px;
+  padding: 0 28px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.att-status svg {
+  position: absolute;
+  right: 10px;
+  pointer-events: none;
+  color: var(--text-3);
+}
+
+.att-status--present select {
+  color: var(--success);
+}
+
+.att-status--absent select {
+  border-color: rgba(255, 92, 112, 0.45);
+  background: rgba(255, 92, 112, 0.12);
+  color: var(--danger);
+}
+
+.att-status--late select {
+  border-color: rgba(255, 181, 71, 0.45);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.att-status--excused select {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.att-status--cancelled select {
+  color: var(--text-3);
+}

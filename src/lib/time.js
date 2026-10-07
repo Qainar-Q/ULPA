@@ -67,3 +67,10 @@ export function almatyWeekday(date = new Date()) {
   }).format(date);
   return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(name) + 1;
 }
+
+/** "6 қазан, дүйсенбі" for a YYYY-MM-DD calendar date (no time zone shifts). */
+export function formatIsoDate(iso) {
+  const [year, month, day] = iso.split("-").map(Number);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay() || 7;
+  return `${day} ${MONTHS_KK[month - 1]}, ${WEEKDAYS_KK[weekday - 1].toLowerCase()}`;
+}

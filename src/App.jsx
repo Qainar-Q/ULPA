@@ -26,6 +26,7 @@ import MaterialsPage from "./pages/MaterialsPage.jsx";
 import PollsPage from "./pages/PollsPage.jsx";
 import TeachersPage from "./pages/TeachersPage.jsx";
 import SearchPage from "./pages/SearchPage.jsx";
+import AttendancePage from "./pages/AttendancePage.jsx";
 import { RedirectIfSignedIn, RequireAdmin, RequireAuth } from "./features/auth/guards.jsx";
 
 export default function App() {
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="polls" element={<PollsPage />} />
               <Route path="teachers" element={<TeachersPage />} />
               <Route path="search" element={<SearchPage />} />
+              <Route path="attendance" element={<AttendancePage />} />
               <Route path="courses/:slug" element={<CourseDetailPage />} />
               <Route element={<RequireAdmin />}>
                 <Route path="admin" element={<AdminLayout />}>
