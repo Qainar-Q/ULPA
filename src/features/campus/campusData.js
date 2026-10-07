@@ -1,15 +1,18 @@
-// al-Farabi KazNU campus (Al-Farabi Ave 71, Almaty).
-// Every position below is the real point of that place on 2GIS (2gis.kz, firm / building
-// pages), not an estimate. The admin can still nudge a marker on the map; corrections are
-// saved in the database (campus_markers) and override these points for everyone.
+// al-Farabi KazNU campus — the official campus map picture (public/campus/kaznu-campus.webp)
+// with tappable numbers. x / y are the centre of each printed number on that picture
+// (890 × 592 px), so a marker can never be "wrong": it sits on the university's own label.
+// For walking directions each place opens in 2GIS or Google Maps.
+
+export const MAP_IMAGE = { src: "/campus/kaznu-campus.webp", width: 890, height: 592 };
 
 export const KINDS = {
-  faculty: { label: "Факультеттер", color: "#ff6b8a" },
-  facility: { label: "Кітапхана, спорт, қызметтер", color: "#5b94ff" },
-  dorm: { label: "Жатақханалар (ДС)", color: "#ffb547" },
+  faculty: { label: "Факультеттер", color: "#9b1c33" },
+  facility: { label: "Сарай, кітапхана, спорт, тамақ", color: "#2b3a8f" },
+  dorm: { label: "Жатақханалар және медпункт", color: "#f0912a" },
+  parking: { label: "Көлік тұрағы", color: "#111" },
 };
 
-// Rooms from our timetable → building. Change here if a room is elsewhere.
+// Rooms from our timetable → place. Change here if a room is elsewhere.
 export const ROOM_BUILDINGS = {
   114: "mechmath",
   115: "mechmath",
@@ -18,81 +21,66 @@ export const ROOM_BUILDINGS = {
 };
 export const OUR_BUILDING = "mechmath";
 
-// gis: path on 2gis.kz/almaty/ (opens that exact place in 2GIS).
-export const BUILDINGS = [
-  // ---- Faculties ----
-  { id: "mechmath", num: 1, kind: "faculty", name: "Механика-математика факультеті", short: "Мехмат", note: "Біздің факультет — ҒТТ мамандығы осында.", address: "әл-Фараби даң., 71/23", lat: 43.223897, lng: 76.92405, gis: "firm/70000001029709246" },
-  { id: "physics", num: 2, kind: "faculty", name: "Физика-техникалық факультет", short: "Физтех", address: "әл-Фараби даң., 71/23", lat: 43.223816, lng: 76.923854, gis: "firm/70000001029709791" },
-  { id: "chemistry", num: 3, kind: "faculty", name: "Химия және химиялық технология факультеті", short: "Химия", address: "әл-Фараби даң., 71/23", lat: 43.223525, lng: 76.923165, gis: "firm/70000001029709773" },
-  { id: "it", num: 4, kind: "faculty", name: "Ақпараттық технологиялар факультеті", short: "IT", address: "әл-Фараби даң., 71/23", lat: 43.224536, lng: 76.923846, gis: "firm/70000001036024575" },
-  { id: "biology", num: 5, kind: "faculty", name: "Биология және биотехнология факультеті", short: "Биология", address: "әл-Фараби даң., 71/19", lat: 43.223608, lng: 76.920755, gis: "firm/9429940001276173" },
-  { id: "geography", num: 6, kind: "faculty", name: "География және табиғатты пайдалану факультеті", short: "География", address: "әл-Фараби даң., 71/19", lat: 43.223291, lng: 76.92199, gis: "firm/70000001029709286" },
-  { id: "main", num: 7, kind: "faculty", name: "Бас ғимарат: ректорат, заң, экономика (ЖМЭБ)", short: "Бас ғимарат", note: "Ректорат, Заң факультеті және Экономика және бизнес жоғары мектебі осы ғимаратта.", address: "әл-Фараби даң., 71", lat: 43.2253, lng: 76.920366, gis: "firm/9429940000796144" },
-  { id: "medicine", num: 8, kind: "faculty", name: "Медицина және денсаулық сақтау факультеті", short: "Медицина", address: "әл-Фараби даң., 71", lat: 43.225642, lng: 76.920878, gis: "firm/70000001052334508" },
-  { id: "philology", num: 9, kind: "faculty", name: "Филология, журналистика, тарих", short: "Филология", note: "Филология және әлем тілдері, Журналистика, Тарих, археология және этнология факультеттері осы ғимаратта.", address: "әл-Фараби даң., 71", lat: 43.224877, lng: 76.920733, gis: "firm/70000001029709390" },
+// gis: path on 2gis.kz/almaty/ when 2GIS has the exact place; otherwise `search` is used.
+export const PLACES = [
+  { id: "rectorate", num: 1, kind: "faculty", name: "Ректорат (бас ғимарат)", search: "КазНУ им. аль-Фараби ректорат", gis: "firm/9429940000796144", x: 267, y: 373 },
+  { id: "philology", num: 2, kind: "faculty", name: "Филология факультеті", search: "КазНУ факультет филологии", gis: "firm/70000001029709390", x: 330, y: 410 },
+  { id: "law", num: 3, kind: "faculty", name: "Заң факультеті", search: "КазНУ юридический факультет", gis: "firm/70000001029709816", x: 238, y: 476 },
+  { id: "economics", num: 4, kind: "faculty", name: "Экономика және бизнес жоғары мектебі", search: "КазНУ высшая школа экономики и бизнеса", gis: "firm/70000001029709184", x: 377, y: 483 },
+  {
+    id: "mechmath",
+    num: 5,
+    kind: "faculty",
+    name: "Механика-математика факультеті",
+    note: "Біздің факультет — ҒТТ мамандығы осында. Ақпараттық технологиялар факультеті де осы кешенде (71/23).",
+    search: "КазНУ механико-математический факультет",
+    gis: "firm/70000001029709246",
+    x: 229,
+    y: 309,
+  },
+  { id: "biology", num: 6, kind: "faculty", name: "Биология және биотехнология факультеті", search: "КазНУ факультет биологии", gis: "firm/9429940001276173", x: 471, y: 350 },
+  { id: "physics", num: 7, kind: "faculty", name: "Физика-техникалық факультет", search: "КазНУ физико-технический факультет", gis: "firm/70000001029709791", x: 286, y: 274 },
+  { id: "chemistry", num: 8, kind: "faculty", name: "Химия және химиялық технология факультеті", search: "КазНУ факультет химии", gis: "firm/70000001029709773", x: 337, y: 253 },
+  { id: "pe", num: 9, kind: "faculty", name: "Дене шынықтыру кафедрасы", search: "КазНУ кафедра физического воспитания", gis: "firm/70000001033431749", x: 389, y: 125 },
+  { id: "military", num: 10, kind: "faculty", name: "Әскери кафедра", note: "2GIS бойынша әскери кафедра қазір кампустан тыс: 1-шағынаудан, 36.", search: "КазНУ военная кафедра", gis: "firm/70000001075860019", x: 292, y: 506 },
+  { id: "journalism", num: 11, kind: "faculty", name: "Журналистика факультеті", search: "КазНУ факультет журналистики", gis: "firm/70000001029709216", x: 366, y: 430 },
+  { id: "geography", num: 12, kind: "faculty", name: "География және табиғатты пайдалану факультеті", search: "КазНУ факультет географии", gis: "firm/70000001029709286", x: 422, y: 327 },
+  { id: "intl", num: 13, kind: "faculty", name: "Халықаралық қатынастар факультеті", note: "2GIS бойынша бұл факультет қазір кампустан тыс: Қарасай батыр к-сі, 95.", search: "КазНУ факультет международных отношений", gis: "firm/9429940001113867", x: 688, y: 265 },
+  { id: "history", num: 14, kind: "faculty", name: "Тарих, археология және этнология факультеті", search: "КазНУ факультет истории", gis: "firm/70000001029709351", x: 408, y: 452 },
 
-  // ---- Facilities ----
-  { id: "palace", num: 10, kind: "facility", name: "Студенттер сарайы (Жолдасбеков атындағы)", short: "Студенттер сарайы", note: "2GIS бойынша қазір жөндеуде.", address: "әл-Фараби даң., 71/24", lat: 43.225301, lng: 76.923846, gis: "geo/9430047375049063" },
-  { id: "library", num: 11, kind: "facility", name: "әл-Фараби атындағы кітапхана", short: "Кітапхана", note: "1-қабатта асхана-кофейня бар.", address: "әл-Фараби даң., 71/27", lat: 43.222096, lng: 76.923904, gis: "firm/70000001035164324" },
-  { id: "keremet", num: 12, kind: "facility", name: "«Керемет» студенттерге қызмет көрсету орталығы", short: "Керемет (ЦОС)", note: "Анықтамалар, құжаттар, қабылдау комиссиясы.", address: "әл-Фараби даң., 71/21", lat: 43.21999, lng: 76.921635, gis: "firm/70000001039049777" },
-  { id: "stadium", num: 13, kind: "facility", name: "Стадион", short: "Стадион", address: "Кампус ішінде", lat: 43.221272, lng: 76.926202, gis: "firm/70000001112788999" },
-  { id: "pe", num: 14, kind: "facility", name: "Дене шынықтыру кафедрасы", short: "Дене шынықтыру", address: "әл-Фараби даң., 71 к10", lat: 43.22044, lng: 76.92547, gis: "firm/70000001033431749" },
-  { id: "pool", num: 15, kind: "facility", name: "Бассейн", short: "Бассейн", address: "әл-Фараби даң., 71/30", lat: 43.219224, lng: 76.925928, gis: "geo/70030076126075901" },
-  { id: "internet", num: 16, kind: "facility", name: "Оқу интернет орталығы", short: "Интернет орталығы", note: "3-қабат.", address: "әл-Фараби даң., 71/22", lat: 43.219931, lng: 76.922944, gis: "firm/70000001033987219" },
-  { id: "technopark", num: 17, kind: "facility", name: "ҚазҰУ Технопаркі", short: "Технопарк", address: "әл-Фараби даң., 71 к2", lat: 43.222997, lng: 76.91919, gis: "firm/9429940001163570" },
-  { id: "young-scientists", num: 18, kind: "facility", name: "Жас ғалымдар үйі", short: "Жас ғалымдар үйі", address: "әл-Фараби даң., 71/28", lat: 43.221845, lng: 76.925356, gis: "geo/9430047375049001" },
-  { id: "shops", num: 19, kind: "facility", name: "Дүкендер", short: "Дүкендер", address: "әл-Фараби даң., 71/10", lat: 43.21938, lng: 76.919484, gis: "geo/9430047375049896" },
-  { id: "medical", num: 20, kind: "facility", symbol: "+", name: "ҚазҰУ емханасы (МСАК орталығы)", short: "Емхана", address: "әл-Фараби даң., 71/4", lat: 43.218222, lng: 76.923971, gis: "firm/70000001077489435" },
+  { id: "palace", num: 1, kind: "facility", name: "Студенттер сарайы", search: "Дворец студентов КазНУ", gis: "geo/9430047375049063", x: 104, y: 346 },
+  { id: "biomuseum", num: 2, kind: "facility", name: "Биология музейі", search: "КазНУ музей биологии", x: 467, y: 403 },
+  { id: "biolibrary", num: 3, kind: "facility", name: "Биология факультетінің кітапханасы", search: "КазНУ библиотека биологического факультета", x: 456, y: 316 },
+  { id: "library", num: 4, kind: "facility", name: "ҚазҰУ кітапханасы", search: "Научная библиотека КазНУ", gis: "firm/70000001035164324", x: 378, y: 195 },
+  { id: "canteen", num: 5, kind: "facility", name: "Тамақтану комбинаты, МИЦ", search: "КазНУ комбинат питания", x: 553, y: 146 },
+  { id: "cinema", num: 6, kind: "facility", name: "Кинотеатр, дүкен", search: "КазНУ кинотеатр", x: 628, y: 162 },
+  { id: "stadium", num: 7, kind: "facility", name: "ҚазҰУ стадионы", search: "Стадион КазНУ", gis: "firm/70000001112788999", x: 265, y: 135 },
+  { id: "museum", num: 8, kind: "facility", name: "ҚазҰУ орталық музейі", search: "Музей КазНУ аль-Фараби", x: 320, y: 469 },
 
-  // ---- Dormitories: Дом студентов (ДС) ----
   ...[
-    [1, 43.219322, 76.92513, "71/1", "9429940001377124"],
-    [4, 43.21844, 76.923212, "71/5", "9429940001377127"],
-    [5, 43.21835, 76.921933, "71/6", "9429940001377128"],
-    [6, 43.217858, 76.921612, "71/7", "9429940001377129"],
-    [7, 43.218023, 76.920992, "71/8", "9429940001377130"],
-    [8, 43.218474, 76.920508, "71/9", "9429940001377131"],
-    [9, 43.218691, 76.924015, "71/3", "9429940001377125"],
-    [10, 43.21817, 76.923556, "71/4", "9429940001377126"],
-    [13, 43.21888, 76.924902, "71/2", "9429940001377132"],
-    [15, 43.221678, 76.920063, "71/15", "9429940001377133"],
-    [16, 43.221367, 76.919723, "71/14", "9429940001377134"],
-    [17, 43.220603, 76.919113, "71/12", "9429940001377135"],
-    [18, 43.219722, 76.91925, "71/11", "9429940001377136"],
-  ].map(([n, lat, lng, address, firm]) => ({
-    id: `ds-${n}`,
-    kind: "dorm",
-    symbol: `${n}`,
-    name: `${n}-жатақхана (ДС-${n})`,
-    short: `ДС-${n}`,
-    address: `әл-Фараби даң., ${address}`,
-    lat,
-    lng,
-    gis: `firm/${firm}`,
-  })),
-];
+    [475, 89], [507, 82], [565, 89], [611, 85], [634, 100], [701, 107],
+    [737, 107], [765, 121], [793, 136], [837, 198], [823, 242], [740, 261],
+  ].map(([x, y], index) => ({ id: `dorm-${index + 1}`, kind: "dorm", group: "dorms", name: "Студенттер жатақханасы (ДС)", search: "Дом студентов КазНУ", x, y })),
+  { id: "medical", num: 1, kind: "dorm", name: "Медициналық көмек пункті", symbol: "+", search: "Центр ПМСП КазНУ", gis: "firm/70000001077489435", x: 586, y: 83 },
 
-// KazNU places that are NOT on this campus (shown in the list only).
-export const OFF_CAMPUS = [
-  { name: "Халықаралық қатынастар және шығыстану факультеті", address: "Қарасай батыр к-сі, 95", gis: "firm/9429940001113867" },
-  { name: "Философия және саясаттану факультеті", address: "Масанчи к-сі, 39", gis: "firm/70000001025544692" },
-  { name: "Әскери кафедра", address: "1-шағынаудан, 36", gis: "firm/70000001075860019" },
-  { name: "14-жатақхана (ДС-14)", address: "Бөгенбай батыр к-сі, 174", gis: "firm/9429940001113862" },
+  { id: "parking-1", kind: "parking", group: "parking", name: "Көлік тұрағы", search: "КазНУ парковка", x: 54, y: 311 },
+  { id: "parking-2", kind: "parking", group: "parking", name: "Көлік тұрағы", search: "КазНУ парковка", x: 199, y: 534 },
+  { id: "parking-3", kind: "parking", group: "parking", name: "Көлік тұрағы", search: "КазНУ парковка", x: 463, y: 568 },
 ];
-
-// Campus area (all points above fit inside, with a small margin).
-export const CAMPUS_BOUNDS = { south: 43.2162, north: 43.2266, west: 76.9178, east: 76.9278 };
-export const CAMPUS_CENTER = { lat: (CAMPUS_BOUNDS.south + CAMPUS_BOUNDS.north) / 2, lng: (CAMPUS_BOUNDS.west + CAMPUS_BOUNDS.east) / 2 };
 
 export function buildingForRoom(room) {
   if (!room) return null;
-  const key = String(room).trim();
-  const id = ROOM_BUILDINGS[key];
-  return id ? BUILDINGS.find((building) => building.id === id) ?? null : null;
+  const id = ROOM_BUILDINGS[String(room).trim()];
+  return id ? PLACES.find((place) => place.id === id) ?? null : null;
 }
 
-/** Link that opens the place in the 2GIS app (or on 2gis.kz), with routes from there. */
-export function twoGisUrl({ gis, lat, lng }) {
-  if (gis) return `https://2gis.kz/almaty/${gis}`;
-  return `https://2gis.kz/almaty?m=${lng.toFixed(6)}%2C${lat.toFixed(6)}%2F18`;
+/** Open in 2GIS: the exact place if 2GIS has it, otherwise a 2GIS search in Almaty. */
+export function twoGisUrl(place) {
+  if (place.gis) return `https://2gis.kz/almaty/${place.gis}`;
+  return `https://2gis.kz/almaty/search/${encodeURIComponent(place.search)}`;
+}
+
+/** Open in Google Maps (search by name, works in the app and the browser). */
+export function googleMapsUrl(place) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.search}, Алматы`)}`;
 }
