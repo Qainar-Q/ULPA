@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ClipboardList, Calculator, ChevronRight, Coffee, Cake, Megaphone } from "lucide-react";
+import { ClipboardList, Calculator, ChevronRight, Coffee, Cake, FolderOpen, Megaphone } from "lucide-react";
 import CourseCard from "../components/CourseCard.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
@@ -7,6 +7,7 @@ import SessionItem from "../components/SessionItem.jsx";
 import CatalogState from "../components/CatalogState.jsx";
 import RecentPhotos from "../components/photos/RecentPhotos.jsx";
 import TaskCard from "../components/tasks/TaskCard.jsx";
+import SpaceCard from "../components/space/SpaceCard.jsx";
 import { useTasks } from "../features/tasks/TasksContext.jsx";
 import AnnouncementCard from "../components/AnnouncementCard.jsx";
 import { useAnnouncements } from "../features/announcements/useAnnouncements.js";
@@ -65,6 +66,15 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <nav className="quick-links" aria-label="Жылдам сілтемелер">
+        <Link to="/materials" className="quick-links__item">
+          <FolderOpen size={18} aria-hidden="true" /> Материалдар
+        </Link>
+        <Link to="/announcements" className="quick-links__item">
+          <Megaphone size={18} aria-hidden="true" /> Хабарландырулар
+        </Link>
+      </nav>
 
       {birthdays.today.length > 0 && (
         <section className="birthday-banner" role="status">
@@ -183,6 +193,8 @@ export default function HomePage() {
           </div>
         </CatalogState>
       </section>
+
+      <SpaceCard />
 
       <section className="panel">
         <SectionTitle

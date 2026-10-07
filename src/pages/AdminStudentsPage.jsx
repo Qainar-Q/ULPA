@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, KeyRound, RefreshCw, Users, X } from "lucide-react";
+import { Cake, Check, Copy, KeyRound, Pencil, RefreshCw, Users, X } from "lucide-react";
+import StudentEditForm from "../components/admin/StudentEditForm.jsx";
 import PageHeader from "../components/ui/PageHeader.jsx";
 import Segmented from "../components/ui/Segmented.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
@@ -79,15 +80,18 @@ export default function AdminStudentsPage() {
   const [busyCode, setBusyCode] = useState(null);
   const [issued, setIssued] = useState(null);
   const [actionError, setActionError] = useState(null);
+  const [editing, setEditing] = useState(null);
 
+  // Account state (codes) + profile fields (birthday, monitor), merged by student code.
   const load = useCallback(async () => {
-    setState("loading");
-    const { data, error } = await supabase.rpc("admin_list_accounts");
-    if (error) {
+    setState((current) => (current === "ready" ? "ready" : "loading"));
+    const [accounts, profiles] = await Promise.all([supabase.rpc("admin_list_accounts"), supabase.rpc("admin_list_students")]);
+    if (accounts.error || profiles.error) {
       setState("error");
       return;
     }
-    setRows(data ?? []);
+    const byCode = new Map((profiles.data ?? []).map((row) => [row.code, row]));
+    setRows((accounts.data ?? []).map((row) => ({ ...byCode.get(row.code), ...row })));
     setState("ready");
   }, []);
 
@@ -166,12 +170,21 @@ export default function AdminStudentsPage() {
                 <strong>
                   {row.full_name}
                   {row.role === "admin" && <span className="tag tag--admin">Әкімші</span>}
+                  {row.is_monitor && <span className="tag tag--admin">Староста</span>}
                 </strong>
                 <div className="roster__meta">
                   <span>{row.group_no}-топ</span>
+                  {row.birth_day && (
+                    <span>
+                      <Cake size={12} aria-hidden="true" /> {row.birth_day}.{String(row.birth_month).padStart(2, "0")}
+                    </span>
+                  )}
                   <AccountStatus row={row} />
                 </div>
               </div>
+              <button type="button" className="icon-button roster__edit" onClick={() => setEditing(row)} aria-label="Өзгерту">
+                <Pencil size={15} />
+              </button>
               <button
                 type="button"
                 className="button button--ghost button--sm"
@@ -185,6 +198,8 @@ export default function AdminStudentsPage() {
           ))}
         </ul>
       )}
+
+      {editing && <StudentEditForm student={editing} onClose={() => setEditing(null)} onSaved={load} />}
     </div>
   );
 }
