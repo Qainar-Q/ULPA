@@ -77,6 +77,9 @@
   align-items: center;
   gap: 2px;
   min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
   font-size: var(--fs-sm);
   font-weight: 550;
   color: var(--accent);

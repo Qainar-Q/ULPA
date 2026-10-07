@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { FolderOpen, Megaphone, ShieldCheck, Vote } from "lucide-react";
+import { FolderOpen, GraduationCap, Megaphone, ShieldCheck, Vote } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
 import { NAV_ITEMS } from "./navItems.js";
 import { useTasks } from "../../features/tasks/TasksContext.jsx";
@@ -38,6 +38,10 @@ export default function Sidebar() {
           <FolderOpen size={18} strokeWidth={1.8} />
           <span>Материалдар</span>
           <NewCount n={counts.materials} />
+        </NavLink>
+        <NavLink to="/teachers" className="side-nav__item">
+          <GraduationCap size={18} strokeWidth={1.8} />
+          <span>Оқытушылар</span>
         </NavLink>
         <NavLink to="/announcements" className="side-nav__item">
           <Megaphone size={18} strokeWidth={1.8} />

@@ -96,3 +96,16 @@ export async function compressImageFile(file) {
     return file; // e.g. HEIC on a browser that cannot read it: upload as is
   }
 }
+
+/** Resize any image to fit `maxEdge` and return a JPEG blob (used for teacher portraits). */
+export async function resizeToJpeg(file, maxEdge = 640, quality = 0.82) {
+  if (!file?.type?.startsWith("image/")) throw new ImageError("not_image");
+  if (file.size > MAX_INPUT_BYTES) throw new ImageError("too_large");
+  const source = await decode(file);
+  try {
+    const { blob } = await render(source, maxEdge, quality);
+    return blob;
+  } finally {
+    if (typeof source.close === "function") source.close();
+  }
+}
