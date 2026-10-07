@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Download, ExternalLink, Trash2, X } from "lucide-react";
 import { canShareFiles, fetchImageFile, saveImageFile } from "../../lib/saveImage.js";
 import { preloadImage } from "../../lib/signedUrls.js";
+import PhotoSocial from "./PhotoSocial.jsx";
 import { deletePhoto, signUrls } from "../../features/photos/photoApi.js";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 import { APP_TIME_ZONE, SESSION_TYPES } from "../../config/app.js";
@@ -19,12 +20,13 @@ function formatDate(iso) {
 }
 
 /** Full-screen photo viewer with previous/next, original link and delete. */
-export default function PhotoViewer({ photos, index, thumbs, courseById, onIndexChange, onClose, onDeleted }) {
+export default function PhotoViewer({ photos, index, thumbs, courseById, onIndexChange, onClose, onDeleted, onEngagementChange }) {
   const { student, isAdmin } = useAuth();
   const photo = photos[index];
   const [fullUrl, setFullUrl] = useState(null);
   const [failed, setFailed] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [file, setFile] = useState(null); // pre-fetched so the share sheet opens within the tap
   const [saveState, setSaveState] = useState(null);
 
@@ -84,7 +86,12 @@ export default function PhotoViewer({ photos, index, thumbs, courseById, onIndex
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(event) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        if (commentsOpen) setCommentsOpen(false);
+        else onClose();
+        return;
+      }
+      if (event.target?.closest?.("input, textarea")) return; // typing a comment
       if (event.key === "ArrowLeft") go(-1);
       if (event.key === "ArrowRight") go(1);
     }
@@ -93,7 +100,7 @@ export default function PhotoViewer({ photos, index, thumbs, courseById, onIndex
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKey);
     };
-  }, [go, onClose]);
+  }, [go, onClose, commentsOpen]);
 
   // Simple swipe left/right on touch screens.
   const [touchX, setTouchX] = useState(null);
@@ -174,6 +181,12 @@ export default function PhotoViewer({ photos, index, thumbs, courseById, onIndex
           {photo.uploader_name && <span>{photo.uploader_name}</span>}
         </div>
         {photo.caption && <p className="viewer__caption">{photo.caption}</p>}
+        <PhotoSocial
+          photo={photo}
+          commentsOpen={commentsOpen}
+          onCommentsOpenChange={setCommentsOpen}
+          onChanged={onEngagementChange}
+        />
         {!failed && (
           <div className="viewer__save">
             <button type="button" className="button button--primary" onClick={save} disabled={!file}>
