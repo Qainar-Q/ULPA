@@ -29,14 +29,25 @@ export function UnreadProvider({ children }) {
       setCounts(EMPTY);
       return undefined;
     }
+    // Presence for the admin dashboard: about once a minute while the app is in the foreground.
+    const touch = () => {
+      if (document.visibilityState === "visible") supabase.rpc("touch_presence").then(() => {}, () => {});
+    };
     refresh();
     syncPush();
-    const onVisible = () => document.visibilityState === "visible" && refresh();
+    touch();
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      refresh();
+      touch();
+    };
     document.addEventListener("visibilitychange", onVisible);
     const timer = setInterval(refresh, 2 * 60 * 1000);
+    const presence = setInterval(touch, 60 * 1000);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       clearInterval(timer);
+      clearInterval(presence);
     };
   }, [status, refresh]);
 
