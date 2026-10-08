@@ -16,6 +16,7 @@ export default function CheckinPage() {
   const { courseById } = useCatalog();
   const [sessionParam] = useQueryParam("s", "");
   const [codeParam] = useQueryParam("c", "");
+  const [testParam] = useQueryParam("test", "");
   const [code, setCode] = useState(codeParam);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -40,7 +41,7 @@ export default function CheckinPage() {
 
   // Opened from the QR: check in straight away.
   useEffect(() => {
-    if (codeParam && !tried.current) {
+    if (codeParam && !tried.current && !testParam) {
       tried.current = true;
       submit(codeParam, sessionParam || null);
     }
@@ -53,6 +54,7 @@ export default function CheckinPage() {
     <div className="stack-lg">
       <PageHeader eyebrow="Сабаққа" title="Белгілену" description="Оқытушы көрсеткен QR-ды телефон камерасымен сканерле немесе 6 таңбалы кодты енгіз. Код 20 секунд сайын ауысады." />
 
+      {testParam && <p className="campus-room">Бұл — оқытушының сынақ QR-ы. Сабақта нағыз QR сканерленгенде осы бетте бірден «Белгілендің ✓» шығады.</p>}
       {result?.ok ? (
         <section className="panel checkin-done">
           <CheckCircle2 size={44} aria-hidden="true" />

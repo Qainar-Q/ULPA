@@ -96,10 +96,14 @@ export default function RollView({ entry, date, base, onDate }) {
           <span className="roll-saving" aria-live="polite">{saving ? "Сақталуда…" : rows ? "Сақталды ✓" : ""}</span>
         </div>
         <div className="roll-actions">
-          {date === today && (
+          {date === today ? (
             <Link to={`${base}/lesson/${entry.id}/${date}/qr`} className="button button--primary">
               <QrCode size={18} /> QR арқылы белгілеу
             </Link>
+          ) : (
+            <span className="roll-qr-note">
+              <QrCode size={15} aria-hidden="true" /> QR тек сабақ болатын күні ашылады — өткен сабақтарды қолмен белгілеңіз.
+            </span>
           )}
           <button
             type="button"

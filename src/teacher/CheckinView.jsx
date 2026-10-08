@@ -5,7 +5,7 @@ import qrcode from "qrcode-generator";
 import { checkinStatus, clock, closeCheckin, openCheckin } from "./teacherApi.js";
 
 /** QR as plain SVG rectangles (no HTML injection). */
-function QrSvg({ text }) {
+export function QrSvg({ text }) {
   const cells = useMemo(() => {
     const qr = qrcode(0, "M");
     qr.addData(text);
