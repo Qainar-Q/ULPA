@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { exitDemo, isDemo } from "../../demo/demoMode.js";
 import { supabase } from "../../lib/supabase.js";
 import { clearPrivateFileCache } from "../../lib/signedUrls.js";
 import { disablePush } from "../../lib/push.js";
@@ -131,6 +132,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (isDemo()) return exitDemo("/login");
     // This device should stop receiving this student's notifications.
     await disablePush().catch(() => {});
     await clearPrivateFileCache();

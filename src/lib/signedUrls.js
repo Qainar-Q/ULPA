@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import { demoFileUrl, isDemo } from "../demo/demoMode.js";
 
 // Private files need signed links. Every new signature is a different URL, which
 // defeats caching, so a link is reused until shortly before it expires.
@@ -10,6 +11,7 @@ const cache = new Map(); // "bucket/path" → { url, expiresAt }
 /** { path: signedUrl } for the given paths, signing only the ones not cached. */
 export async function signedUrls(bucket, paths) {
   const unique = [...new Set(paths.filter(Boolean))];
+  if (isDemo()) return Object.fromEntries(unique.map((path) => [path, demoFileUrl(path)]));
   const now = Date.now();
   const result = {};
   const missing = [];

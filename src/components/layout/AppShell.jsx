@@ -7,6 +7,7 @@ import BottomNav from "./BottomNav.jsx";
 import MobileTopbar from "./MobileTopbar.jsx";
 import OnboardingTour from "../OnboardingTour.jsx";
 import BadgeToast from "../classlife/BadgeToast.jsx";
+import DemoBanner from "./DemoBanner.jsx";
 
 export default function AppShell() {
   const { pathname } = useLocation();
@@ -40,6 +41,7 @@ export default function AppShell() {
       <div className="app-main">
         <MobileTopbar />
         <main className="page" id="main">
+          <DemoBanner />
           {/* Navigation stays visible while a page's code loads */}
           <Suspense fallback={<PageLoading />}>
             <Outlet />

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, Fingerprint, LogIn } from "lucide-react";
+import { Eye, FlaskConical, Fingerprint, LogIn } from "lucide-react";
 import AuthLayout from "../components/layout/AuthLayout.jsx";
 import PasswordField from "../components/ui/PasswordField.jsx";
 import StudentCodeField from "../components/StudentCodeField.jsx";
@@ -55,6 +55,9 @@ export default function LoginPage() {
           <Link to="/guest" className="guest-link">
             <Eye size={15} aria-hidden="true" /> Қонақ ретінде қарау
           </Link>
+          <a href="/demo" className="guest-link">
+            <FlaskConical size={15} aria-hidden="true" /> Демо нұсқасын байқап көру
+          </a>
         </>
       }
     >
