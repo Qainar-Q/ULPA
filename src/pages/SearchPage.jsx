@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, Camera, ClipboardList, FileText, GraduationCap, History, Megaphone, Search, Vote, X } from "lucide-react";
+import { BookOpen, Camera, ClipboardList, FileText, GraduationCap, History, Megaphone, NotebookPen, Search, Vote, X } from "lucide-react";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 import { useQueryParam } from "../lib/useQueryParam.js";
@@ -15,8 +15,9 @@ const KINDS = {
   teacher: { label: "Оқытушылар", icon: GraduationCap },
   photo: { label: "Фотолар", icon: Camera },
   poll: { label: "Сауалнамалар", icon: Vote },
+  note: { label: "Конспектілер", icon: NotebookPen },
 };
-const ORDER = ["course", "task", "material", "teacher", "announcement", "poll", "photo"];
+const ORDER = ["course", "task", "note", "material", "teacher", "announcement", "poll", "photo"];
 
 function linkFor(item, course) {
   switch (item.kind) {
@@ -32,6 +33,8 @@ function linkFor(item, course) {
       return course ? `/photos?course=${course.slug}` : "/photos";
     case "poll":
       return "/polls";
+    case "note":
+      return `/notes/${item.id}`;
     default:
       return "/announcements";
   }

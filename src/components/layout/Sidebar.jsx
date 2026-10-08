@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
-import { CalendarCheck, FolderOpen, GraduationCap, Map, Megaphone, Search, ShieldCheck, Vote } from "lucide-react";
+import { Search, ShieldCheck } from "lucide-react";
 import BrandMark from "./BrandMark.jsx";
-import { NAV_ITEMS } from "./navItems.js";
+import { MORE_LINKS, NAV_ITEMS } from "./navItems.js";
 import { useTasks } from "../../features/tasks/TasksContext.jsx";
 import { useUnread } from "../../features/unread/UnreadContext.jsx";
 import { APP_NAME, CLASS_LABEL } from "../../config/app.js";
@@ -40,33 +40,13 @@ export default function Sidebar() {
             {to === "/photos" && <NewCount n={counts.photos} />}
           </NavLink>
         ))}
-        <NavLink to="/attendance" className="side-nav__item">
-          <CalendarCheck size={18} strokeWidth={1.8} />
-          <span>Қатысу</span>
-        </NavLink>
-        <NavLink to="/campus" className="side-nav__item">
-          <Map size={18} strokeWidth={1.8} />
-          <span>Кампус картасы</span>
-        </NavLink>
-        <NavLink to="/materials" className="side-nav__item">
-          <FolderOpen size={18} strokeWidth={1.8} />
-          <span>Материалдар</span>
-          <NewCount n={counts.materials} />
-        </NavLink>
-        <NavLink to="/teachers" className="side-nav__item">
-          <GraduationCap size={18} strokeWidth={1.8} />
-          <span>Оқытушылар</span>
-        </NavLink>
-        <NavLink to="/announcements" className="side-nav__item">
-          <Megaphone size={18} strokeWidth={1.8} />
-          <span>Хабарландырулар</span>
-          <NewCount n={counts.announcements} />
-        </NavLink>
-        <NavLink to="/polls" className="side-nav__item">
-          <Vote size={18} strokeWidth={1.8} />
-          <span>Дауыс беру</span>
-          <NewCount n={counts.polls} />
-        </NavLink>
+        {MORE_LINKS.map(({ to, title, icon: Icon, unread }) => (
+          <NavLink key={to} to={to} className="side-nav__item">
+            <Icon size={18} strokeWidth={1.8} />
+            <span>{title}</span>
+            {unread && <NewCount n={counts[unread]} />}
+          </NavLink>
+        ))}
         {isAdmin && (
           <NavLink to="/admin" className="side-nav__item">
             <ShieldCheck size={18} strokeWidth={1.8} />
@@ -89,7 +69,7 @@ export default function Sidebar() {
             </span>
           </NavLink>
         )}
-        <p className="sidebar__version">ULPA · v0.9</p>
+        <p className="sidebar__version">ULPA · v1.0</p>
       </div>
     </aside>
   );

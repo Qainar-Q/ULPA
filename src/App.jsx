@@ -34,6 +34,11 @@ const TeachersPage = lazyPage(() => import("./pages/TeachersPage.jsx"));
 const SearchPage = lazyPage(() => import("./pages/SearchPage.jsx"));
 const AttendancePage = lazyPage(() => import("./pages/AttendancePage.jsx"));
 const CampusPage = lazyPage(() => import("./pages/CampusPage.jsx"));
+const NotesPage = lazyPage(() => import("./pages/NotesPage.jsx"));
+const NotePage = lazyPage(() => import("./pages/NotePage.jsx"));
+const DrawPage = lazyPage(() => import("./pages/DrawPage.jsx"));
+const SuggestionsPage = lazyPage(() => import("./pages/SuggestionsPage.jsx"));
+const TranslatePage = lazyPage(() => import("./pages/TranslatePage.jsx"));
 
 export default function App() {
   return (
@@ -70,6 +75,11 @@ export default function App() {
               <Route path="search" element={<SearchPage />} />
               <Route path="attendance" element={<AttendancePage />} />
               <Route path="campus" element={<CampusPage />} />
+              <Route path="notes" element={<NotesPage />} />
+              <Route path="notes/:id" element={<NotePage />} />
+              <Route path="draw" element={<DrawPage />} />
+              <Route path="suggestions" element={<SuggestionsPage />} />
+              <Route path="translate" element={<TranslatePage />} />
               <Route path="courses/:slug" element={<CourseDetailPage />} />
               <Route element={<RequireAdmin />}>
                 <Route path="admin" element={<AdminLayout />}>

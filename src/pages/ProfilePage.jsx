@@ -6,6 +6,7 @@ import PasskeySettings from "../components/PasskeySettings.jsx";
 import InstallApp from "../components/InstallApp.jsx";
 import ThemeSwitch from "../components/ThemeSwitch.jsx";
 import NotificationSettings from "../components/NotificationSettings.jsx";
+import BadgesPanel from "../components/classlife/BadgesPanel.jsx";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { PROGRAM_NAME } from "../config/app.js";
 
@@ -70,9 +71,13 @@ export default function ProfilePage() {
         </div>
       </dl>
       <p className="muted small">
-        Аты, тобы және туған күнін тек әкімші өзгерте алады. Туған күнің басқа студенттерге көрінбейді.
+        Аты, тобы және туған күнін тек әкімші өзгерте алады. Туған күніңнің тек күні мен айы сыныптастарға көрінеді (құттықтау үшін), жылы сақталмайды.
         Әкімші сенің ULPA-ға соңғы кірген уақытыңды және қанша күн қолданғаныңды көреді (қай бетті ашқаның сақталмайды).
       </p>
+
+      <div id="badges">
+        <BadgesPanel />
+      </div>
 
       <section className="panel">
         <h2 className="panel-title">Хабарландырулар</h2>
