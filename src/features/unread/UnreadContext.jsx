@@ -16,7 +16,8 @@ export function UnreadProvider({ children }) {
     if (error || !data) return;
     const next = { ...EMPTY };
     for (const row of data) next[row.area] = row.unread;
-    setCounts(next);
+    // Same numbers → keep the old object, so nothing re-renders.
+    setCounts((current) => (Object.keys(next).every((key) => current[key] === next[key]) ? current : next));
   }, []);
 
   const markSeen = useCallback(async (area) => {

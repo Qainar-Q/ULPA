@@ -5,6 +5,11 @@ import { X } from "lucide-react";
 /** Accessible modal: Esc closes, page scroll locked, focus moved inside. */
 export default function Modal({ title, onClose, children, variant = "sheet", labelledBy }) {
   const panelRef = useRef(null);
+  // Parents pass a new onClose on every render; keep the latest in a ref so the
+  // focus/scroll-lock effect runs only when the modal opens (otherwise focus jumps
+  // and the phone keyboard closes while typing).
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -13,7 +18,7 @@ export default function Modal({ title, onClose, children, variant = "sheet", lab
     panelRef.current?.focus();
 
     function onKey(event) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") closeRef.current();
     }
     window.addEventListener("keydown", onKey);
     return () => {
@@ -21,7 +26,7 @@ export default function Modal({ title, onClose, children, variant = "sheet", lab
       window.removeEventListener("keydown", onKey);
       if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return createPortal(
     <div className={`modal modal--${variant}`} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>

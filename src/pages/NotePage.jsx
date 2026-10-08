@@ -61,7 +61,7 @@ function NoteHistory({ noteId, onRestore, onClose }) {
   );
 }
 
-export default function NotePage() {
+function NoteScreen() {
   const { id: routeId } = useParams();
   const isNew = routeId === "new";
   const navigate = useNavigate();
@@ -360,4 +360,10 @@ export default function NotePage() {
       {history && note && <NoteHistory noteId={note.id} onRestore={restore} onClose={() => setHistory(false)} />}
     </div>
   );
+}
+
+/** New key per note id: after saving a new note the page starts fresh in view mode. */
+export default function NotePage() {
+  const { id } = useParams();
+  return <NoteScreen key={id} />;
 }

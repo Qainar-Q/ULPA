@@ -252,7 +252,7 @@
 .note-editor__text {
   min-height: 320px;
   font-family: var(--font-mono);
-  font-size: 0.875rem;
+  font-size: 1rem; /* 16px: iPhone does not zoom on focus */
   line-height: 1.6;
 }
 

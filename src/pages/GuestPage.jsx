@@ -41,12 +41,11 @@ function GpaDemo() {
             <span>{label}</span>
             <input
               className="input input--score"
-              type="number"
+              type="text"
               inputMode="decimal"
-              min="0"
-              max="100"
+              autoComplete="off"
               value={entry[key]}
-              onChange={(event) => setEntry((current) => ({ ...current, [key]: event.target.value }))}
+              onChange={(event) => setEntry((current) => ({ ...current, [key]: event.target.value.replace(/[^\d.,]/g, "").slice(0, 6) }))}
             />
           </label>
         ))}

@@ -54,7 +54,7 @@ function useIss() {
           if (!cancelled) setState((current) => (current.position ? current : { ...current, status: "error" }));
         }
       }
-      timer = setTimeout(tick, 10000);
+      if (!cancelled) timer = setTimeout(tick, 10000);
     }
     tick();
     return () => {

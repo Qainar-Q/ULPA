@@ -46,7 +46,10 @@ export default function PhotoUploadDialog({ onClose, onUploaded, defaultCourseSl
   const cameraRef = useRef(null);
   const galleryRef = useRef(null);
 
-  useEffect(() => () => files.forEach((item) => URL.revokeObjectURL(item.preview)), [files]);
+  // Free the previews when the dialog closes (removed photos are freed one by one below).
+  const filesRef = useRef(files);
+  filesRef.current = files;
+  useEffect(() => () => filesRef.current.forEach((item) => URL.revokeObjectURL(item.preview)), []);
 
   function addFiles(list) {
     setError(null);
@@ -94,7 +97,10 @@ export default function PhotoUploadDialog({ onClose, onUploaded, defaultCourseSl
         setError(uploadError instanceof ImageError ? uploadError.code : "upload");
         setProgress(null);
         // Keep the files that did not upload so the student can retry.
-        setFiles((current) => current.slice(uploaded));
+        setFiles((current) => {
+          current.slice(0, uploaded).forEach((item) => URL.revokeObjectURL(item.preview));
+          return current.slice(uploaded);
+        });
         if (uploaded > 0) onUploaded();
         return;
       }

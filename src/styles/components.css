@@ -85,6 +85,11 @@
   color: var(--accent);
 }
 
+/* Links (back links, "all" links) are easier to hit on a phone. */
+a.text-link {
+  min-height: 40px;
+}
+
 .text-link:hover {
   text-decoration: underline;
   text-underline-offset: 3px;

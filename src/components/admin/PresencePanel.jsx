@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase.js";
+import { useVisiblePolling } from "../../lib/useVisiblePolling.js";
 
 /** Online comes from the server clock; the rest is relative to this device's time. */
 function ago(row, now) {
@@ -36,11 +37,7 @@ export default function PresencePanel() {
     setNow(Date.now());
   }, []);
 
-  useEffect(() => {
-    load();
-    const timer = setInterval(load, 30 * 1000);
-    return () => clearInterval(timer);
-  }, [load]);
+  useVisiblePolling(load, 30 * 1000);
 
   if (!rows) return <div className="skeleton-list" aria-busy="true"><span /><span /></div>;
 

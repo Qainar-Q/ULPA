@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useVisiblePolling } from "../lib/useVisiblePolling.js";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Maximize2, Square } from "lucide-react";
 import qrcode from "qrcode-generator";
@@ -34,7 +35,6 @@ export default function CheckinView({ entry, date, base }) {
   const [state, setState] = useState(null);
   const [error, setError] = useState(null);
   const [big, setBig] = useState(false);
-  const tick = useRef(null);
 
   useEffect(() => {
     let alive = true;
@@ -46,24 +46,39 @@ export default function CheckinView({ entry, date, base }) {
     };
   }, [entry.id, date]);
 
-  useEffect(() => {
-    if (!sessionId) return undefined;
-    let alive = true;
-    async function poll() {
+  const closed = state && !state.open;
+  useVisiblePolling(
+    async () => {
       try {
         const next = await checkinStatus(sessionId);
-        if (alive) setState({ ...next, at: Date.now() });
+        setState({ ...next, at: Date.now() });
       } catch {
         /* keep the last code on a network blip */
       }
-    }
-    poll();
-    tick.current = setInterval(poll, 2000);
-    return () => {
-      alive = false;
-      clearInterval(tick.current);
+    },
+    2000,
+    Boolean(sessionId) && !closed
+  );
+
+  // Keep the screen on while the QR is shown (phones lock after ~30 s otherwise).
+  useEffect(() => {
+    let lock = null;
+    let released = false;
+    const request = async () => {
+      try {
+        if (!released && document.visibilityState === "visible" && "wakeLock" in navigator) lock = await navigator.wakeLock.request("screen");
+      } catch {
+        lock = null;
+      }
     };
-  }, [sessionId]);
+    request();
+    document.addEventListener("visibilitychange", request);
+    return () => {
+      released = true;
+      document.removeEventListener("visibilitychange", request);
+      lock?.release?.().catch?.(() => {});
+    };
+  }, []);
 
   // Smooth countdown between polls.
   const [, setNow] = useState(Date.now());
@@ -95,7 +110,9 @@ export default function CheckinView({ entry, date, base }) {
             <div className="checkin__qr">
               <QrSvg text={url} />
             </div>
-            <p className="checkin__hint">Телефон камерасымен сканерлеңіз немесе ULPA → «Белгілену» бетіне кодты енгізіңіз:</p>
+            <p className="checkin__hint">
+              Студенттер: <strong>ULPA қосымшасын ашып → «Белгілену»</strong> бетіне кодты енгізіңдер (басты бетте де батырма шығады). Камерамен сканерлеуге де болады.
+            </p>
             <p className="checkin__code" aria-live="polite">
               {state.code.slice(0, 3)} {state.code.slice(3)}
             </p>

@@ -20,6 +20,7 @@ export function GpaProvider({ children }) {
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const [feedback, setFeedback] = useState({ sound: false, vibration: false });
   const timers = useRef({});
+  const pending = useRef(new Set()); // slugs typed but not saved yet
 
   // Load saved grades once courses are known.
   useEffect(() => {
@@ -35,7 +36,12 @@ export function GpaProvider({ children }) {
           const course = courses.find((item) => item.id === row.course_id);
           if (course) bySlug[course.slug] = { ab1: toInput(row.ab1), ab2: toInput(row.ab2), exam: toInput(row.exam) };
         }
-        setEntries(bySlug);
+        // Never overwrite what the student is typing right now.
+        setEntries((current) => {
+          const merged = { ...bySlug };
+          for (const slug of pending.current) if (current[slug]) merged[slug] = current[slug];
+          return merged;
+        });
       });
     return () => {
       cancelled = true;
@@ -51,6 +57,7 @@ export function GpaProvider({ children }) {
       const course = courses.find((item) => item.slug === slug);
       if (!course) return;
       const values = [entry.ab1, entry.ab2, entry.exam].map(parseScore);
+      pending.current.delete(slug);
       if (values.some((value) => Number.isNaN(value))) return; // never save invalid input
       setSaveState("saving");
       const [ab1, ab2, exam] = values;
@@ -69,6 +76,7 @@ export function GpaProvider({ children }) {
     (slug, field, raw) => {
       setEntries((current) => {
         const next = { ...emptyEntry, ...current[slug], [field]: raw };
+        pending.current.add(slug);
         clearTimeout(timers.current[slug]);
         timers.current[slug] = setTimeout(() => persist(slug, next), 800);
         return { ...current, [slug]: next };

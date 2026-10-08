@@ -14,9 +14,19 @@
   gap: var(--s-3);
   padding: 10px var(--gutter);
   padding-top: calc(10px + env(safe-area-inset-top));
+  isolation: isolate;
+}
+
+.t-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   border-bottom: 1px solid var(--line);
   background: var(--bar-bg);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
+  pointer-events: none;
 }
 
 .t-bar__nav {

@@ -17,7 +17,7 @@ export default function CheckinPage() {
   const [sessionParam] = useQueryParam("s", "");
   const [codeParam] = useQueryParam("c", "");
   const [testParam] = useQueryParam("test", "");
-  const [code, setCode] = useState(codeParam);
+  const [code, setCode] = useState(testParam ? "" : codeParam);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState([]);
