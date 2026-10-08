@@ -11,10 +11,13 @@ import { formatDateTime } from "../lib/due.js";
 
 const MAX_IMAGES = 5;
 const ERRORS = {
-  not_configured: "Аударма әлі іске қосылмаған — әкімші Claude API кілтін қосуы керек.",
+  not_configured: "Аударма әлі іске қосылмаған — әкімші API кілтін қосуы керек.",
+  region: "Бұл AI қызметі біздің аймақта қолжетімсіз болып тұр — әкімшіге айт.",
+  blocked: "AI бұл бетті аудармады. Басқа суретпен көр.",
+  empty_result: "AI бос жауап қайтарды. Суретті анығырақ түсіріп, қайта көр.",
   limit: "Бүгінгі лимитің бітті (күніне 15 аударма). Ертең қайта көр.",
   class_limit: "Бүгін бүкіл топтың лимиті бітті. Ертең қайта көр.",
-  busy: "Claude қазір бос емес. Бір минуттан кейін қайта көр.",
+  busy: "AI қазір бос емес не минуттық лимит толды. Бір минуттан кейін қайта көр.",
   no_credit: "API балансы бітті — әкімшіге айт.",
   bad_key: "API кілті қате — әкімшіге айт.",
   bad_image: "Бұл суретті оқи алмадым. JPG/PNG скриншот не фото жібер.",
@@ -156,9 +159,9 @@ export default function TranslatePage() {
   return (
     <div className="stack-lg">
       <PageHeader
-        eyebrow="Claude AI"
+        eyebrow="AI аудармашы"
         title="Орысша → қазақша"
-        description="Орысша оқулықтың бетін суретке түсір не скриншот жібер — Claude оқып, формулаларын сақтап, қазақшаға аударады."
+        description="Орысша оқулықтың бетін суретке түсір не скриншот жібер — AI оқып, формулаларын сақтап, қазақшаға аударады."
       />
 
       <section className="panel translate-input">
@@ -223,7 +226,7 @@ export default function TranslatePage() {
         {error && <p className="form__error" role="alert">{error}</p>}
         <button type="button" className="button button--primary button--block" onClick={run} disabled={Boolean(busy)}>
           {source === "image" ? <Languages size={18} /> : <Type size={18} />}{" "}
-          {busy ? `Claude оқып жатыр… ${busy !== "1" ? busy : ""}` : "Қазақшаға аудару"}
+          {busy ? `AI оқып жатыр… ${busy !== "1" ? busy : ""}` : "Қазақшаға аудару"}
         </button>
         <p className="muted small">
           {busy ? "Бір бетке әдетте 15–40 секунд кетеді. Бетті жаппа." : "Күніне 15 аударма. Аударма — көмекші құрал: маңызды терминдерді оқулықпен салыстырып тексер."}
