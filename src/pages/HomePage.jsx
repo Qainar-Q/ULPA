@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { ClipboardList, Calculator, ChevronRight, Coffee, Cake, Megaphone } from "lucide-react";
 import { MORE_LINKS } from "../components/layout/navItems.js";
-import BirthdayHero from "../components/classlife/BirthdayHero.jsx";
+import { Suspense, lazy } from "react";
+// Only downloaded on someone's birthday.
+const BirthdayHero = lazy(() => import("../components/classlife/BirthdayHero.jsx"));
 import OpenCheckinBanner from "../components/OpenCheckinBanner.jsx";
 import CourseCard from "../components/CourseCard.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
@@ -46,7 +48,11 @@ export default function HomePage() {
   return (
     <div className="stack-lg">
       <OpenCheckinBanner />
-      {birthdays.today.length > 0 && <BirthdayHero people={birthdays.today} myCode={student?.code} />}
+      {birthdays.today.length > 0 && (
+        <Suspense fallback={null}>
+          <BirthdayHero people={birthdays.today} myCode={student?.code} />
+        </Suspense>
+      )}
 
       <section className="hero">
         <div className="hero__grid" aria-hidden="true" />

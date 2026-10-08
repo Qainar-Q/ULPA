@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useVisiblePolling } from "../lib/useVisiblePolling.js";
 import { Link } from "react-router-dom";
 import { QrCode } from "lucide-react";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
@@ -9,12 +10,7 @@ export default function OpenCheckinBanner() {
   const { courseById } = useCatalog();
   const [open, setOpen] = useState([]);
 
-  useEffect(() => {
-    const load = () => myOpenCheckins().then((rows) => setOpen(rows.filter((row) => !row.done))).catch(() => {});
-    load();
-    const timer = setInterval(load, 45000);
-    return () => clearInterval(timer);
-  }, []);
+  useVisiblePolling(() => myOpenCheckins().then((rows) => setOpen(rows.filter((row) => !row.done))).catch(() => {}), 30000);
 
   if (!open.length) return null;
   const first = open[0];

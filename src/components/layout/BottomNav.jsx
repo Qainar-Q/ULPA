@@ -15,9 +15,16 @@ export default function BottomNav() {
           <span className="nav-icon">
             <Icon size={21} strokeWidth={1.8} />
             {to === "/tasks" && openTasks.length > 0 && (
-              <span className={`nav-badge${counts.tasks > 0 ? " nav-badge--new" : ""}`}>{openTasks.length}</span>
+              <span className={`nav-badge${counts.tasks > 0 ? " nav-badge--new" : ""}`}>
+                {openTasks.length}
+                {counts.tasks > 0 && <span className="sr-only"> (жаңасы бар)</span>}
+              </span>
             )}
-            {dots[to] > 0 && <span className="nav-dot" aria-label="Жаңа" />}
+            {dots[to] > 0 && (
+              <span className="nav-dot">
+                <span className="sr-only">Жаңа</span>
+              </span>
+            )}
           </span>
           <span>{label}</span>
         </NavLink>

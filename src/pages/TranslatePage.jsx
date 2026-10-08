@@ -8,6 +8,7 @@ import { deleteTranslation, listTranslations, translate } from "../features/clas
 import { storeDraft } from "../features/notes/notesApi.js";
 import { resizeToJpeg } from "../features/photos/imageProcessing.js";
 import { formatDateTime } from "../lib/due.js";
+import { holdBusy } from "../lib/busy.js";
 
 const MAX_IMAGES = 5;
 const ERRORS = {
@@ -92,7 +93,7 @@ export default function TranslatePage() {
     const files = [...list].filter((file) => file.type.startsWith("image/"));
     if (files.length === 0) return;
     setError(null);
-    setImages((current) => [...current, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, MAX_IMAGES));
+    setImages((current) => [...current, ...files.slice(0, Math.max(0, MAX_IMAGES - current.length)).map((file) => ({ file, url: URL.createObjectURL(file) }))]);
   }
 
   // Paste a screenshot with Ctrl+V.
@@ -114,6 +115,8 @@ export default function TranslatePage() {
     if (source === "image" && jobs.length === 0) return setError("Алдымен сурет таңда.");
     if (source === "text" && !text.trim()) return setError("Орысша мәтінді қой.");
     const done = [];
+    const doneImages = [];
+    const release = holdBusy();
     for (let i = 0; i < jobs.length; i += 1) {
       setBusy(jobs.length > 1 ? `${i + 1}/${jobs.length}` : "1");
       try {
@@ -123,6 +126,7 @@ export default function TranslatePage() {
         done.push({ id: data.id, result: data.result, created_at: data.created_at ?? new Date().toISOString(), source_kind: job.image ? "image" : "text", label: job.label, truncated: data.truncated });
         setRemaining(data.remaining);
         setResults([...done]);
+        if (job.image) doneImages.push(job.image);
       } catch (translateError) {
         setError(ERRORS[translateError?.message] ?? "Аударылмады. Қайта көр.");
         break;
@@ -130,11 +134,11 @@ export default function TranslatePage() {
     }
     if (done.length) {
       setHistory((current) => [...done.slice().reverse(), ...current]);
-      if (source === "image") {
-        images.forEach((image) => URL.revokeObjectURL(image.url));
-        setImages([]);
-      }
+      // Keep the pages that were not translated (e.g. page 2 failed), drop the rest.
+      doneImages.forEach((image) => URL.revokeObjectURL(image.url));
+      setImages((current) => current.filter((image) => !doneImages.includes(image)));
     }
+    release();
     setBusy(null);
   }
 

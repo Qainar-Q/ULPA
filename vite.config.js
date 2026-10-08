@@ -18,6 +18,9 @@ export default defineConfig({
               name: (id) =>
                 /[\\/]src[\\/](lib|features|config|components)[\\/]/.test(id) &&
                 !/[\\/]components[\\/]layout[\\/]/.test(id) &&
+                // Admin-only and rarely opened parts load with their own pages, not at startup.
+                !/[\\/]components[\\/](admin|classlife|teachers)[\\/]/.test(id) &&
+                !/(PhotoUploadDialog|MaterialUploadDialog|PhotoViewer|ImageLightbox|Markdown)\.jsx$/.test(id) &&
                 !/prefetch\.js$/.test(id)
                   ? "core"
                   : null,

@@ -1850,13 +1850,13 @@
   appearance: none;
   -webkit-appearance: none;
   min-height: 36px;
-  max-width: 132px;
+  max-width: 150px;
   padding: 0 28px 0 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: var(--surface);
   color: var(--text-2);
-  font-size: var(--fs-xs);
+  font-size: 16px; /* smaller makes iPhone zoom in when the picker opens */
   font-weight: 600;
   cursor: pointer;
 }

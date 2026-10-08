@@ -975,10 +975,19 @@
   align-items: center;
   justify-content: space-between;
   padding: calc(var(--s-2) + env(safe-area-inset-top)) var(--gutter) var(--s-2);
-  background: var(--bar-bg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  isolation: isolate;
+}
+
+.guest__bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   border-bottom: 1px solid var(--line);
+  background: var(--bar-bg);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
 }
 
 .guest__main {

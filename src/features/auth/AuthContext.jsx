@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { exitDemo, isDemo } from "../../demo/demoMode.js";
 import { supabase } from "../../lib/supabase.js";
 import { clearPrivateFileCache } from "../../lib/signedUrls.js";
@@ -8,6 +8,32 @@ import { normalizeStudentCode, studentEmail } from "./studentCode.js";
 
 const AuthContext = createContext(null);
 
+// Last known profile (name, code, group, role — nothing secret) so the app still opens
+// offline or when the server is briefly unreachable, instead of signing the student out.
+const PROFILE_KEY = isDemo() ? "ulpa-demo-profile" : "ulpa-profile";
+function rememberProfile(userId, profile) {
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify({ userId, ...profile }));
+  } catch {
+    /* storage unavailable */
+  }
+}
+function cachedProfile(userId) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null");
+    return saved?.userId === userId ? { kind: saved.kind, data: saved.data } : null;
+  } catch {
+    return null;
+  }
+}
+function forgetProfile() {
+  try {
+    localStorage.removeItem(PROFILE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 // status: "loading" → "signedIn" | "signedOut"
 export function AuthProvider({ children }) {
   const [status, setStatus] = useState("loading");
@@ -16,8 +42,11 @@ export function AuthProvider({ children }) {
   const [teacher, setTeacher] = useState(null); // teacher accounts have no student row
   const [notice, setNotice] = useState(null); // e.g. "session_expired", "not_linked"
 
+  const loadedUser = useRef(null);
+
   const loadStudent = useCallback(async (nextSession) => {
     if (!nextSession) {
+      loadedUser.current = null;
       setSession(null);
       setStudent(null);
       setTeacher(null);
@@ -25,38 +54,58 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // RLS returns only the caller's own row (admins can read all, so filter by user_id).
-    const { data, error } = await supabase
-      .from("students")
-      .select("id, code, full_name, group_no, role, is_monitor, birth_month, birth_day, avatar_path, activated_at")
-      .eq("user_id", nextSession.user.id)
-      .maybeSingle();
+    const apply = (profile) => {
+      loadedUser.current = nextSession.user.id;
+      setSession(nextSession);
+      setStudent(profile.kind === "student" ? profile.data : null);
+      setTeacher(profile.kind === "teacher" ? profile.data : null);
+      setStatus("signedIn");
+      rememberProfile(nextSession.user.id, profile);
+    };
 
-    if (!error && !data) {
+    // A few quick retries: right after unlocking the phone the network is often not ready.
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (attempt) await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+      // RLS returns only the caller's own row (admins can read all, so filter by user_id).
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, code, full_name, group_no, role, is_monitor, birth_month, birth_day, avatar_path, activated_at")
+        .eq("user_id", nextSession.user.id)
+        .maybeSingle();
+      if (data) return apply({ kind: "student", data });
+      if (error) {
+        lastError = error;
+        continue;
+      }
       // Not a student: maybe a teacher account.
       const { data: teacherData, error: teacherError } = await supabase.rpc("teacher_me");
-      if (!teacherError && teacherData?.id) {
-        setSession(nextSession);
-        setStudent(null);
-        setTeacher(teacherData);
-        setStatus("signedIn");
-        return;
+      if (teacherData?.id) return apply({ kind: "teacher", data: teacherData });
+      if (teacherError) {
+        lastError = teacherError;
+        continue;
       }
-    }
-
-    if (error || !data) {
+      // The server answered: this login belongs to nobody. Only now sign out.
+      loadedUser.current = null;
       await supabase.auth.signOut();
-      setNotice(error ? "server_error" : "not_linked");
+      setNotice("not_linked");
       setSession(null);
       setStudent(null);
+      setTeacher(null);
       setStatus("signedOut");
       return;
     }
 
+    // Offline / server trouble: keep the session. Use the last known profile if we have it.
+    const cached = cachedProfile(nextSession.user.id);
+    if (cached) {
+      apply(cached);
+      return;
+    }
+    console.warn("profile load failed", lastError?.message);
+    setNotice("server_error");
     setSession(nextSession);
-    setStudent(data);
-    setTeacher(null);
-    setStatus("signedIn");
+    setStatus("signedOut");
   }, []);
 
   useEffect(() => {
@@ -69,6 +118,7 @@ export function AuthProvider({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return;
       if (event === "SIGNED_OUT") {
+        loadedUser.current = null;
         setSession(null);
         setStudent(null);
         setTeacher(null);
@@ -76,14 +126,27 @@ export function AuthProvider({ children }) {
       } else if (event === "TOKEN_REFRESHED" && nextSession) {
         setSession(nextSession);
       } else if (event === "SIGNED_IN" && nextSession) {
+        // The auth client repeats SIGNED_IN whenever the app returns to the foreground:
+        // no need to reload the same person's profile each time.
+        if (nextSession.user.id === loadedUser.current) {
+          setSession(nextSession);
+          return;
+        }
         // Defer: calling Supabase inside this callback can deadlock the auth client.
         setTimeout(() => active && loadStudent(nextSession), 0);
       }
     });
 
+    // Came back online after a failed start: try again.
+    const onOnline = () => {
+      if (!loadedUser.current) supabase.auth.getSession().then(({ data }) => active && data.session && loadStudent(data.session));
+    };
+    window.addEventListener("online", onOnline);
+
     return () => {
       active = false;
       listener.subscription.unsubscribe();
+      window.removeEventListener("online", onOnline);
     };
   }, [loadStudent]);
 
@@ -152,6 +215,7 @@ export function AuthProvider({ children }) {
     // This device should stop receiving this student's notifications.
     await disablePush().catch(() => {});
     await clearPrivateFileCache();
+    forgetProfile();
     await supabase.auth.signOut();
   }, []);
 

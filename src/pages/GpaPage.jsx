@@ -88,14 +88,13 @@ export default function GpaPage() {
                         <input
                           id={id}
                           className="input input--score"
-                          type="number"
+                          type="text"
                           inputMode="decimal"
-                          min="0"
-                          max="100"
-                          step="0.01"
+                          autoComplete="off"
+                          enterKeyHint="next"
                           placeholder="—"
                           value={entry[field.key]}
-                          onChange={(event) => updateEntry(course.slug, field.key, event.target.value)}
+                          onChange={(event) => updateEntry(course.slug, field.key, event.target.value.replace(/[^\d.,]/g, "").slice(0, 6))}
                           aria-invalid={status === "invalid"}
                         />
                       </label>

@@ -15,6 +15,7 @@ export default function RollView({ entry, date, base, onDate }) {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(0);
   const pending = useRef(new Map());
+  const pendingFor = useRef(null); // { entryId, date } the queued taps belong to
   const timer = useRef(null);
   const today = almatyIso();
 
@@ -34,6 +35,7 @@ export default function RollView({ entry, date, base, onDate }) {
 
   // Batch quick taps into one request.
   function queue(changes) {
+    pendingFor.current = { entryId: entry.id, date };
     for (const [studentId, status] of changes) pending.current.set(studentId, status);
     setRows((current) => current.map((row) => (pending.current.has(row.student_id) ? { ...row, status: pending.current.get(row.student_id), method: "teacher" } : row)));
     clearTimeout(timer.current);
@@ -41,12 +43,14 @@ export default function RollView({ entry, date, base, onDate }) {
   }
 
   async function flush() {
+    clearTimeout(timer.current);
     const marks = [...pending.current].map(([student_id, status]) => ({ student_id, status }));
     pending.current = new Map();
-    if (!marks.length) return;
+    if (!marks.length || !pendingFor.current) return;
+    const target = pendingFor.current;
     setSaving((n) => n + 1);
     try {
-      await teacherMark(entry.id, date, marks);
+      await teacherMark(target.entryId, target.date, marks);
     } catch {
       setError("Сақталмады — қайта басып көріңіз.");
       load();
@@ -54,7 +58,10 @@ export default function RollView({ entry, date, base, onDate }) {
     setSaving((n) => n - 1);
   }
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  // Leaving the page (or switching the date) right after a tap: send what is queued.
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+  useEffect(() => () => flushRef.current(), [entry.id, date]);
 
   const counts = useMemo(() => {
     const out = { present: 0, late: 0, absent: 0, excused: 0, none: 0 };
@@ -93,7 +100,7 @@ export default function RollView({ entry, date, base, onDate }) {
           <span className="roll-count roll-count--bad">✕ {counts.absent}</span>
           <span className="roll-count roll-count--info">📝 {counts.excused}</span>
           {counts.none > 0 && <span className="roll-count">… {counts.none}</span>}
-          <span className="roll-saving" aria-live="polite">{saving ? "Сақталуда…" : rows ? "Сақталды ✓" : ""}</span>
+          <span className="roll-saving" aria-live="polite">{saving || pending.current.size ? "Сақталуда…" : rows ? "Сақталды ✓" : ""}</span>
         </div>
         <div className="roll-actions">
           {date === today ? (
