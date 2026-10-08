@@ -79,9 +79,12 @@ export default function GuestPage() {
             <small>Қонақ режимі</small>
           </span>
         </div>
-        <Link to="/login" className="button button--primary button--sm">
-          <LogIn size={15} /> Кіру
-        </Link>
+        <div className="guest__actions">
+          <a href="/demo" className="button button--ghost button--sm">Демо</a>
+          <Link to="/login" className="button button--primary button--sm">
+            <LogIn size={15} /> Кіру
+          </Link>
+        </div>
       </header>
 
       <main className="guest__main">
@@ -96,6 +99,15 @@ export default function GuestPage() {
             </p>
           </div>
         </section>
+
+        <a href="/demo" className="panel demo-cta">
+          <span className="demo-cta__icon" aria-hidden="true">🧪</span>
+          <span className="demo-cta__text">
+            <strong>Демо нұсқаны ашу</strong>
+            <span>Ойдан шығарылған топпен барлық мүмкіндікті өзің басып көр: кесте, тапсырмалар, фотолар, конспектілер, жеребе, туған күн…</span>
+          </span>
+          <span className="button button--primary button--sm">Ашу</span>
+        </a>
 
         <div className="guest-stats">
           <div><strong>{count("courses")}</strong><span>пән</span></div>

@@ -1,3 +1,4 @@
+import { demoFileUrl, isDemo } from "../../demo/demoMode.js";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase.js";
 import { useAuth } from "../auth/AuthContext.jsx";
@@ -78,6 +79,7 @@ export function materialViewUrl(item) {
 }
 
 export async function materialUrl(item) {
+  if (isDemo()) return demoFileUrl(item.storage_path);
   const { data, error } = await supabase.storage
     .from(MATERIAL_BUCKET)
     .createSignedUrl(item.storage_path, 60 * 10, { download: item.file_name });

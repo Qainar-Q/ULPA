@@ -189,6 +189,18 @@ export default function BirthdayHero({ people, myCode }) {
       return true;
     }
   });
+  // Wait until the welcome tour (if any) is closed, so the two never overlap.
+  const [tourOpen, setTourOpen] = useState(true);
+  useEffect(() => {
+    if (!overlay) return undefined;
+    const check = () => setTourOpen(Boolean(document.querySelector(".tour")));
+    const first = setTimeout(check, 1200);
+    const timer = setInterval(check, 800);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, [overlay]);
 
   function closeOverlay() {
     try {
@@ -201,7 +213,7 @@ export default function BirthdayHero({ people, myCode }) {
 
   return (
     <>
-      {overlay && (
+      {overlay && !tourOpen && (
         <Celebration
           people={iAmHero ? people.filter((row) => row.code === myCode) : people}
           isMe={iAmHero}

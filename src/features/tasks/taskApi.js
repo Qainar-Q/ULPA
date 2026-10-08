@@ -1,3 +1,4 @@
+import { demoFileUrl, isDemo } from "../../demo/demoMode.js";
 import { supabase } from "../../lib/supabase.js";
 import { compressImageFile } from "../photos/imageProcessing.js";
 import { IMMUTABLE_CACHE, signedUrls } from "../../lib/signedUrls.js";
@@ -110,6 +111,7 @@ export function attachmentViewUrls(files) {
 
 /** Short-lived download link that saves under the original file name. */
 export async function attachmentUrl(file) {
+  if (isDemo()) return demoFileUrl(file.storage_path);
   const { data, error } = await supabase.storage
     .from(TASK_BUCKET)
     .createSignedUrl(file.storage_path, 60 * 10, { download: file.file_name });

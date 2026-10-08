@@ -39,6 +39,7 @@ const NotePage = lazyPage(() => import("./pages/NotePage.jsx"));
 const DrawPage = lazyPage(() => import("./pages/DrawPage.jsx"));
 const SuggestionsPage = lazyPage(() => import("./pages/SuggestionsPage.jsx"));
 const TranslatePage = lazyPage(() => import("./pages/TranslatePage.jsx"));
+const DemoStartPage = lazyPage(() => import("./pages/DemoStartPage.jsx"));
 
 export default function App() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
         <Routes>
           {/* Public guest overview: counts only, no content */}
           <Route path="guest" element={<GuestPage />} />
+          <Route path="demo" element={<DemoStartPage />} />
 
           {/* Public: sign-in and activation */}
           <Route element={<RedirectIfSignedIn />}>
