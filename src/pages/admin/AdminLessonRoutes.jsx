@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import { CheckinRoute, CourseRoute, RollRoute } from "../../teacher/LessonRoutes.jsx";
+import QrTestView from "../../teacher/QrTestView.jsx";
 
 const BASE = "/admin/teachers";
 
@@ -10,6 +11,7 @@ export default function AdminLessonRoutes() {
       <Route path="lesson/:entryId/:date" element={<RollRoute base={BASE} />} />
       <Route path="lesson/:entryId/:date/qr" element={<CheckinRoute base={BASE} />} />
       <Route path="course/:courseId" element={<CourseRoute base={BASE} />} />
+      <Route path="qr-test" element={<QrTestView base={BASE} />} />
     </Routes>
   );
 }

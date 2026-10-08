@@ -14,6 +14,7 @@ import { greetingFor, formatLongDate } from "../lib/time.js";
 import { formatDateTime } from "../lib/due.js";
 import LessonsBoard from "./LessonsBoard.jsx";
 import { CheckinRoute, CourseRoute, RollRoute } from "./LessonRoutes.jsx";
+import QrTestView from "./QrTestView.jsx";
 import { announce, myAnnouncements } from "./teacherApi.js";
 
 function TeacherHome() {
@@ -207,6 +208,7 @@ export default function TeacherApp() {
           <Route path="lesson/:entryId/:date" element={<RollRoute />} />
           <Route path="lesson/:entryId/:date/qr" element={<CheckinRoute />} />
           <Route path="course/:courseId" element={<CourseRoute />} />
+          <Route path="qr-test" element={<QrTestView />} />
           <Route path="announce" element={<AnnouncePage />} />
           <Route path="profile" element={<TeacherProfile />} />
           <Route path="*" element={<Navigate to="/" replace />} />

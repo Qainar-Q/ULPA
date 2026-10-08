@@ -675,3 +675,31 @@
 .official__row--info b {
   color: var(--blue);
 }
+
+.t-empty-today {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.t-empty-today p {
+  margin: 0;
+}
+
+.roll-qr-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+
+.t-steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.3em;
+  color: var(--text-2);
+  line-height: 1.5;
+}

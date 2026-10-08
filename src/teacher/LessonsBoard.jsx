@@ -25,7 +25,25 @@ export default function LessonsBoard({ base = "" }) {
     <div className="stack-lg">
       <section className="panel">
         <h2 className="panel-title">Бүгінгі сабақтар</h2>
-        {todays.length === 0 && <p className="muted">Бүгін сабақ жоқ.</p>}
+        {todays.length === 0 && (() => {
+          // Next lesson day after today (wrapping to next week).
+          const next = [...rows].sort((a, b) => ((a.weekday - weekday + 7) % 7 || 7) - ((b.weekday - weekday + 7) % 7 || 7) || a.start_time.localeCompare(b.start_time))[0];
+          return (
+            <div className="t-empty-today">
+              <p>
+                Бүгін сабағыңыз жоқ. <strong>QR-белгілеу</strong> мен «Белгілеу» батырмалары сабақ болатын күні осы жерде шығады.
+              </p>
+              {next && (
+                <p className="muted small">
+                  Келесі сабақ: {weekdayLabel(next.weekday)}, {clock(next.start_time)} · {next.course_name}
+                </p>
+              )}
+              <Link to={`${base}/qr-test`} className="button button--ghost button--sm">
+                <QrCode size={15} /> QR қалай көрінетінін байқап көру
+              </Link>
+            </div>
+          );
+        })()}
         <ul className="t-lessons">
           {todays.map((row) => (
             <li key={row.id} className="t-lesson" style={{ "--course-h": row.hue }}>
