@@ -150,6 +150,26 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return json({ error: "method" }, 405, origin);
 
+  // Health check from the database (pg_net) with the push hook secret: translates a fixed
+  // sample with the configured provider. Nothing is saved; no student data involved.
+  const hook = req.headers.get("x-ulpa-hook");
+  if (hook) {
+    const { data: config } = await db.rpc("push_server_config");
+    if (!config?.hook_secret || hook !== config.hook_secret) return json({ error: "unauthorized" }, 401, origin);
+    const claude = Deno.env.get("ANTHROPIC_API_KEY");
+    const gemini = Deno.env.get("GEMINI_API_KEY");
+    const which = claude ? "claude" : gemini ? "gemini" : null;
+    if (!which) return json({ error: "not_configured" }, 200, origin);
+    const sample = "Мына орысша мәтінді қазақ тіліне аудар:\n\nПроизводная функции в точке — это предел отношения приращения функции к приращению аргумента, когда приращение аргумента стремится к нулю.";
+    try {
+      const started = Date.now();
+      const answer = which === "claude" ? await askClaude(claude!, sample, "") : await askGemini(gemini!, sample, "");
+      return json({ ok: true, provider: which, ms: Date.now() - started, result: answer.text }, 200, origin);
+    } catch (error) {
+      return json({ ok: false, provider: which, error: error instanceof UpstreamError ? error.message : String(error) }, 200, origin);
+    }
+  }
+
   // Who is asking (must be an activated student).
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   const { data: userData } = await db.auth.getUser(token);
