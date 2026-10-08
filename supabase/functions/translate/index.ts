@@ -1,8 +1,10 @@
 // ULPA · translate
 //
 // A signed-in student sends a photo/screenshot of a Russian textbook page (or pasted
-// Russian text); Claude reads it and returns a Kazakh translation in simple Markdown.
-// The Anthropic API key lives only here (Edge Function secret ANTHROPIC_API_KEY).
+// Russian text); an AI model reads it and returns a Kazakh translation in simple Markdown.
+// Provider: Claude if the secret ANTHROPIC_API_KEY is set, otherwise Google Gemini
+// (free tier) with GEMINI_API_KEY. TRANSLATE_PROVIDER=claude|gemini forces one.
+// API keys live only in Edge Function secrets, never in the browser.
 // Limits: TRANSLATE_DAILY_LIMIT per student per day (default 15) and
 // TRANSLATE_CLASS_DAILY_LIMIT for the whole class (default 200), counted in Almaty days.
 
@@ -58,6 +60,91 @@ function almatyDayStart(): string {
   return new Date(now - elapsed - (now % 1000)).toISOString();
 }
 
+type Answer = { text: string; inputTokens: number | null; outputTokens: number | null; truncated: boolean };
+
+class UpstreamError extends Error {
+  constructor(public code: string, detail = "") {
+    super(`${code} ${detail}`.trim());
+  }
+}
+
+async function askClaude(apiKey: string, ask: string, image: string, mediaType?: string): Promise<Answer> {
+  const content = image
+    ? [{ type: "image", source: { type: "base64", media_type: mediaType, data: image } }, { type: "text", text: ask }]
+    : [{ type: "text", text: ask }];
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({
+      model: Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-5-5",
+      max_tokens: 6000,
+      system: SYSTEM,
+      messages: [{ role: "user", content }],
+    }),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error("anthropic error", response.status, detail.slice(0, 500));
+    throw new UpstreamError(
+      response.status === 401 ? "bad_key" : response.status === 429 || response.status === 529 ? "busy" : response.status === 400 && /credit/i.test(detail) ? "no_credit" : "upstream"
+    );
+  }
+  const result = await response.json();
+  return {
+    text: (result.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n"),
+    inputTokens: result.usage?.input_tokens ?? null,
+    outputTokens: result.usage?.output_tokens ?? null,
+    truncated: result.stop_reason === "max_tokens",
+  };
+}
+
+// Free-tier friendly models first; the next one is tried if a model is not available.
+const GEMINI_MODELS = (Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash,gemini-flash-latest,gemini-2.0-flash").split(",").map((m) => m.trim()).filter(Boolean);
+
+async function askGemini(apiKey: string, ask: string, image: string, mediaType?: string): Promise<Answer> {
+  const parts = image ? [{ inline_data: { mime_type: mediaType, data: image } }, { text: ask }] : [{ text: ask }];
+  let lastError: UpstreamError = new UpstreamError("upstream");
+  for (const model of GEMINI_MODELS) {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM }] },
+        contents: [{ role: "user", parts }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 16000 },
+      }),
+    });
+    if (response.ok) {
+      const result = await response.json();
+      const candidate = result.candidates?.[0];
+      const text = (candidate?.content?.parts ?? []).filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought).map((p: { text: string }) => p.text).join("");
+      if (!text && candidate?.finishReason && candidate.finishReason !== "STOP") {
+        throw new UpstreamError(candidate.finishReason === "SAFETY" || candidate.finishReason === "RECITATION" ? "blocked" : "upstream", candidate.finishReason);
+      }
+      return {
+        text,
+        inputTokens: result.usageMetadata?.promptTokenCount ?? null,
+        outputTokens: result.usageMetadata?.candidatesTokenCount ?? null,
+        truncated: candidate?.finishReason === "MAX_TOKENS",
+      };
+    }
+    const detail = await response.text();
+    console.error("gemini error", model, response.status, detail.slice(0, 500));
+    if (response.status === 404) {
+      lastError = new UpstreamError("upstream", "model not found");
+      continue; // try the next model
+    }
+    if (/API_KEY_INVALID|API key not valid/i.test(detail) || response.status === 401 || response.status === 403) throw new UpstreamError("bad_key");
+    if (/location is not supported/i.test(detail)) throw new UpstreamError("region");
+    if (response.status === 429) {
+      lastError = new UpstreamError("busy"); // this model's free quota is used up: try the next one
+      continue;
+    }
+    throw new UpstreamError("upstream");
+  }
+  throw lastError;
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
@@ -84,8 +171,11 @@ Deno.serve(async (req) => {
   }
   if (text.length > MAX_TEXT) return json({ error: "too_long" }, 400, origin);
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) return json({ error: "not_configured" }, 503, origin);
+  const claudeKey = Deno.env.get("ANTHROPIC_API_KEY");
+  const geminiKey = Deno.env.get("GEMINI_API_KEY");
+  const forced = Deno.env.get("TRANSLATE_PROVIDER");
+  const provider = forced === "gemini" && geminiKey ? "gemini" : forced === "claude" && claudeKey ? "claude" : claudeKey ? "claude" : geminiKey ? "gemini" : null;
+  if (!provider) return json({ error: "not_configured" }, 503, origin);
 
   // Daily limits.
   const perStudent = Number(Deno.env.get("TRANSLATE_DAILY_LIMIT") ?? 15);
@@ -96,42 +186,18 @@ Deno.serve(async (req) => {
   const { count: all } = await db.from("translations").select("id", { count: "exact", head: true }).gte("created_at", since);
   if ((all ?? 0) >= perClass) return json({ error: "class_limit" }, 429, origin);
 
-  const content = image
-    ? [
-        { type: "image", source: { type: "base64", media_type: body.mediaType, data: image } },
-        { type: "text", text: "Осы беттегі орысша мәтінді қазақ тіліне аудар." },
-      ]
-    : [{ type: "text", text: `Мына орысша мәтінді қазақ тіліне аудар:\n\n${text}` }];
-
-  let response: Response;
+  const ask = image ? "Осы беттегі орысша мәтінді қазақ тіліне аудар." : `Мына орысша мәтінді қазақ тіліне аудар:\n\n${text}`;
+  let out: Answer;
   try {
-    response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({
-        model: Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-5-5",
-        max_tokens: 6000,
-        system: SYSTEM,
-        messages: [{ role: "user", content }],
-      }),
-    });
+    out = provider === "claude"
+      ? await askClaude(claudeKey!, ask, image, body.mediaType)
+      : await askGemini(geminiKey!, ask, image, body.mediaType);
   } catch (error) {
-    console.error("anthropic fetch failed", error);
-    return json({ error: "upstream" }, 502, origin);
-  }
-  if (!response.ok) {
-    const detail = await response.text();
-    console.error("anthropic error", response.status, detail.slice(0, 500));
-    const code = response.status === 401 ? "bad_key" : response.status === 429 || response.status === 529 ? "busy" : response.status === 400 && /credit/i.test(detail) ? "no_credit" : "upstream";
+    const code = error instanceof UpstreamError ? error.code : "upstream";
+    if (!(error instanceof UpstreamError)) console.error(`${provider} failed`, error);
     return json({ error: code }, 502, origin);
   }
-  const result = await response.json();
-  const translated = (result.content ?? [])
-    .filter((block: { type: string }) => block.type === "text")
-    .map((block: { text: string }) => block.text)
-    .join("\n")
-    .trim()
-    .slice(0, 30000);
+  const translated = out.text.trim().slice(0, 30000);
   if (!translated) return json({ error: "empty_result" }, 502, origin);
 
   const { data: saved } = await db
@@ -140,11 +206,11 @@ Deno.serve(async (req) => {
       student_id: student.id,
       source_kind: image ? "image" : "text",
       result: translated,
-      input_tokens: result.usage?.input_tokens ?? null,
-      output_tokens: result.usage?.output_tokens ?? null,
+      input_tokens: out.inputTokens,
+      output_tokens: out.outputTokens,
     })
     .select("id, created_at")
     .single();
 
-  return json({ id: saved?.id, created_at: saved?.created_at, result: translated, remaining: Math.max(0, perStudent - (mine ?? 0) - 1), truncated: result.stop_reason === "max_tokens" }, 200, origin);
+  return json({ id: saved?.id, created_at: saved?.created_at, result: translated, remaining: Math.max(0, perStudent - (mine ?? 0) - 1), truncated: out.truncated, provider }, 200, origin);
 });
