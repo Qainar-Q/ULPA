@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar.jsx";
 import BottomNav from "./BottomNav.jsx";
 import MobileTopbar from "./MobileTopbar.jsx";
 import OnboardingTour from "../OnboardingTour.jsx";
+import BadgeToast from "../classlife/BadgeToast.jsx";
 
 export default function AppShell() {
   const { pathname } = useLocation();
@@ -47,6 +48,7 @@ export default function AppShell() {
       </div>
       <BottomNav />
       <OnboardingTour />
+      <BadgeToast />
     </div>
   );
 }

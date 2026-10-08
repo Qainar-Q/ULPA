@@ -2,7 +2,7 @@
 //
 // Called two ways:
 //   1. By the database (triggers / nightly cron via pg_net) with header
-//      x-ulpa-hook: <secret from Vault>. Body { type: "task"|"announcement"|"poll"|"comment"|"deadlines"|"init", id }.
+//      x-ulpa-hook: <secret from Vault>. Body { type: "task"|"announcement"|"poll"|"comment"|"deadlines"|"wish"|"suggestion"|"birthdays"|"init", id }.
 //   2. By a signed-in student (Authorization: Bearer <their session token>)
 //      with { type: "test" } — sends a test notification to that student's own devices.
 // Recipients follow the same visibility rules as the app (group items only to
@@ -208,6 +208,52 @@ async function onDeadlines(keys: VapidKeys) {
   return totals;
 }
 
+async function onWish(id: string, keys: VapidKeys) {
+  const { data: wish } = await db.from("birthday_wishes").select("id, student_id, author_name, emoji, body").eq("id", id).maybeSingle();
+  if (!wish) return { skipped: "not found" };
+  return deliver([wish.student_id], {
+    title: `${wish.emoji} ${wish.author_name ?? "Сыныптасың"} сені құттықтады!`,
+    body: clip(wish.body, 140),
+    url: "/",
+    tag: `wish-${wish.id}`,
+  }, "comments", keys);
+}
+
+async function onSuggestion(id: string, keys: VapidKeys) {
+  const { data: item } = await db.from("suggestions").select("id, body").eq("id", id).maybeSingle();
+  if (!item) return { skipped: "not found" };
+  const members = await classMembers();
+  const admins = members.filter((s) => s.role === "admin").map((s) => s.id);
+  // No author name here: the box is anonymous to everyone but the admin's own lookup.
+  return deliver(admins, { title: "📮 Жаңа ұсыныс", body: clip(item.body, 120), url: "/suggestions", tag: `suggestion-${item.id}` }, null, keys);
+}
+
+const almatyParts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Almaty", year: "numeric", month: "numeric", day: "numeric" });
+
+async function onBirthdays(keys: VapidKeys) {
+  const parts = Object.fromEntries(almatyParts.formatToParts(new Date()).map((p) => [p.type, Number(p.value)]));
+  const { year, month, day } = parts as unknown as { year: number; month: number; day: number };
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const { data: rows } = await db.from("students").select("id, full_name, birth_month, birth_day, user_id").not("birth_month", "is", null);
+  const today = (rows ?? []).filter(
+    (s) => s.birth_month === month && (s.birth_day === day || (!leap && month === 2 && day === 28 && s.birth_day === 29))
+  );
+  if (today.length === 0) return { skipped: "no birthdays" };
+  const members = await classMembers();
+  const names = today.map((s) => s.full_name).join(", ");
+  const heroes = new Set(today.map((s) => s.id));
+  const totals = { devices: 0, sent: 0, gone: 0, failed: 0 };
+  const add = (r: typeof totals) => {
+    totals.devices += r.devices; totals.sent += r.sent; totals.gone += r.gone; totals.failed += r.failed;
+  };
+  for (const hero of today) {
+    add(await deliver([hero.id], { title: `🎉 Туған күніңмен, ${hero.full_name}!`, body: "Бүкіл топ атынан құттықтаймыз! ULPA-ны ашып, тілектерді оқы 🎂", url: "/", tag: "birthday-me" }, null, keys));
+  }
+  const others = members.filter((s) => !heroes.has(s.id)).map((s) => s.id);
+  add(await deliver(others, { title: `🎂 Бүгін туған күн: ${names}`, body: "Құттықтауды ұмытпа — ULPA басты бетінде тілек жаз!", url: "/", tag: "birthdays" }, "announcements", keys));
+  return totals;
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
@@ -254,6 +300,12 @@ Deno.serve(async (req) => {
         return json(await onComment(id, keys), 200, origin);
       case "deadlines":
         return json(await onDeadlines(keys), 200, origin);
+      case "wish":
+        return json(await onWish(id, keys), 200, origin);
+      case "suggestion":
+        return json(await onSuggestion(id, keys), 200, origin);
+      case "birthdays":
+        return json(await onBirthdays(keys), 200, origin);
       default:
         return json({ error: "unknown_type" }, 400, origin);
     }

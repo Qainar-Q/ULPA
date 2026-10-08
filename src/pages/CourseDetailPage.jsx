@@ -69,6 +69,7 @@ function CourseDetail({ course }) {
         <a href="#materials">Материалдар</a>
         <a href="#photos">Фото</a>
         <a href="#tasks">Тапсырма</a>
+        <Link to={`/notes?course=${course.slug}`}>Конспектілер</Link>
       </nav>
 
       <div className="detail-grid">

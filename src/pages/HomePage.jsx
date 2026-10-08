@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import { ClipboardList, Calculator, ChevronRight, Coffee, Cake, FolderOpen, GraduationCap, Megaphone, Vote, CalendarCheck, Map } from "lucide-react";
+import { ClipboardList, Calculator, ChevronRight, Coffee, Cake, Megaphone } from "lucide-react";
+import { MORE_LINKS } from "../components/layout/navItems.js";
+import BirthdayHero from "../components/classlife/BirthdayHero.jsx";
 import CourseCard from "../components/CourseCard.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
@@ -36,13 +38,14 @@ export default function HomePage() {
   const { openTasks, status: tasksStatus } = useTasks();
   const announcements = useAnnouncements(3);
   const birthdays = useBirthdays(14);
-  const myBirthdayToday = birthdays.today.some((row) => row.code === student?.code);
   const upcomingTasks = [...openTasks]
     .sort((a, b) => (a.due_at ?? "9999").localeCompare(b.due_at ?? "9999"))
     .slice(0, 4);
 
   return (
     <div className="stack-lg">
+      {birthdays.today.length > 0 && <BirthdayHero people={birthdays.today} myCode={student?.code} />}
+
       <section className="hero">
         <div className="hero__grid" aria-hidden="true" />
         <div className="hero__orbit" aria-hidden="true">
@@ -71,41 +74,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      <nav className="quick-links" aria-label="Жылдам сілтемелер">
-        <Link to="/materials" className="quick-links__item">
-          <FolderOpen size={18} aria-hidden="true" /> Материалдар
-          {unread.materials > 0 && <span className="quick-links__new">{unread.materials}</span>}
-        </Link>
-        <Link to="/announcements" className="quick-links__item">
-          <Megaphone size={18} aria-hidden="true" /> Хабарландырулар
-          {unread.announcements > 0 && <span className="quick-links__new">{unread.announcements}</span>}
-        </Link>
-        <Link to="/teachers" className="quick-links__item">
-          <GraduationCap size={18} aria-hidden="true" /> Оқытушылар
-        </Link>
-        <Link to="/polls" className="quick-links__item">
-          <Vote size={18} aria-hidden="true" /> Дауыс беру
-          {unread.polls > 0 && <span className="quick-links__new">{unread.polls}</span>}
-        </Link>
-        <Link to="/attendance" className="quick-links__item">
-          <CalendarCheck size={18} aria-hidden="true" /> Қатысуым
-        </Link>
-        <Link to="/campus" className="quick-links__item">
-          <Map size={18} aria-hidden="true" /> Кампус картасы
-        </Link>
+      <nav className="quick-links" aria-label="Барлық бөлімдер">
+        {MORE_LINKS.map(({ to, short, icon: Icon, unread: key }) => (
+          <Link key={to} to={to} className="quick-links__item">
+            <Icon size={20} aria-hidden="true" />
+            <span>{short}</span>
+            {key && unread[key] > 0 && <span className="quick-links__new">{unread[key]}</span>}
+          </Link>
+        ))}
       </nav>
-
-      {birthdays.today.length > 0 && (
-        <section className="birthday-banner" role="status">
-          <span className="birthday-banner__emoji" aria-hidden="true">🎂</span>
-          <div>
-            <strong>
-              {myBirthdayToday ? `Туған күніңмен, ${student.full_name}! 🎉` : `Бүгін туған күн: ${birthdays.today.map((row) => row.full_name).join(", ")}`}
-            </strong>
-            <p>{myBirthdayToday ? "Бүкіл топ атынан құттықтаймыз!" : "Құттықтауды ұмытпа!"}</p>
-          </div>
-        </section>
-      )}
 
       {announcements.items.length > 0 && (
         <section className="panel">
