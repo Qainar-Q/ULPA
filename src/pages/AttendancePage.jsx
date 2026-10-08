@@ -3,6 +3,7 @@ import { CalendarCheck, ChevronDown, CloudOff, Lock } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import CatalogState from "../components/CatalogState.jsx";
+import OfficialAttendance from "../components/OfficialAttendance.jsx";
 import { useCatalog } from "../features/catalog/CatalogContext.jsx";
 import { STATUSES, pastOccurrences, summarize, useAttendanceMarks } from "../features/attendance/attendance.js";
 import { SEMESTER_START, SESSION_TYPES } from "../config/app.js";
@@ -68,6 +69,7 @@ export default function AttendancePage() {
         title="Қатысу"
         description="Әдепкі бойынша әр сабаққа «болдым» деп есептеледі — тек болмаған, кешіккен немесе өтпей қалған сабақтарды белгіле."
       />
+      <OfficialAttendance />
       <p className="att-private">
         <Lock size={14} aria-hidden="true" /> Бұл деректер тек саған көрінеді — әкімшіге де, сыныптастарыңа да емес.
       </p>

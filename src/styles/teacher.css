@@ -1,0 +1,677 @@
+/* ULPA · teacher app, roll call, QR check-in, official attendance */
+
+.t-app {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.t-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 10px var(--gutter);
+  padding-top: calc(10px + env(safe-area-inset-top));
+  border-bottom: 1px solid var(--line);
+  background: var(--bar-bg);
+  backdrop-filter: blur(14px);
+}
+
+.t-bar__nav {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  gap: 4px;
+}
+
+.t-bar__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.t-bar__link.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.t-bar__me {
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .t-bar .brand__text,
+  .t-bar__me {
+    display: none;
+  }
+
+  .t-bar__link span {
+    display: none;
+  }
+
+  .t-bar__link {
+    min-width: 48px;
+    justify-content: center;
+  }
+}
+
+.t-main {
+  width: min(var(--content-max), 100%);
+  margin: 0 auto;
+  padding: var(--s-6) var(--gutter) var(--s-10);
+}
+
+.t-hero .hero__content {
+  padding-right: 0;
+}
+
+.t-lessons {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.t-lesson {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-3);
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid hsl(var(--course-h, 180) 70% 60%);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.t-lesson > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.t-lesson--link:hover {
+  border-color: var(--accent-line);
+}
+
+.t-lesson__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.t-day + .t-day {
+  margin-top: var(--s-3);
+}
+
+.t-day__title {
+  margin: 0 0 6px;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.t-sent {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.t-sent li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.t-sent p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+}
+
+/* Roll call */
+.roll-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left: 3px solid hsl(var(--course-h, 180) 70% 60%);
+}
+
+.roll-head .tag {
+  align-self: flex-start;
+}
+
+.roll-head__title {
+  margin: 0;
+  font-size: var(--fs-xl);
+}
+
+.roll-head p {
+  margin: 0;
+}
+
+.roll-date {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: 4px;
+}
+
+.roll-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.roll-count {
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.roll-count--ok {
+  color: var(--success);
+}
+
+.roll-count--warn {
+  color: var(--warning);
+}
+
+.roll-count--bad {
+  color: var(--danger);
+}
+
+.roll-count--info {
+  color: var(--blue);
+}
+
+.roll-saving {
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+
+.roll-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: 6px;
+}
+
+.roll-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roll-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.roll-row--ok {
+  border-color: rgba(63, 217, 154, 0.35);
+}
+
+.roll-row--bad {
+  border-color: rgba(255, 107, 125, 0.45);
+  background: linear-gradient(90deg, rgba(255, 107, 125, 0.08), transparent 60%), var(--surface);
+}
+
+.roll-row--warn {
+  border-color: rgba(255, 181, 71, 0.45);
+}
+
+.roll-row__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.roll-row__who > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.roll-row__who small {
+  color: var(--text-3);
+}
+
+.roll-row__marks {
+  display: flex;
+  gap: 4px;
+}
+
+.roll-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.roll-mark.is-on.roll-mark--ok {
+  border-color: var(--success);
+  background: rgba(63, 217, 154, 0.18);
+  color: var(--success);
+}
+
+.roll-mark.is-on.roll-mark--warn {
+  border-color: var(--warning);
+  background: rgba(255, 181, 71, 0.18);
+  color: var(--warning);
+}
+
+.roll-mark.is-on.roll-mark--bad {
+  border-color: var(--danger);
+  background: rgba(255, 107, 125, 0.18);
+  color: var(--danger);
+}
+
+.roll-mark.is-on.roll-mark--info {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+/* QR check-in */
+.checkin__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  text-align: center;
+}
+
+.checkin__course {
+  margin: 0;
+}
+
+.checkin__qr {
+  width: min(320px, 78vw);
+  padding: 10px;
+  border-radius: var(--r-lg);
+  background: #fff;
+}
+
+.qr {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.checkin__hint {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.checkin__code {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(2.4rem, 10vw, 4rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.checkin__timer {
+  position: relative;
+  width: min(320px, 100%);
+  height: 26px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  font-size: var(--fs-xs);
+}
+
+.checkin__timer::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--p);
+  background: var(--accent-soft);
+  content: "";
+  transition: width 0.5s linear;
+}
+
+.checkin__timer span {
+  position: relative;
+  line-height: 26px;
+}
+
+.checkin__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checkin__list li {
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(63, 217, 154, 0.14);
+  color: var(--success);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.checkin--big .checkin__qr {
+  width: min(560px, 92vw);
+}
+
+.checkin--big .checkin__code {
+  font-size: clamp(3rem, 14vw, 6rem);
+}
+
+/* Course stats */
+.stats-table-wrap {
+  overflow-x: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+}
+
+.stats-table th:first-child,
+.stats-table td:first-child {
+  text-align: left;
+}
+
+.stats-table td:first-child small {
+  display: block;
+  color: var(--text-3);
+}
+
+.stats-table__pct {
+  font-weight: 800;
+}
+
+.stats-table tr.is-low td {
+  background: rgba(255, 107, 125, 0.08);
+}
+
+.stats-table tr.is-low .stats-table__pct {
+  color: var(--danger);
+}
+
+/* Admin: teacher accounts */
+.t-accounts {
+  display: grid;
+  gap: var(--s-3);
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.t-account {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.t-account__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.t-account__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+.t-account__dot.is-online {
+  background: var(--success);
+  box-shadow: 0 0 0 4px rgba(63, 217, 154, 0.2);
+}
+
+.t-account p {
+  margin: 0;
+}
+
+.t-account__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.t-account__stats dt {
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+
+.t-account__stats dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.t-account__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.t-code-msg {
+  margin: 0;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+}
+
+/* Students: check-in + official marks */
+.checkin-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-lg);
+  background: var(--accent-soft);
+  color: var(--text);
+  text-decoration: none;
+  animation: draw-pop 0.3s var(--ease);
+}
+
+.checkin-banner svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.checkin-banner > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-sm);
+}
+
+.checkin-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.checkin-form__code {
+  min-height: 64px;
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-align: center;
+}
+
+.checkin-form__open {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--accent);
+  font-size: var(--fs-sm);
+}
+
+.checkin-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.checkin-done svg {
+  color: var(--success);
+}
+
+.checkin-done h2,
+.checkin-done p {
+  margin: 0;
+}
+
+.official__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.official__head .panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.official__courses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin: var(--s-3) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.official__courses li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--course, var(--accent));
+  border-radius: var(--r-md);
+}
+
+.official__courses li .muted {
+  width: 100%;
+}
+
+.official__pct {
+  color: var(--success);
+  font-weight: 800;
+}
+
+.official__pct.is-low {
+  color: var(--danger);
+}
+
+.official__list {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 var(--s-2);
+  padding: 0;
+  list-style: none;
+}
+
+.official__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: var(--fs-sm);
+}
+
+@media (min-width: 640px) {
+  .official__row {
+    grid-template-columns: 180px 1fr auto;
+    align-items: center;
+  }
+}
+
+.official__row--bad b {
+  color: var(--danger);
+}
+
+.official__row--ok b {
+  color: var(--success);
+}
+
+.official__row--warn b {
+  color: var(--warning);
+}
+
+.official__row--info b {
+  color: var(--blue);
+}

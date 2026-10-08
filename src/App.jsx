@@ -6,7 +6,7 @@ import AppShell from "./components/layout/AppShell.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import { GpaProvider } from "./features/gpa/GpaContext.jsx";
-import { AuthProvider } from "./features/auth/AuthContext.jsx";
+import { AuthProvider, useAuth } from "./features/auth/AuthContext.jsx";
 import { CatalogProvider } from "./features/catalog/CatalogContext.jsx";
 import { TasksProvider } from "./features/tasks/TasksContext.jsx";
 import { UnreadProvider } from "./features/unread/UnreadContext.jsx";
@@ -40,10 +40,31 @@ const DrawPage = lazyPage(() => import("./pages/DrawPage.jsx"));
 const SuggestionsPage = lazyPage(() => import("./pages/SuggestionsPage.jsx"));
 const TranslatePage = lazyPage(() => import("./pages/TranslatePage.jsx"));
 const DemoStartPage = lazyPage(() => import("./pages/DemoStartPage.jsx"));
+const CheckinPage = lazyPage(() => import("./pages/CheckinPage.jsx"));
+const TeacherApp = lazyPage(() => import("./teacher/TeacherApp.jsx"));
+const AdminTeachersPage = lazyPage(() => import("./pages/admin/AdminTeachersPage.jsx"));
+const AdminLessonRoutes = lazyPage(() => import("./pages/admin/AdminLessonRoutes.jsx"));
 
 export default function App() {
   return (
     <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
+  );
+}
+
+/** Teacher accounts get their own small app; everyone else the class app. */
+function AppRoutes() {
+  const { isTeacher } = useAuth();
+  if (isTeacher) {
+    return (
+      <Suspense fallback={<PageLoading />}>
+        <TeacherApp />
+      </Suspense>
+    );
+  }
+  return (
+    <>
       <CatalogProvider>
       <TasksProvider>
       <UnreadProvider>
@@ -82,12 +103,15 @@ export default function App() {
               <Route path="draw" element={<DrawPage />} />
               <Route path="suggestions" element={<SuggestionsPage />} />
               <Route path="translate" element={<TranslatePage />} />
+              <Route path="checkin" element={<CheckinPage />} />
               <Route path="courses/:slug" element={<CourseDetailPage />} />
               <Route element={<RequireAdmin />}>
                 <Route path="admin" element={<AdminLayout />}>
                   <Route index element={<AdminStudentsPage />} />
                   <Route path="schedule" element={<AdminSchedulePage />} />
                   <Route path="overview" element={<AdminOverviewPage />} />
+                  <Route path="teachers" element={<AdminTeachersPage />} />
+                  <Route path="teachers/*" element={<AdminLessonRoutes />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFoundPage />} />
@@ -99,6 +123,6 @@ export default function App() {
       </UnreadProvider>
       </TasksProvider>
       </CatalogProvider>
-    </AuthProvider>
+    </>
   );
 }

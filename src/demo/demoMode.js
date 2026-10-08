@@ -16,10 +16,21 @@ export function isDemo() {
 
 const b64 = (value) => btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
+/** "student" (class view, as the admin) or "teacher" (teacher cabinet). */
+export function demoRole() {
+  try {
+    return sessionStorage.getItem(`${FLAG}-role`) === "teacher" ? "teacher" : "student";
+  } catch {
+    return "student";
+  }
+}
+
 /** Turn demo mode on for this tab and seed a local (fake) session. */
-export function enterDemo() {
+export function enterDemo(role = "student") {
   try {
     sessionStorage.setItem(FLAG, "1");
+    sessionStorage.setItem(`${FLAG}-role`, role === "teacher" ? "teacher" : "student");
+    sessionStorage.removeItem("ulpa-demo-store");
     const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
     const user = { id: DEMO_USER_ID, aud: "authenticated", role: "authenticated", email: "demo@ulpa.local", app_metadata: {}, user_metadata: {} };
     const session = {
@@ -40,6 +51,7 @@ export function enterDemo() {
 export function exitDemo(to = "/login") {
   try {
     sessionStorage.removeItem(FLAG);
+    sessionStorage.removeItem(`${FLAG}-role`);
     sessionStorage.removeItem("ulpa-demo-store");
     localStorage.removeItem(DEMO_AUTH_KEY);
   } catch {
