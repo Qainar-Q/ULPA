@@ -6,6 +6,8 @@
 // (public.consume_account_code, callable only with the service role).
 // If valid, the auth user is created (first activation) or its password is
 // replaced (reset). The service-role key exists only here, on the server.
+// Teachers use the same flow with their login code (90–99): their code is checked
+// against private.teacher_codes and the auth user is linked to public.teachers.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -71,11 +73,14 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // Teacher login codes live in public.teachers (90–99).
+  const { data: teacher } = await admin.from("teachers").select("id").eq("login_code", studentCode).maybeSingle();
+  const isTeacher = Boolean(teacher);
+
   // 1. Check + consume the one-time code (wrong attempts are counted in the DB).
-  const { data: check, error: checkError } = await admin.rpc("consume_account_code", {
-    p_student_code: studentCode,
-    p_code: accessCode,
-  });
+  const { data: check, error: checkError } = isTeacher
+    ? await admin.rpc("consume_teacher_code", { p_login: studentCode, p_code: accessCode })
+    : await admin.rpc("consume_account_code", { p_student_code: studentCode, p_code: accessCode });
   if (checkError) {
     console.error("consume_account_code failed", checkError.code);
     return reply(origin, 500, { ok: false, error: "server_error" });
@@ -84,7 +89,7 @@ Deno.serve(async (req) => {
     return reply(origin, 400, { ok: false, error: check?.error ?? "invalid_code" });
   }
 
-  const studentId: string = check.student_id;
+  const studentId: string = isTeacher ? check.teacher_id : check.student_id;
   let userId: string | null = check.user_id;
   const email = `s${studentCode}@${EMAIL_DOMAIN}`;
 
@@ -94,7 +99,7 @@ Deno.serve(async (req) => {
       email,
       password,
       email_confirm: true,
-      app_metadata: { student_code: studentCode },
+      app_metadata: isTeacher ? { teacher_code: studentCode } : { student_code: studentCode },
     });
 
     if (createError) {
@@ -122,11 +127,10 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 3. Link the student row to the auth user.
-  const { error: linkError } = await admin.rpc("finish_account_activation", {
-    p_student_id: studentId,
-    p_user_id: userId,
-  });
+  // 3. Link the student (or teacher) row to the auth user.
+  const { error: linkError } = isTeacher
+    ? await admin.rpc("finish_teacher_activation", { p_teacher_id: studentId, p_user_id: userId })
+    : await admin.rpc("finish_account_activation", { p_student_id: studentId, p_user_id: userId });
   if (linkError) {
     console.error("finish_account_activation failed", linkError.code);
     return reply(origin, 500, { ok: false, error: "server_error" });

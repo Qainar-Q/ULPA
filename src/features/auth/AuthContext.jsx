@@ -13,12 +13,14 @@ export function AuthProvider({ children }) {
   const [status, setStatus] = useState("loading");
   const [session, setSession] = useState(null);
   const [student, setStudent] = useState(null);
+  const [teacher, setTeacher] = useState(null); // teacher accounts have no student row
   const [notice, setNotice] = useState(null); // e.g. "session_expired", "not_linked"
 
   const loadStudent = useCallback(async (nextSession) => {
     if (!nextSession) {
       setSession(null);
       setStudent(null);
+      setTeacher(null);
       setStatus("signedOut");
       return;
     }
@@ -29,6 +31,18 @@ export function AuthProvider({ children }) {
       .select("id, code, full_name, group_no, role, is_monitor, birth_month, birth_day, avatar_path, activated_at")
       .eq("user_id", nextSession.user.id)
       .maybeSingle();
+
+    if (!error && !data) {
+      // Not a student: maybe a teacher account.
+      const { data: teacherData, error: teacherError } = await supabase.rpc("teacher_me");
+      if (!teacherError && teacherData?.id) {
+        setSession(nextSession);
+        setStudent(null);
+        setTeacher(teacherData);
+        setStatus("signedIn");
+        return;
+      }
+    }
 
     if (error || !data) {
       await supabase.auth.signOut();
@@ -41,6 +55,7 @@ export function AuthProvider({ children }) {
 
     setSession(nextSession);
     setStudent(data);
+    setTeacher(null);
     setStatus("signedIn");
   }, []);
 
@@ -56,6 +71,7 @@ export function AuthProvider({ children }) {
       if (event === "SIGNED_OUT") {
         setSession(null);
         setStudent(null);
+        setTeacher(null);
         setStatus("signedOut");
       } else if (event === "TOKEN_REFRESHED" && nextSession) {
         setSession(nextSession);
@@ -149,6 +165,8 @@ export function AuthProvider({ children }) {
       status,
       session,
       student,
+      teacher,
+      isTeacher: Boolean(teacher),
       isAdmin: student?.role === "admin",
       notice,
       clearNotice: () => setNotice(null),
@@ -158,7 +176,7 @@ export function AuthProvider({ children }) {
       signOut,
       refreshStudent,
     }),
-    [status, session, student, notice, signIn, signInWithPasskey, activate, signOut, refreshStudent]
+    [status, session, student, teacher, notice, signIn, signInWithPasskey, activate, signOut, refreshStudent]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

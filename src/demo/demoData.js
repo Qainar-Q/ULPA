@@ -21,7 +21,15 @@ function at(days, hour = 12, minute = 0) {
 
 export const DEMO_NAME = "Қонақ";
 
-export function buildDemoStore() {
+/** YYYY-MM-DD of the `weekday` (1 = Monday) `weeksAgo` weeks back (Almaty). */
+function lastWeekday(weekday, weeksAgo) {
+  const { year, month, day } = almatyToday();
+  const today = new Date(Date.UTC(year, month - 1, day));
+  const back = ((today.getUTCDay() || 7) - weekday + 7) % 7 + 7 * (weeksAgo - 1);
+  return new Date(today.getTime() - back * DAY).toISOString().slice(0, 10);
+}
+
+export function buildDemoStore(role = "student") {
   const today = almatyToday();
   const soon = new Date(Date.now() + 4 * DAY);
 
@@ -100,6 +108,13 @@ export function buildDemoStore() {
     updated_at: at(-40),
   }));
   const course_teachers = teachers.map((teacher, index) => ({ course_id: c(index), teacher_id: teacher.id }));
+  // Teacher demo: the visitor is the first teacher (no student row is theirs).
+  if (role === "teacher") {
+    students[0].user_id = null;
+    teachers[0].user_id = DEMO_USER_ID;
+    teachers[0].login_code = "91";
+    course_teachers.push({ course_id: c(2), teacher_id: teachers[0].id });
+  }
 
   const assignments = [
     [3, "Python: орбита периодын есептейтін функция", "orbit(r, v) функциясын жаз, 3 мысалмен тексер. Кодты PDF не скриншот етіп жүкте.", at(1, 23, 59), null, s(5)],
@@ -305,6 +320,18 @@ export function buildDemoStore() {
     student_grades,
     translations,
     attendance_marks: [],
+    official_attendance: [
+      ...[1, 2, 3].flatMap((weeksAgo) =>
+        students.filter((st) => st.group_no === 1).map((st, index) => ({
+          schedule_entry_id: schedule_entries[0].id,
+          session_date: lastWeekday(1, weeksAgo),
+          student_id: st.id,
+          status: index === 2 && weeksAgo === 1 ? "absent" : index === 4 && weeksAgo === 2 ? "late" : "present",
+          method: weeksAgo === 1 ? "qr" : "teacher",
+          updated_at: at(-7 * weeksAgo),
+        }))
+      ),
+    ],
     onboarding_done: [],
     notification_prefs: [{ student_id: me.id, tasks: true, announcements: true, polls: true, comments: true, deadlines: true, updated_at: at(-10) }],
     push_subscriptions: [],

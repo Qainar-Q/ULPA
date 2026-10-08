@@ -4,7 +4,7 @@
 // lt, lte, in, is, not.is), order, limit, single-row responses, insert/upsert/update/delete
 // and the embedded child lists the app selects.
 import { buildDemoStore, DEMO_NAME } from "./demoData.js";
-import { DEMO_USER_ID, rememberDemoUpload } from "./demoMode.js";
+import { DEMO_USER_ID, demoRole, rememberDemoUpload } from "./demoMode.js";
 
 const STORE_KEY = "ulpa-demo-store";
 let store = null;
@@ -17,7 +17,7 @@ function load() {
   } catch {
     store = null;
   }
-  if (!store) store = buildDemoStore();
+  if (!store) store = buildDemoStore(demoRole());
   return store;
 }
 let saveTimer = null;
@@ -324,8 +324,116 @@ function engagement(photoIds) {
   }));
 }
 
+const myTeacher = () => load().teachers.find((row) => row.user_id === DEMO_USER_ID) ?? null;
+function myCourseIds() {
+  const teacher = myTeacher();
+  if (!teacher) return null; // admin: all courses
+  return load().course_teachers.filter((row) => row.teacher_id === teacher.id).map((row) => row.course_id);
+}
+
+function scheduleRows() {
+  const db = load();
+  const allowed = myCourseIds();
+  return db.schedule_entries
+    .filter((e) => !allowed || allowed.includes(e.course_id))
+    .map((e) => {
+      const course = db.courses.find((c) => c.id === e.course_id);
+      return { id: e.id, course_id: e.course_id, course_code: course?.code, course_name: course?.name, hue: course?.hue, weekday: e.weekday, start_time: e.start_time, end_time: e.end_time, room: e.room, session_type: e.session_type, group_no: e.group_no };
+    })
+    .sort((a, b) => a.weekday - b.weekday || a.start_time.localeCompare(b.start_time));
+}
+const officialRows = () => table("official_attendance");
+
 const RPC = {
   touch_presence: () => null,
+  teacher_me: () => {
+    const teacher = myTeacher();
+    if (!teacher) return null;
+    const db = load();
+    return {
+      id: teacher.id,
+      full_name: teacher.full_name,
+      login_code: teacher.login_code,
+      courses: myCourseIds().map((id) => db.courses.find((c) => c.id === id)).map(({ id, slug, code, name, hue }) => ({ id, slug, code, name, hue })),
+    };
+  },
+  teacher_announce: ({ p_title, p_body, p_group_no }) => {
+    const teacher = myTeacher();
+    const row = { id: uuid(), title: p_title, body: p_body || null, group_no: p_group_no, pinned: false, author_id: null, author_name: teacher?.full_name, author_role: "teacher", created_at: now(), updated_at: now() };
+    table("announcements").push(row);
+    save();
+    return row.id;
+  },
+  teacher_my_announcements: () => table("announcements").filter((row) => row.author_role === "teacher" && row.author_name === myTeacher()?.full_name).reverse(),
+  teacher_schedule: () => scheduleRows(),
+  teacher_roll: ({ p_entry, p_date }) => {
+    const db = load();
+    const entry = db.schedule_entries.find((e) => e.id === p_entry);
+    return db.students
+      .filter((s) => !entry?.group_no || s.group_no === entry.group_no)
+      .map((s) => {
+        const mark = officialRows().find((a) => a.schedule_entry_id === p_entry && a.session_date === p_date && a.student_id === s.id);
+        return { student_id: s.id, code: s.code, full_name: s.full_name, group_no: s.group_no, status: mark?.status ?? null, method: mark?.method ?? null, updated_at: mark?.updated_at ?? null };
+      })
+      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+  },
+  teacher_mark: ({ p_entry, p_date, p_marks }) => {
+    const rows = officialRows();
+    for (const mark of p_marks) {
+      const index = rows.findIndex((a) => a.schedule_entry_id === p_entry && a.session_date === p_date && a.student_id === mark.student_id);
+      if (!mark.status) {
+        if (index >= 0) rows.splice(index, 1);
+      } else if (index >= 0) Object.assign(rows[index], { status: mark.status, method: "teacher", updated_at: now() });
+      else rows.push({ schedule_entry_id: p_entry, session_date: p_date, student_id: mark.student_id, status: mark.status, method: "teacher", updated_at: now() });
+    }
+    save();
+    return p_marks.length;
+  },
+  teacher_course_stats: ({ p_course }) => {
+    const db = load();
+    const entries = db.schedule_entries.filter((e) => e.course_id === p_course).map((e) => e.id);
+    return db.students.map((s) => {
+      const mine = officialRows().filter((a) => a.student_id === s.id && entries.includes(a.schedule_entry_id));
+      const count = (status) => mine.filter((a) => a.status === status).length;
+      return { student_id: s.id, code: s.code, full_name: s.full_name, group_no: s.group_no, present: count("present"), late: count("late"), absent: count("absent"), excused: count("excused"), lessons: mine.length };
+    });
+  },
+  teacher_course_sheet: ({ p_course }) => {
+    const db = load();
+    return officialRows()
+      .map((a) => ({ a, e: db.schedule_entries.find((e) => e.id === a.schedule_entry_id) }))
+      .filter(({ e }) => e?.course_id === p_course)
+      .map(({ a, e }) => ({ session_date: a.session_date, start_time: e.start_time, group_no: e.group_no, student_id: a.student_id, status: a.status }));
+  },
+  teacher_open_checkin: () => "demo-checkin",
+  teacher_checkin_status: () => {
+    const window = Math.floor(Date.now() / 20000);
+    return { open: true, code: String((window * 7919) % 1000000).padStart(6, "0"), seconds_left: 20 - (Math.floor(Date.now() / 1000) % 20), expires_at: now(), checked_in: ["Аружан", "Нұрлан", "Дильназ"] };
+  },
+  teacher_close_checkin: () => null,
+  my_open_checkins: () => [],
+  my_official_attendance: () => {
+    const db = load();
+    return officialRows()
+      .filter((a) => a.student_id === me().id)
+      .map((a) => {
+        const e = db.schedule_entries.find((x) => x.id === a.schedule_entry_id);
+        return { schedule_entry_id: a.schedule_entry_id, course_id: e?.course_id, session_date: a.session_date, start_time: e?.start_time, status: a.status, method: a.method };
+      });
+  },
+  student_checkin: () => ({ ok: false, error: "wrong_code" }),
+  admin_teacher_accounts: () =>
+    load().teachers.map((t, index) => ({
+      id: t.id, full_name: t.full_name, login_code: `9${index + 1}`, activated: index < 4, activated_at: index < 4 ? now() : null,
+      last_seen: index < 4 ? new Date(Date.now() - index * 5_400_000).toISOString() : null, online: index === 0, days_7: index < 4 ? 4 - index : 0, days_30: index < 4 ? 12 - index * 2 : 0,
+      minutes_7: index < 4 ? 60 - index * 12 : 0, open_code_expires_at: null,
+      courses: load().course_teachers.filter((ct) => ct.teacher_id === t.id).map((ct) => load().courses.find((c) => c.id === ct.course_id)?.name),
+      lessons_marked: index < 4 ? 6 - index : 0, last_marked: index < 4 ? new Date(Date.now() - 86400000 * (index + 1)).toISOString() : null,
+    })),
+  admin_issue_teacher_code: ({ p_teacher_id }) => {
+    const index = load().teachers.findIndex((t) => t.id === p_teacher_id);
+    return { code: "DEMO-4321", expires_at: new Date(Date.now() + 3 * 86400000).toISOString(), login_code: `9${index + 1}` };
+  },
   mark_seen: ({ p_area }) => {
     load().seen[p_area] = 0;
     save();

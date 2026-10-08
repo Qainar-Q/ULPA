@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ClipboardList, Calculator, ChevronRight, Coffee, Cake, Megaphone } from "lucide-react";
 import { MORE_LINKS } from "../components/layout/navItems.js";
 import BirthdayHero from "../components/classlife/BirthdayHero.jsx";
+import OpenCheckinBanner from "../components/OpenCheckinBanner.jsx";
 import CourseCard from "../components/CourseCard.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import SectionTitle from "../components/ui/SectionTitle.jsx";
@@ -44,6 +45,7 @@ export default function HomePage() {
 
   return (
     <div className="stack-lg">
+      <OpenCheckinBanner />
       {birthdays.today.length > 0 && <BirthdayHero people={birthdays.today} myCode={student?.code} />}
 
       <section className="hero">

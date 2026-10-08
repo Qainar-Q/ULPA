@@ -108,6 +108,14 @@ export default function GuestPage() {
           </span>
           <span className="button button--primary button--sm">Ашу</span>
         </a>
+        <a href="/demo?as=teacher" className="panel demo-cta">
+          <span className="demo-cta__icon" aria-hidden="true">👩‍🏫</span>
+          <span className="demo-cta__text">
+            <strong>Оқытушы кабинетінің демосы</strong>
+            <span>Оқытушы көзімен: бүгінгі сабақтар, бір басумен қатысу белгілеу, QR арқылы белгілену, Excel-ге жүктеу.</span>
+          </span>
+          <span className="button button--ghost button--sm">Ашу</span>
+        </a>
 
         <div className="guest-stats">
           <div><strong>{count("courses")}</strong><span>пән</span></div>

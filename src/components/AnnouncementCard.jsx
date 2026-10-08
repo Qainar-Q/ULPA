@@ -1,7 +1,7 @@
 import { Megaphone, Pencil, Pin, Trash2 } from "lucide-react";
 import { formatDateTime } from "../lib/due.js";
 
-const ROLE_LABEL = { admin: "Әкімші", monitor: "Староста" };
+const ROLE_LABEL = { admin: "Әкімші", monitor: "Староста", teacher: "Оқытушы" };
 
 export default function AnnouncementCard({ item, canManage, onEdit, onDelete, compact = false }) {
   return (
