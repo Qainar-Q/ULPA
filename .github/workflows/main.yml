@@ -35,6 +35,24 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Automatic checks in demo mode (made-up data, real database blocked).
+      # If any check fails, the site is not deployed and the old version stays online.
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run automatic tests
+        run: npm test
+
+      - name: Keep the test report when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
+
       - name: Upload site for GitHub Pages
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
