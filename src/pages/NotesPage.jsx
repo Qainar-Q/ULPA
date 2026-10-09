@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, NotebookPen, Plus } from "lucide-react";
+import { CalendarDays, NotebookPen, Plus, Sparkles } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import CourseSelect from "../components/CourseSelect.jsx";
@@ -33,9 +33,14 @@ export default function NotesPage() {
         title="Конспектілер"
         description="Әр сабақтың конспектісін бүкіл топ бірге жазады. Кім не өзгерткені сақталады — кез келген ескі нұсқаны қайтаруға болады."
         actions={
-          <Link to={`/notes/new${course ? `?course=${course.slug}` : ""}`} className="button button--primary">
-            <Plus size={16} /> Жаңа конспект
-          </Link>
+          <>
+            <Link to={`/quiz${course ? `?course=${course.slug}` : ""}`} className="button button--ghost">
+              <Sparkles size={16} /> AI тест
+            </Link>
+            <Link to={`/notes/new${course ? `?course=${course.slug}` : ""}`} className="button button--primary">
+              <Plus size={16} /> Жаңа конспект
+            </Link>
+          </>
         }
       />
 

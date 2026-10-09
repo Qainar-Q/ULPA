@@ -21,6 +21,7 @@ const PAGES = [
   ["/profile", ".badge"],
   ["/search?q=туынды", ".search-hit"],
   ["/checkin", ".checkin-form__code"],
+  ["/quiz", "#quiz-course"],
   ["/admin", "tr, li"],
   ["/admin/teachers", ".t-account"],
 ];
@@ -92,4 +93,34 @@ test("going back returns to the same scroll position", async ({ page, errors }) 
   // …and "back" returns to where we were.
   await page.goBack();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before - 40);
+});
+
+test("AI quiz: pick a course, answer, see the result", async ({ page, errors }) => {
+  await enterStudentDemo(page);
+  await page.goto("/notes");
+  await page.getByRole("link", { name: "AI тест" }).click();
+  await expect(page).toHaveURL(/\/quiz/);
+  await page.locator("#quiz-course").selectOption({ index: 1 });
+  await page.getByRole("button", { name: "Тест құрастыру" }).click();
+  const options = page.locator(".quiz__option");
+  await expect(options.first()).toBeVisible();
+  const total = Number((await page.locator(".quiz__count").innerText()).match(/\/\s*(\d+)/)[1]);
+  for (let i = 0; i < total; i += 1) {
+    await options.first().click();
+    await expect(page.locator(".quiz__explain")).toBeVisible();
+    await expect(page.locator(".quiz__option.is-correct")).toHaveCount(1);
+    await page.locator(".quiz__explain .button").click();
+  }
+  await expect(page.locator(".quiz__score")).toHaveText(new RegExp(`^\\d+ / ${total}$`));
+  await expectNoOverflow(page);
+});
+
+test("blackboard photo becomes a note draft", async ({ page, errors }) => {
+  await enterStudentDemo(page);
+  await page.goto("/photos");
+  await page.locator(".photo-tile").first().click();
+  await page.getByRole("button", { name: "Тақтадан конспект жасау" }).click();
+  await expect(page).toHaveURL(/\/notes\/new$/);
+  await expect(page.locator("#note-title")).toHaveValue("Тақтадан конспект (демо)");
+  await expect(page.locator(".viewer")).toHaveCount(0);
 });

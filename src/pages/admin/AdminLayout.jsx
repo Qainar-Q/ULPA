@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { CalendarDays, GraduationCap, LayoutDashboard, Users } from "lucide-react";
 import StorageUsage from "../../components/StorageUsage.jsx";
+import PhotoTextIndex from "../../components/admin/PhotoTextIndex.jsx";
 
 /** Admin area with its own tabs. Access is checked by RequireAdmin + the database. */
 export default function AdminLayout() {
@@ -21,6 +22,7 @@ export default function AdminLayout() {
         </NavLink>
       </nav>
       <StorageUsage />
+      <PhotoTextIndex />
       <Outlet />
     </div>
   );

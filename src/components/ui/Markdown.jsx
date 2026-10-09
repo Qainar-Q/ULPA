@@ -134,3 +134,8 @@ export function markdownPreview(text, max = 160) {
     .trim();
   return plain.length > max ? `${plain.slice(0, max - 1)}…` : plain;
 }
+
+/** One line of text with `code`, **bold** and *italic* (for quiz options and the like). */
+export function InlineMarkdown({ text }) {
+  return <>{inline(String(text ?? ""), "inl")}</>;
+}

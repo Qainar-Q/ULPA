@@ -35,6 +35,7 @@ const SearchPage = lazyPage(() => import("./pages/SearchPage.jsx"));
 const AttendancePage = lazyPage(() => import("./pages/AttendancePage.jsx"));
 const CampusPage = lazyPage(() => import("./pages/CampusPage.jsx"));
 const NotesPage = lazyPage(() => import("./pages/NotesPage.jsx"));
+const QuizPage = lazyPage(() => import("./pages/QuizPage.jsx"));
 const NotePage = lazyPage(() => import("./pages/NotePage.jsx"));
 const DrawPage = lazyPage(() => import("./pages/DrawPage.jsx"));
 const SuggestionsPage = lazyPage(() => import("./pages/SuggestionsPage.jsx"));
@@ -99,6 +100,7 @@ function AppRoutes() {
               <Route path="attendance" element={<AttendancePage />} />
               <Route path="campus" element={<CampusPage />} />
               <Route path="notes" element={<NotesPage />} />
+              <Route path="quiz" element={<QuizPage />} />
               <Route path="notes/:id" element={<NotePage />} />
               <Route path="draw" element={<DrawPage />} />
               <Route path="suggestions" element={<SuggestionsPage />} />
