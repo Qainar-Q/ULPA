@@ -5,6 +5,17 @@ import { STATUS, courseSheet, courseStats, percent } from "./teacherApi.js";
 
 const SHORT = { present: "+", late: "к", absent: "н", excused: "с" };
 
+const LATIN = {
+  а: "a", ә: "a", б: "b", в: "v", г: "g", ғ: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "i", к: "k", қ: "q", л: "l", м: "m", н: "n", ң: "n",
+  о: "o", ө: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ұ: "u", ү: "u", ф: "f", х: "h", һ: "h", ц: "ts", ч: "ch", ш: "sh", щ: "sh", ы: "y", і: "i", э: "e", ю: "yu", я: "ya",
+};
+
+/** File names in Latin letters only: some phones and browsers drop Cyrillic download names. */
+function latin(text) {
+  const out = [...String(text ?? "").toLowerCase()].map((ch) => LATIN[ch] ?? ch).join("");
+  return out.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "course";
+}
+
 /** Excel-friendly CSV (UTF-8 BOM, ";" separator): one row per student, one column per lesson. */
 function exportCsv(course, stats, sheet) {
   const lessons = [...new Map(sheet.map((row) => [`${row.session_date} ${row.start_time.slice(0, 5)}`, row])).keys()].sort();
@@ -25,9 +36,13 @@ function exportCsv(course, stats, sheet) {
   const csv = "﻿" + [header, ...lines].map((line) => line.map(esc).join(";")).join("\r\n");
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  link.download = `qatysu-${course.code}-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `qatysu-${latin(course.code)}-${new Date().toISOString().slice(0, 10)}.csv`;
+  // The link must be in the page, or some browsers drop the file name.
+  link.style.display = "none";
+  document.body.appendChild(link);
   link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
 }
 
 export default function CourseStatsView({ course, base }) {
