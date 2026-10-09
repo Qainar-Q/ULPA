@@ -1,0 +1,31 @@
+name: Keep Supabase awake
+
+# Supabase free projects are paused after about a week without any requests
+# (e.g. during holidays). This makes one tiny read every 3 days so that never
+# happens. It uses only the public publishable key that the website itself
+# uses, and Row Level Security still applies, so no data is exposed or changed.
+
+on:
+  schedule:
+    - cron: "17 4 */3 * *" # every 3 days, 09:17 Almaty time
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the database
+        run: |
+          status=$(curl -s -o response.txt -w "%{http_code}" --retry 3 --retry-delay 20 --max-time 30 \
+            "https://lxrjogpmmatpuzellnyu.supabase.co/rest/v1/courses?select=id&limit=1" \
+            -H "apikey: sb_publishable_fnfShtPMuOUc2g3CNX-ydA_PAob-rU6")
+          echo "HTTP $status"
+          if [ "$status" != "200" ]; then
+            cat response.txt
+            echo "::error::Supabase did not answer normally (HTTP $status). If the project is paused, restore it at supabase.com."
+            exit 1
+          fi
