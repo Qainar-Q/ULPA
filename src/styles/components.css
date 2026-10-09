@@ -152,6 +152,7 @@ a.text-link {
 
 .page-header__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-2);
 }
 

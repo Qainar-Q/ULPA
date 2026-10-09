@@ -98,49 +98,96 @@ async function askClaude(apiKey: string, ask: string, image: string, mediaType?:
   };
 }
 
-// Free-tier friendly models first; the next one is tried if a model is not available.
-const GEMINI_MODELS = (Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash,gemini-flash-latest,gemini-2.0-flash").split(",").map((m) => m.trim()).filter(Boolean);
+// Google retires model names over time, so the list is not fixed: GEMINI_MODEL (comma list)
+// is tried first, then whatever "flash" models this key can actually use (asked from Google
+// once per server start). "Busy" (429/503) or "gone" (404) moves on to the next model.
+const PREFERRED = (Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-latest,gemini-flash-lite-latest").split(",").map((m) => m.trim()).filter(Boolean);
+let discovered: Promise<string[]> | null = null;
+
+function versionOf(name: string): number {
+  const match = name.match(/gemini-(\d+(?:\.\d+)?)/);
+  return match ? Number(match[1]) : 0;
+}
+
+async function availableFlashModels(apiKey: string): Promise<string[]> {
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { headers: { "x-goog-api-key": apiKey } });
+    if (!response.ok) return [];
+    const { models = [] } = await response.json();
+    return models
+      .filter((m: { name: string; supportedGenerationMethods?: string[] }) =>
+        /flash/i.test(m.name) && !/image|tts|audio|live|embed|preview|exp/i.test(m.name) && (m.supportedGenerationMethods ?? []).includes("generateContent"))
+      .map((m: { name: string }) => m.name.replace(/^models\//, ""))
+      .sort((a: string, b: string) => versionOf(b) - versionOf(a) || Number(/lite/.test(a)) - Number(/lite/.test(b)));
+  } catch {
+    return [];
+  }
+}
+
+async function geminiModels(apiKey: string): Promise<string[]> {
+  discovered ??= availableFlashModels(apiKey);
+  const found = await discovered;
+  if (!found.length) discovered = null; // ask again next time
+  return [...new Set([...PREFERRED, ...found.slice(0, 4)])];
+}
+
 
 async function askGemini(apiKey: string, ask: string, image: string, mediaType?: string): Promise<Answer> {
   const parts = image ? [{ inline_data: { mime_type: mediaType, data: image } }, { text: ask }] : [{ text: ask }];
   let lastError: UpstreamError = new UpstreamError("upstream");
-  for (const model of GEMINI_MODELS) {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ role: "user", parts }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 16000 },
-      }),
-    });
-    if (response.ok) {
-      const result = await response.json();
-      const candidate = result.candidates?.[0];
-      const text = (candidate?.content?.parts ?? []).filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought).map((p: { text: string }) => p.text).join("");
-      if (!text && candidate?.finishReason && candidate.finishReason !== "STOP") {
-        throw new UpstreamError(candidate.finishReason === "SAFETY" || candidate.finishReason === "RECITATION" ? "blocked" : "upstream", candidate.finishReason);
+  const models = await geminiModels(apiKey);
+  let quick = true; // ask for little "thinking" (much faster); dropped if a model rejects it
+  // Pass 2 (only when every model was busy): wait a moment, try the first two again.
+  for (let pass = 0; pass < 2; pass += 1) {
+    if (pass === 1) {
+      if (lastError.code !== "busy") break;
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+    }
+    const list = pass === 0 ? models : models.slice(0, 2);
+    for (let i = 0; i < list.length; i += 1) {
+      const model = list[i];
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM }] },
+          contents: [{ role: "user", parts }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 16000, ...(quick ? { thinkingConfig: { thinkingLevel: "low" } } : {}) },
+        }),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const candidate = result.candidates?.[0];
+        const text = (candidate?.content?.parts ?? []).filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought).map((p: { text: string }) => p.text).join("");
+        if (!text && candidate?.finishReason && candidate.finishReason !== "STOP") {
+          throw new UpstreamError(candidate.finishReason === "SAFETY" || candidate.finishReason === "RECITATION" ? "blocked" : "upstream", candidate.finishReason);
+        }
+        return {
+          text,
+          inputTokens: result.usageMetadata?.promptTokenCount ?? null,
+          outputTokens: result.usageMetadata?.candidatesTokenCount ?? null,
+          truncated: candidate?.finishReason === "MAX_TOKENS",
+        };
       }
-      return {
-        text,
-        inputTokens: result.usageMetadata?.promptTokenCount ?? null,
-        outputTokens: result.usageMetadata?.candidatesTokenCount ?? null,
-        truncated: candidate?.finishReason === "MAX_TOKENS",
-      };
+      const detail = await response.text();
+      console.error("gemini error", model, response.status, detail.slice(0, 500));
+      if (response.status === 400 && quick && /thinking/i.test(detail)) {
+        quick = false;
+        i -= 1; // same model again, without the hint
+        continue;
+      }
+      if (response.status === 404) {
+        lastError = new UpstreamError("upstream", "model not found");
+        continue; // try the next model
+      }
+      if (/API_KEY_INVALID|API key not valid/i.test(detail) || response.status === 401 || response.status === 403) throw new UpstreamError("bad_key");
+      if (/location is not supported/i.test(detail)) throw new UpstreamError("region");
+      if (response.status === 429 || response.status === 503) {
+        lastError = new UpstreamError("busy"); // this model's free quota is used up: try the next one
+        continue;
+      }
+      throw new UpstreamError("upstream");
     }
-    const detail = await response.text();
-    console.error("gemini error", model, response.status, detail.slice(0, 500));
-    if (response.status === 404) {
-      lastError = new UpstreamError("upstream", "model not found");
-      continue; // try the next model
-    }
-    if (/API_KEY_INVALID|API key not valid/i.test(detail) || response.status === 401 || response.status === 403) throw new UpstreamError("bad_key");
-    if (/location is not supported/i.test(detail)) throw new UpstreamError("region");
-    if (response.status === 429) {
-      lastError = new UpstreamError("busy"); // this model's free quota is used up: try the next one
-      continue;
-    }
-    throw new UpstreamError("upstream");
   }
   throw lastError;
 }

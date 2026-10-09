@@ -639,6 +639,32 @@ async function functions(name, body) {
     save();
     return respond({ id: row.id, created_at: row.created_at, result, remaining: 14, truncated: false });
   }
+  if (name === "study-ai") {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    if (body?.action === "photo_index") return respond({ ok: true });
+    if (body?.action === "photo_note") {
+      const photo = table("course_photos").find((row) => row.id === body.photoId);
+      return respond({
+        ok: true,
+        title: "Тақтадан конспект (демо)",
+        body: "## Демо конспект\n\nДемо нұсқада нақты AI қосылмаған. Нағыз ULPA-да AI тақтадағы формулалар мен анықтамаларды осылай реттеп жазады:\n\n- **Ньютонның екінші заңы:** `F = m·a`\n- **Үдеу:** `a = dv/dt`\n\nСақтамас бұрын тексеріп, түзете аласың.",
+        course_id: photo?.course_id ?? null,
+        lesson_date: (photo?.created_at ?? now()).slice(0, 10),
+        remaining: 9,
+      });
+    }
+    if (body?.action === "quiz") {
+      const questions = [
+        { q: "Ньютонның екінші заңы қалай жазылады?", options: ["`F = m/a`", "`F = m·a`", "`F = m + a`", "`F = a/m`"], answer: 1, explain: "Күш массаның үдеуге көбейтіндісіне тең: `F = m·a`." },
+        { q: "`(sin x)'` неге тең?", options: ["`-cos x`", "`cos x`", "`sin x`", "`-sin x`"], answer: 1, explain: "Синустың туындысы — косинус." },
+        { q: "Бірінші ғарыштық жылдамдық шамамен қанша?", options: ["3,1 км/с", "11,2 км/с", "7,9 км/с", "16,7 км/с"], answer: 2, explain: "Жер бетіндегі бірінші ғарыштық жылдамдық ≈ 7,9 км/с." },
+        { q: "Интегралдың геометриялық мағынасы қандай?", options: ["Қисық астындағы аудан", "Жанаманың көлбеулігі", "Функцияның максимумы", "Нүктелер арасындағы қашықтық"], answer: 0, explain: "Анықталған интеграл — қисық пен ось арасындағы аудан." },
+        { q: "Кеплердің бірінші заңы бойынша планета орбитасы қандай?", options: ["Шеңбер", "Парабола", "Түзу", "Эллипс"], answer: 3, explain: "Планеталар Күн фокуста тұрған эллипс бойымен қозғалады." },
+      ];
+      return respond({ ok: true, questions: questions.slice(0, Math.min(Number(body.count) || 5, 5)), remaining: 9 });
+    }
+    return respond({ error: "bad_request" }, { status: 400 });
+  }
   if (name === "push-send") return respond({ devices: 0, sent: 0, gone: 0, failed: 0 });
   return respond({ error: "demo" }, { status: 400 });
 }

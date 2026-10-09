@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase.js";
+import { indexPhoto } from "../classlife/studyAi.js";
 import { IMMUTABLE_CACHE, signedUrls } from "../../lib/signedUrls.js";
 
 export const PHOTO_BUCKET = "course-photos";
@@ -54,6 +55,8 @@ export async function uploadPhoto({ courseId, photoType, groupNo, caption, prepa
 
     const { error: markError } = await supabase.from("course_photos").update({ uploaded: true }).eq("id", row.id);
     if (markError) throw markError;
+    // In the background: let the AI read the board so search can find this photo later.
+    indexPhoto(row.id).catch(() => {});
     return row;
   } catch (error) {
     await storage.remove([row.storage_path, row.thumb_path]).catch(() => {});

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Download, ExternalLink, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ExternalLink, Sparkles, Trash2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { aiErrorText, photoToNote } from "../../features/classlife/studyAi.js";
+import { storeDraft } from "../../features/notes/notesApi.js";
+import { holdBusy } from "../../lib/busy.js";
 import { canShareFiles, fetchImageFile, saveImageFile } from "../../lib/saveImage.js";
 import { preloadImage } from "../../lib/signedUrls.js";
 import PhotoSocial from "./PhotoSocial.jsx";
@@ -29,6 +33,31 @@ export default function PhotoViewer({ photos, index, thumbs, courseById, onIndex
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [file, setFile] = useState(null); // pre-fetched so the share sheet opens within the tap
   const [saveState, setSaveState] = useState(null);
+  const navigate = useNavigate();
+  const [noteState, setNoteState] = useState(null); // null | "busy" | { error }
+
+  useEffect(() => setNoteState(null), [photo.id]);
+
+  // Blackboard photo → AI note draft → open the note editor to check and save it.
+  async function makeNote() {
+    setNoteState("busy");
+    const release = holdBusy();
+    try {
+      const result = await photoToNote(photo.id);
+      storeDraft(null, {
+        title: result.title,
+        body: result.body,
+        courseSlug: courseById(result.course_id)?.slug ?? "",
+        lessonDate: result.lesson_date ?? "",
+      });
+      onClose();
+      navigate("/notes/new");
+    } catch (error) {
+      setNoteState({ error: aiErrorText(error.message) });
+    } finally {
+      release();
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -194,6 +223,10 @@ export default function PhotoViewer({ photos, index, thumbs, courseById, onIndex
             </button>
             {saveState === "shared" && <span className="passkeys__ok">Мәзірден «Сохранить изображение» таңда ✓</span>}
             {saveState === "downloaded" && <span className="passkeys__ok">Жүктелді ✓</span>}
+            <button type="button" className="button button--ghost viewer__ai" onClick={makeNote} disabled={noteState === "busy"}>
+              <Sparkles size={17} /> {noteState === "busy" ? "AI оқып жатыр… (~30 сек)" : "Тақтадан конспект жасау"}
+            </button>
+            {noteState?.error && <span className="form__error">{noteState.error}</span>}
           </div>
         )}
       </div>
