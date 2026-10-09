@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { useScrollMemory } from "../lib/useScrollMemory.js";
 import { House, LogOut, Megaphone, Send, UserRound } from "lucide-react";
 import BrandMark from "../components/layout/BrandMark.jsx";
 import DemoBanner from "../components/layout/DemoBanner.jsx";
@@ -162,7 +163,6 @@ const NAV = [
 /** Separate, simple app for teacher accounts (no class pages at all). */
 export default function TeacherApp() {
   const { teacher } = useAuth();
-  const { pathname } = useLocation();
 
   // Activity for the admin dashboard, about once a minute while visible.
   useEffect(() => {
@@ -176,9 +176,7 @@ export default function TeacherApp() {
     };
   }, []);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+  useScrollMemory();
 
   return (
     <div className="t-app">

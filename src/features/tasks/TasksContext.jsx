@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { fetchTasks, setDone } from "./taskApi.js";
+import { readCache, writeCache } from "../../lib/cache.js";
 
 // Assignments visible to the signed-in student (the database filters by group)
 // plus that student's own done marks.
@@ -11,18 +12,26 @@ export function TasksProvider({ children }) {
   const { status: authStatus, student } = useAuth();
   const [state, setState] = useState({ status: "idle", tasks: [], statuses: [] });
 
+  const userId = student?.id ?? null;
+
   const load = useCallback(async () => {
     setState((current) => ({ ...current, status: current.tasks.length ? "ready" : "loading" }));
     try {
       const data = await fetchTasks();
       setState({ status: "ready", ...data });
+      writeCache("tasks", userId, data);
     } catch {
-      setState((current) => ({ ...current, status: "error" }));
+      // Offline with a saved copy on screen: keep it.
+      setState((current) => ({ ...current, status: current.tasks.length ? "ready" : "error" }));
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
-    if (authStatus === "signedIn") load();
+    if (authStatus === "signedIn") {
+      const cached = readCache("tasks", userId);
+      if (cached?.tasks) setState((current) => (current.tasks.length ? current : { status: "ready", ...cached }));
+      load();
+    }
     if (authStatus === "signedOut") setState({ status: "idle", tasks: [], statuses: [] });
   }, [authStatus, student?.id, load]);
 

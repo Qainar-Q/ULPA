@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { readCache, writeCache } from "../../lib/cache.js";
 import { supabase } from "../../lib/supabase.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 
@@ -14,8 +15,12 @@ export function CatalogProvider({ children }) {
   const [sessions, setSessions] = useState([]);
   const [status, setStatus] = useState("idle"); // idle | loading | ready | error
 
+  const userId = student?.id ?? null;
+  const hasData = useRef(false);
+
   const load = useCallback(async () => {
-    setStatus("loading");
+    // With a saved copy on screen, refresh quietly instead of showing "loading".
+    if (!hasData.current) setStatus("loading");
     const [coursesResult, sessionsResult] = await Promise.all([
       supabase.from("courses").select("id, slug, code, name, teacher, description, hue, sort_order").order("sort_order"),
       supabase
@@ -25,41 +30,36 @@ export function CatalogProvider({ children }) {
         .order("start_time"),
     ]);
 
-    const cacheKey = `ulpa-catalog-${student?.id ?? "anon"}`;
     if (coursesResult.error || sessionsResult.error) {
-      // Offline: show the last copy this student loaded (read-only cache of real data).
-      try {
-        const cached = JSON.parse(localStorage.getItem(cacheKey) ?? "null");
-        if (cached?.courses?.length) {
-          setCourses(cached.courses);
-          setSessions(cached.sessions);
-          setStatus("ready");
-          return;
-        }
-      } catch {
-        /* storage unavailable */
-      }
-      setStatus("error");
+      // Offline: keep showing the last copy if there is one.
+      setStatus(hasData.current ? "ready" : "error");
       return;
     }
+    hasData.current = true;
     setCourses(coursesResult.data);
     setSessions(sessionsResult.data);
     setStatus("ready");
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({ courses: coursesResult.data, sessions: sessionsResult.data }));
-    } catch {
-      /* storage full or blocked */
-    }
-  }, [student?.id]);
+    writeCache("catalog", userId, { courses: coursesResult.data, sessions: sessionsResult.data });
+  }, [userId]);
 
   useEffect(() => {
-    if (authStatus === "signedIn") load();
+    if (authStatus === "signedIn") {
+      const cached = readCache("catalog", userId);
+      if (cached?.courses?.length && !hasData.current) {
+        hasData.current = true;
+        setCourses(cached.courses);
+        setSessions(cached.sessions);
+        setStatus("ready");
+      }
+      load();
+    }
     if (authStatus === "signedOut") {
+      hasData.current = false;
       setCourses([]);
       setSessions([]);
       setStatus("idle");
     }
-  }, [authStatus, student?.id, load]);
+  }, [authStatus, userId, load]);
 
   const value = useMemo(() => {
     const byId = new Map(courses.map((course) => [course.id, course]));
