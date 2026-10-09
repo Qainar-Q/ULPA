@@ -1,4 +1,4 @@
-import { test, expect, expectNoOverflow, enterStudentDemo } from "./helpers.js";
+import { test, expect, expectNoOverflow, enterStudentDemo, closeOverlays } from "./helpers.js";
 
 // Every student page with something that must be on it.
 const PAGES = [
@@ -66,4 +66,30 @@ test("leaving the demo goes back to the start", async ({ page, errors }) => {
   await page.locator(".demo-banner button").click();
   await expect(page.locator(".demo-banner")).toHaveCount(0);
   await expect(page).not.toHaveURL(/\/demo/);
+});
+
+test("going back returns to the same scroll position", async ({ page, errors }) => {
+  await enterStudentDemo(page);
+  await page.goto("/notes");
+  await expect(page.locator(".note-card").first()).toBeVisible();
+  await page.goto("/");
+  await closeOverlays(page);
+  await expect(page.locator(".session-list li, .session").first()).toBeVisible();
+  const max = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+  const target = Math.min(600, max - 10);
+  expect(target, "home page is long enough to scroll").toBeGreaterThan(100);
+  await page.mouse.wheel(0, target);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(target - 40);
+  const before = await page.evaluate(() => window.scrollY);
+
+  // A new page opens at the top…
+  // (any link on the home page that is visible right now)
+  const link = page.locator('main a[href^="/tasks"]:visible, main a[href^="/notes"]:visible').first();
+  await link.click();
+  await expect(page).not.toHaveURL(/localhost:4173\/$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+  // …and "back" returns to where we were.
+  await page.goBack();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before - 40);
 });

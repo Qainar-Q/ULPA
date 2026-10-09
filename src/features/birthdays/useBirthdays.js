@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { almatyDateParts } from "../../lib/time.js";
+import { readCache, writeCache } from "../../lib/cache.js";
 
 /** Days from today (Almaty) until the next occurrence of day/month (0 = today). */
 function daysUntil(month, day, now) {
@@ -14,15 +15,19 @@ function daysUntil(month, day, now) {
 
 /** Class birthdays (first name + day/month only), with today's and upcoming ones. */
 export function useBirthdays(windowDays = 7) {
-  const { status: authStatus } = useAuth();
-  const [rows, setRows] = useState([]);
+  const { status: authStatus, student } = useAuth();
+  const userId = student?.id ?? null;
+  const [rows, setRows] = useState(() => readCache("birthdays", userId) ?? []);
 
   useEffect(() => {
     if (authStatus !== "signedIn") return;
     supabase.rpc("class_birthdays").then(({ data, error }) => {
-      if (!error && data) setRows(data);
+      if (!error && data) {
+        setRows(data);
+        writeCache("birthdays", userId, data);
+      }
     });
-  }, [authStatus]);
+  }, [authStatus, userId]);
 
   const now = new Date();
   const withDays = rows

@@ -1,7 +1,8 @@
 import { Suspense, useEffect } from "react";
 import PageLoading from "../ui/PageLoading.jsx";
 import { prefetchPages } from "../../lib/prefetch.js";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
+import { useScrollMemory } from "../../lib/useScrollMemory.js";
 import Sidebar from "./Sidebar.jsx";
 import BottomNav from "./BottomNav.jsx";
 import MobileTopbar from "./MobileTopbar.jsx";
@@ -10,7 +11,6 @@ import BadgeToast from "../classlife/BadgeToast.jsx";
 import DemoBanner from "./DemoBanner.jsx";
 
 export default function AppShell() {
-  const { pathname } = useLocation();
   const navigate = useNavigate();
 
   // After the first screen is shown, quietly fetch the most used pages.
@@ -30,10 +30,8 @@ export default function AppShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
-  // New page → start at the top (important on phones).
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+  // New page → start at the top; going back → return to where you were.
+  useScrollMemory();
 
   return (
     <div className="app-shell">

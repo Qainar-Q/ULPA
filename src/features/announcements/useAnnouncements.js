@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { readCache, writeCache } from "../../lib/cache.js";
 
 const FIELDS = "id, title, body, group_no, pinned, author_id, author_name, author_role, created_at, updated_at";
 
 /** Announcements visible to the current student (database filters by group). Pinned first. */
 export function useAnnouncements(limit = 50) {
-  const { status: authStatus } = useAuth();
-  const [state, setState] = useState({ status: "loading", items: [] });
+  const { status: authStatus, student } = useAuth();
+  const userId = student?.id ?? null;
+  const cacheName = `announcements-${limit}`;
+  // Last copy from this device first (shows instantly), then fresh data.
+  const [state, setState] = useState(() => {
+    const cached = readCache(cacheName, userId);
+    return cached ? { status: "ready", items: cached } : { status: "loading", items: [] };
+  });
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -16,8 +23,13 @@ export function useAnnouncements(limit = 50) {
       .order("pinned", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(limit);
-    setState(error ? { status: "error", items: [] } : { status: "ready", items: data });
-  }, [limit]);
+    if (error) {
+      setState((current) => (current.items.length ? current : { status: "error", items: [] }));
+      return;
+    }
+    setState({ status: "ready", items: data });
+    writeCache(cacheName, userId, data);
+  }, [limit, cacheName, userId]);
 
   useEffect(() => {
     if (authStatus === "signedIn") load();

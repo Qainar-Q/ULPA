@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { clearCaches } from "../../lib/cache.js";
 import { exitDemo, isDemo } from "../../demo/demoMode.js";
 import { supabase } from "../../lib/supabase.js";
 import { clearPrivateFileCache } from "../../lib/signedUrls.js";
@@ -216,6 +217,7 @@ export function AuthProvider({ children }) {
     await disablePush().catch(() => {});
     await clearPrivateFileCache();
     forgetProfile();
+    clearCaches();
     await supabase.auth.signOut();
   }, []);
 
