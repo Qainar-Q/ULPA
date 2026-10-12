@@ -1,5 +1,6 @@
 import { Megaphone, Pencil, Pin, Trash2 } from "lucide-react";
 import { formatDateTime } from "../lib/due.js";
+import AnnouncementImages from "./AnnouncementImages.jsx";
 
 const ROLE_LABEL = { admin: "Әкімші", monitor: "Староста", teacher: "Оқытушы" };
 
@@ -12,6 +13,7 @@ export default function AnnouncementCard({ item, canManage, onEdit, onDelete, co
       <div className="announcement__body">
         <h3>{item.title}</h3>
         {item.body && <p className={compact ? "announcement__text--clamp" : undefined}>{item.body}</p>}
+        <AnnouncementImages item={item} compact={compact} />
         <div className="announcement__meta">
           <span>
             {item.author_name ?? "—"}

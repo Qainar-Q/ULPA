@@ -149,6 +149,7 @@ function applyOrder(rows, order) {
 
 const EMBEDS = {
   assignments: { assignment_attachments: "assignment_id" },
+  announcements: { announcement_images: "announcement_id" },
   polls: { poll_options: "poll_id" },
   teachers: { course_teachers: "teacher_id" },
 };
@@ -206,6 +207,9 @@ function stamp(name, row) {
       break;
     case "assignment_attachments":
       Object.assign(out, { uploaded: false, storage_path: `${out.assignment_id}/${out.id}` });
+      break;
+    case "announcement_images":
+      Object.assign(out, { uploaded: false, position: out.position ?? 0, storage_path: `${out.announcement_id}/${out.id}.jpg` });
       break;
     case "photo_reactions":
       Object.assign(out, { student_id: who.id, student_name: who.name });
@@ -303,6 +307,7 @@ function rest(name, method, params, body, headers) {
       load().poll_votes = table("poll_votes").filter((item) => item.poll_id !== row.id);
     }
     if (name === "notes") for (const row of removed) load().note_revisions = table("note_revisions").filter((item) => item.note_id !== row.id);
+    if (name === "announcements") for (const row of removed) load().announcement_images = table("announcement_images").filter((item) => item.announcement_id !== row.id);
     if (name === "assignments") for (const row of removed) load().assignment_attachments = table("assignment_attachments").filter((item) => item.assignment_id !== row.id);
     save();
     if (!prefer.includes("return=representation")) return new Response(null, { status: 204 });
