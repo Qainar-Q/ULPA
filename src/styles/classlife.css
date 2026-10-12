@@ -1330,3 +1330,41 @@
 .viewer__ai {
   color: #fff;
 }
+
+/* ---- Draw: hints, actions, already-drawn names ---- */
+.draw-hint {
+  margin: calc(-1 * var(--s-2)) 0 0;
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.draw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+
+.draw-history .draw-actions {
+  justify-content: flex-start;
+}
+
+.draw-person.is-done {
+  border-style: dashed;
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.draw-history__peek {
+  flex-basis: 100%;
+  overflow: hidden;
+  color: var(--text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon-button:disabled {
+  opacity: 0.35;
+}

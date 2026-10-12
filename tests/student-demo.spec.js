@@ -45,6 +45,22 @@ test("random draw makes groups", async ({ page, errors }) => {
   await expect(page.locator(".draw-stage .draw-group").first()).toBeVisible({ timeout: 10_000 });
 });
 
+test("draw: groups by size, then a pick that never repeats", async ({ page, errors }) => {
+  await enterStudentDemo(page);
+  await page.goto("/draw");
+  await page.getByRole("radio", { name: "Топтағы адам" }).click();
+  await expect(page.locator(".draw-hint")).toContainText("топ");
+  await page.getByRole("button", { name: "Бастау" }).click();
+  await expect(page.locator(".draw-stage .draw-group").first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("button", { name: "Көшіру" }).first()).toBeVisible();
+
+  await page.getByRole("radio", { name: "Жеребе" }).click();
+  await page.getByText("Бұрын шыққандар қайталанбасын").click();
+  await page.getByRole("button", { name: "Бастау" }).click();
+  await expect(page.locator(".draw-stage .draw-picked li")).toHaveCount(1, { timeout: 10_000 });
+  await expect(page.locator(".draw-person.is-done")).toHaveCount(1);
+});
+
 test("translation returns Kazakh text", async ({ page, errors }) => {
   await enterStudentDemo(page);
   await page.goto("/translate");
