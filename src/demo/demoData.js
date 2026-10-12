@@ -305,6 +305,10 @@ export function buildDemoStore(role = "student") {
     assignment_attachments,
     assignment_status,
     announcements,
+    announcement_images: [
+      { id: id(560), announcement_id: announcements[2].id, storage_path: "demo/p3.jpg", width: 1200, height: 900, position: 0, uploaded: true, created_at: announcements[2].created_at },
+      { id: id(561), announcement_id: announcements[2].id, storage_path: "demo/p5.jpg", width: 1200, height: 900, position: 1, uploaded: true, created_at: announcements[2].created_at },
+    ],
     course_photos,
     photo_reactions,
     photo_comments,

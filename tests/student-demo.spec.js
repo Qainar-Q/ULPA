@@ -124,3 +124,24 @@ test("blackboard photo becomes a note draft", async ({ page, errors }) => {
   await expect(page.locator("#note-title")).toHaveValue("Тақтадан конспект (демо)");
   await expect(page.locator(".viewer")).toHaveCount(0);
 });
+
+test("announcements show photos and can be posted with a photo", async ({ page, errors }) => {
+  await enterStudentDemo(page);
+  await page.goto("/announcements");
+  const firstImage = page.locator(".announcement__image").first();
+  await expect(firstImage.locator("img")).toBeVisible();
+  await firstImage.click();
+  await expect(page.locator(".viewer")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".viewer")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Жариялау" }).first().click();
+  await page.locator("#an-title").fill("Сабақ кестесі өзгерді");
+  await page.locator('.upload input[type="file"]').setInputFiles("public/demo/p2.jpg");
+  await expect(page.locator(".ann-photos__item img")).toHaveCount(1);
+  await page.locator(".upload").getByRole("button", { name: "Жариялау" }).click();
+  await expect(page.locator(".modal")).toHaveCount(0);
+  const card = page.locator(".announcement", { hasText: "Сабақ кестесі өзгерді" });
+  await expect(card.locator(".announcement__image img")).toHaveCount(1);
+  await expectNoOverflow(page);
+});

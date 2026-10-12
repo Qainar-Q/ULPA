@@ -1,11 +1,22 @@
-import { useState } from "react";
-import { CloudOff, Megaphone, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CloudOff, ImagePlus, Megaphone, Plus, X } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
 import Modal from "../components/ui/Modal.jsx";
 import Segmented from "../components/ui/Segmented.jsx";
 import AnnouncementCard from "../components/AnnouncementCard.jsx";
-import { deleteAnnouncement, saveAnnouncement, useAnnouncements } from "../features/announcements/useAnnouncements.js";
+import {
+  ANNOUNCEMENT_BUCKET,
+  MAX_ANNOUNCEMENT_IMAGES,
+  addAnnouncementImages,
+  announcementImages,
+  deleteAnnouncement,
+  removeAnnouncementImages,
+  saveAnnouncement,
+  useAnnouncements,
+} from "../features/announcements/useAnnouncements.js";
+import { signedUrls } from "../lib/signedUrls.js";
+import { holdBusy } from "../lib/busy.js";
 import { useAuth } from "../features/auth/AuthContext.jsx";
 import { useMarkSeen } from "../features/unread/UnreadContext.jsx";
 
@@ -24,17 +35,56 @@ function AnnouncementForm({ item, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const set = (key) => (value) => setValues((current) => ({ ...current, [key]: value }));
 
+  // Photos: the ones already saved (can be removed) and new ones picked on this device.
+  const [kept, setKept] = useState(() => announcementImages(item));
+  const [removed, setRemoved] = useState([]);
+  const [added, setAdded] = useState([]); // { file, preview }
+  const [keptUrls, setKeptUrls] = useState({});
+  const fileInput = useRef(null);
+  const addedRef = useRef(added);
+  addedRef.current = added;
+  const total = kept.length + added.length;
+
+  useEffect(() => {
+    const paths = announcementImages(item).map((image) => image.storage_path);
+    if (paths.length) signedUrls(ANNOUNCEMENT_BUCKET, paths).then(setKeptUrls).catch(() => {});
+  }, [item]);
+  useEffect(() => () => addedRef.current.forEach((entry) => URL.revokeObjectURL(entry.preview)), []);
+
+  function pick(event) {
+    const files = [...(event.target.files ?? [])].filter((file) => file.type.startsWith("image/"));
+    event.target.value = "";
+    const room = MAX_ANNOUNCEMENT_IMAGES - total;
+    if (files.length > room) setError(`Бір хабарландыруға ${MAX_ANNOUNCEMENT_IMAGES} фотоға дейін.`);
+    setAdded((current) => [...current, ...files.slice(0, Math.max(room, 0)).map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
+  }
+
   async function submit(event) {
     event.preventDefault();
     if (!values.title.trim()) return setError("Тақырыбын жаз.");
     setBusy(true);
+    setError(null);
+    const release = holdBusy();
+    let savedId = item?.id ?? null;
     try {
-      await saveAnnouncement(item?.id, values);
+      savedId = await saveAnnouncement(item?.id, values);
+      await removeAnnouncementImages(removed);
+      const nextPosition = kept.reduce((max, image) => Math.max(max, image.position + 1), 0);
+      await addAnnouncementImages(savedId, added.map((entry) => entry.file), nextPosition);
       await onSaved();
       onClose();
     } catch (saveError) {
-      setError(saveError?.code === "42501" ? "Бұл топқа хабарландыру жариялауға рұқсатың жоқ." : "Сақталмады. Қайта көр.");
+      if (savedId && savedId !== item?.id) await onSaved(); // the text is saved even if a photo failed
+      setError(
+        saveError?.code === "42501"
+          ? "Бұл топқа хабарландыру жариялауға рұқсатың жоқ."
+          : savedId
+            ? "Мәтін сақталды, бірақ кейбір фото жүктелмеді. Қайта көр."
+            : "Сақталмады. Қайта көр."
+      );
       setBusy(false);
+    } finally {
+      release();
     }
   }
 
@@ -53,6 +103,52 @@ function AnnouncementForm({ item, onClose, onSaved }) {
           <span className="field__label">Кімге</span>
           <Segmented label="Кімге" options={groupOptions} value={values.groupNo} onChange={set("groupNo")} />
         </div>
+        <div className="field">
+          <span className="field__label">
+            Фото <span className="muted">(міндетті емес, {MAX_ANNOUNCEMENT_IMAGES}-ке дейін)</span>
+          </span>
+          <div className="ann-photos">
+            {kept.map((image) => (
+              <div key={image.id} className="ann-photos__item">
+                {keptUrls[image.storage_path] && <img src={keptUrls[image.storage_path]} alt="" />}
+                <button
+                  type="button"
+                  className="ann-photos__remove"
+                  aria-label="Фотоны алып тастау"
+                  onClick={() => {
+                    setKept((current) => current.filter((entry) => entry.id !== image.id));
+                    setRemoved((current) => [...current, image]);
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            {added.map((entry) => (
+              <div key={entry.preview} className="ann-photos__item">
+                <img src={entry.preview} alt="" />
+                <button
+                  type="button"
+                  className="ann-photos__remove"
+                  aria-label="Фотоны алып тастау"
+                  onClick={() => {
+                    URL.revokeObjectURL(entry.preview);
+                    setAdded((current) => current.filter((other) => other !== entry));
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            {total < MAX_ANNOUNCEMENT_IMAGES && (
+              <button type="button" className="ann-photos__add" onClick={() => fileInput.current?.click()}>
+                <ImagePlus size={20} />
+                <span>Қосу</span>
+              </button>
+            )}
+          </div>
+          <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={pick} />
+        </div>
         {isAdmin && (
           <label className="toggle">
             <span>Басты бетте бекіту</span>
@@ -62,7 +158,7 @@ function AnnouncementForm({ item, onClose, onSaved }) {
         )}
         {error && <p className="form__error" role="alert">{error}</p>}
         <button type="submit" className="button button--primary button--block" disabled={busy}>
-          {busy ? "Жариялануда…" : item ? "Сақтау" : "Жариялау"}
+          {busy ? (added.length ? "Фото жүктелуде…" : "Жариялануда…") : item ? "Сақтау" : "Жариялау"}
         </button>
       </form>
     </Modal>
