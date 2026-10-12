@@ -541,6 +541,19 @@ const RPC = {
     save();
     return [{ id: note.id, version: note.version }];
   },
+  draw_v2: ({ p_title, p_mode, p_amount, p_codes, p_extra, p_request, p_per_group }) => {
+    const draws = table("draws");
+    const again = p_request && draws.find((row) => row.request_id === p_request);
+    if (again) return again;
+    const count = load().students.filter((row) => (p_codes ?? []).includes(row.code)).length + (p_extra ?? []).filter((name) => name.trim()).length;
+    const amount = p_mode === "groups" && p_per_group ? Math.ceil(count / p_per_group) : p_amount;
+    if (p_mode === "groups" && (amount < 2 || amount > count)) throw Object.assign(new Error("bad_amount"), { code: "22023" });
+    const id = RPC.make_draw({ p_title, p_mode, p_amount: amount, p_codes, p_extra });
+    const row = table("draws").find((item) => item.id === id);
+    row.request_id = p_request;
+    save();
+    return row;
+  },
   make_draw: ({ p_title, p_mode, p_amount, p_codes, p_extra }) => {
     const names = [...load().students.filter((row) => (p_codes ?? []).includes(row.code)).map((row) => row.full_name), ...(p_extra ?? []).map((name) => name.trim()).filter(Boolean)];
     if (names.length < 2) throw Object.assign(new Error("bad_pool"), { code: "22023" });

@@ -17,7 +17,31 @@ export async function listDraws() {
   return data ?? [];
 }
 
-export async function makeDraw({ title, mode, amount, codes, extra }) {
+const isNetworkError = (error) => !error?.code && /fetch|load failed|network|timeout|abort/i.test(`${error?.name ?? ""} ${error?.message ?? error ?? ""}`);
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * One request: the server shuffles, saves and sends the finished draw back.
+ * A weak phone connection is retried automatically; the request id makes a retry return the
+ * same draw instead of a new one, so a lost answer can never turn into a "re-roll".
+ */
+export async function makeDraw({ title, mode, amount, codes, extra, perGroup = null }) {
+  const request = crypto.randomUUID?.() ?? "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (c ^ (Math.random() * 16) >> (c / 4)).toString(16));
+  const args = { p_title: title, p_mode: mode, p_amount: amount, p_codes: codes, p_extra: extra, p_request: request, p_per_group: perGroup };
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (attempt) await wait(attempt === 1 ? 700 : 1800);
+    const { data, error } = await supabase.rpc("draw_v2", args).abortSignal(AbortSignal.timeout?.(12000));
+    if (!error) return data;
+    lastError = error;
+    if (error.code === "PGRST202") return makeDrawOld({ title, mode, amount, codes, extra }); // server not updated yet
+    if (!isNetworkError(error)) break;
+  }
+  if (isNetworkError(lastError)) lastError.network = true;
+  throw lastError;
+}
+
+async function makeDrawOld({ title, mode, amount, codes, extra }) {
   const { data, error } = await supabase.rpc("make_draw", { p_title: title, p_mode: mode, p_amount: amount, p_codes: codes, p_extra: extra });
   if (error) throw error;
   const { data: row, error: readError } = await supabase.from("draws").select("*").eq("id", data).single();
