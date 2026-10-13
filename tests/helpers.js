@@ -56,10 +56,24 @@ export async function enterStudentDemo(page) {
 }
 
 export async function closeOverlays(page) {
-  const skip = page.locator(".tour__skip");
-  if (await skip.isVisible({ timeout: 2500 }).catch(() => false)) await skip.click();
-  const bday = page.locator(".bday-overlay__close");
-  if (await bday.isVisible({ timeout: 3000 }).catch(() => false)) await bday.click();
+  // The welcome tour and the birthday greeting appear a moment after the page loads
+  // (slower on busy machines), so keep closing them until none shows up for 2 s.
+  const deadline = Date.now() + 15_000;
+  let quietSince = Date.now();
+  while (Date.now() < deadline) {
+    const skip = page.locator(".tour__skip");
+    const bday = page.locator(".bday-overlay__close");
+    if (await skip.isVisible().catch(() => false)) {
+      await skip.click();
+      quietSince = Date.now();
+    } else if (await bday.isVisible().catch(() => false)) {
+      await bday.click();
+      quietSince = Date.now();
+    } else if (Date.now() - quietSince > 2000) {
+      break;
+    }
+    await page.waitForTimeout(200);
+  }
   await expect(page.locator(".tour, .bday-overlay")).toHaveCount(0);
 }
 
