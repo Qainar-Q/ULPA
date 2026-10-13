@@ -144,6 +144,20 @@ async function onAnnouncement(id: string, keys: VapidKeys) {
   }, "announcements", keys);
 }
 
+async function onMaterial(id: string, keys: VapidKeys) {
+  const { data: item } = await db.from("course_materials").select("id, title, group_no, uploader_name, teacher_id, uploaded, courses(code, slug)").eq("id", id).maybeSingle();
+  if (!item || !item.teacher_id || !item.uploaded) return { skipped: "not found" };
+  const members = await classMembers();
+  const to = members.filter((s) => canSee(s, item.group_no)).map((s) => s.id);
+  const course = item.courses as { code?: string; slug?: string } | null;
+  return deliver(to, {
+    title: `📎 Оқытушы файл жіберді${course?.code ? ` · ${course.code}` : ""}`,
+    body: `${clip(item.title, 110)}${item.uploader_name ? ` — ${item.uploader_name}` : ""}`,
+    url: course?.slug ? `/materials?course=${course.slug}` : "/materials",
+    tag: `material-${item.id}`,
+  }, "announcements", keys);
+}
+
 async function onPoll(id: string, keys: VapidKeys) {
   const { data: poll } = await db.from("polls").select("id, question, group_no, created_by, creator_name").eq("id", id).maybeSingle();
   if (!poll) return { skipped: "not found" };
@@ -296,6 +310,8 @@ Deno.serve(async (req) => {
         return json(await onAnnouncement(id, keys), 200, origin);
       case "poll":
         return json(await onPoll(id, keys), 200, origin);
+      case "material":
+        return json(await onMaterial(id, keys), 200, origin);
       case "comment":
         return json(await onComment(id, keys), 200, origin);
       case "deadlines":

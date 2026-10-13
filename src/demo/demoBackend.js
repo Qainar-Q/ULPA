@@ -189,7 +189,7 @@ function stamp(name, row) {
   if (!PRIMARY[name] && !has("id")) out.id = uuid();
   if (!has("created_at")) out.created_at = now();
   out.updated_at = now();
-  const who = { id: student.id, name: student.full_name };
+  const who = { id: student?.id ?? null, name: student?.full_name ?? null };
   switch (name) {
     case "assignments":
     case "polls":
@@ -202,9 +202,12 @@ function stamp(name, row) {
     case "course_photos":
       Object.assign(out, { uploaded_by: who.id, uploader_name: who.name, uploaded: false, storage_path: `${out.id}/full.jpg`, thumb_path: `${out.id}/thumb.jpg` });
       break;
-    case "course_materials":
-      Object.assign(out, { uploaded_by: who.id, uploader_name: who.name, uploaded: false, storage_path: `${out.id}/${out.file_name}` });
+    case "course_materials": {
+      const teacher = demoRole() === "teacher" ? myTeacher() : null;
+      Object.assign(out, teacher ? { uploaded_by: null, teacher_id: teacher.id, uploader_name: teacher.full_name } : { uploaded_by: who.id, teacher_id: null, uploader_name: who.name });
+      Object.assign(out, { uploaded: false, storage_path: `${out.id}/${out.file_name}` });
       break;
+    }
     case "assignment_attachments":
       Object.assign(out, { uploaded: false, storage_path: `${out.assignment_id}/${out.id}` });
       break;

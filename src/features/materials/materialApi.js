@@ -10,7 +10,7 @@ export const MATERIAL_BUCKET = "course-materials";
 export const MAX_MATERIAL_BYTES = 25 * 1024 * 1024;
 
 const FIELDS =
-  "id, course_id, title, description, group_no, file_name, mime_type, size_bytes, storage_path, uploaded_by, uploader_name, created_at";
+  "id, course_id, title, description, group_no, file_name, mime_type, size_bytes, storage_path, uploaded_by, uploader_name, teacher_id, created_at";
 
 /** Visible materials (database filters by group), newest first. */
 export function useMaterials({ courseId, limit = 200 } = {}) {

@@ -2404,3 +2404,19 @@ li.is-online .presence__who small {
   font-weight: 700;
   text-decoration: none;
 }
+
+/* Files shared by a teacher */
+.material__teacher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.material--teacher {
+  border-color: var(--accent-line);
+}

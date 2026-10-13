@@ -206,8 +206,26 @@ export function buildDemoStore(role = "student") {
     uploaded: true,
     uploaded_by: author.id,
     uploader_name: author.full_name,
+    teacher_id: null,
     created_at: at(-2 - index * 3),
   }));
+  // A file shared by a teacher (shows with the «Оқытушы» label).
+  course_materials.unshift({
+    id: id(720),
+    course_id: courses[0].id,
+    title: "3-дәріс слайдтары",
+    description: "Келесі сабаққа дейін оқып келіңіздер.",
+    group_no: null,
+    file_name: "3-daris.pdf",
+    mime_type: "application/pdf",
+    size_bytes: 83208,
+    storage_path: "demo/sample.pdf",
+    uploaded: true,
+    uploaded_by: null,
+    uploader_name: teachers[0].full_name,
+    teacher_id: teachers[0].id,
+    created_at: at(-1),
+  });
 
   const polls = [
     { question: "Ғарыш апталығына қатысамыз ба?", details: "Сенбі, студенттер сарайы, 14:00", anonymous: false, multiple: false, options: ["Иә, барамын 🚀", "Мүмкін", "Бара алмаймын"], votes: [0, 0, 0, 1, 0, 2, 1, 0] },

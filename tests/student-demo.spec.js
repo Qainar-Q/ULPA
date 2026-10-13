@@ -161,3 +161,11 @@ test("announcements show photos and can be posted with a photo", async ({ page, 
   await expect(card.locator(".announcement__image img")).toHaveCount(1);
   await expectNoOverflow(page);
 });
+
+test("students see files shared by teachers", async ({ page, errors }) => {
+  await enterStudentDemo(page);
+  await page.goto("/materials");
+  const shared = page.locator(".material--teacher").first();
+  await expect(shared).toBeVisible();
+  await expect(shared.locator(".material__teacher")).toContainText("Оқытушы");
+});
