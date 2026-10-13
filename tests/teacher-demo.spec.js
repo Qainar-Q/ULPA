@@ -68,3 +68,17 @@ test("teacher profile opens", async ({ page, errors }) => {
   await expect(page.locator(".t-main > .stack-lg").getByRole("button", { name: "Шығу" })).toBeVisible();
   await expectNoOverflow(page);
 });
+
+test("teacher sends a file to students", async ({ page, errors }) => {
+  await enterTeacherDemo(page);
+  await page.getByRole("link", { name: "Файл жіберу" }).click();
+  await expect(page).toHaveURL(/\/files$/);
+  await page.locator('input[type="file"]').setInputFiles("public/demo/sample.pdf");
+  await expect(page.locator("#tf-title")).toHaveValue("sample");
+  await page.locator("#tf-title").fill("Тест файлы — 7-апта");
+  await page.getByRole("button", { name: "Жіберу" }).click();
+  await expect(page.locator(".form__ok")).toBeVisible();
+  await expect(page.locator(".material", { hasText: "Тест файлы — 7-апта" })).toHaveCount(1);
+  await expect(page.locator(".material__teacher").first()).toBeVisible();
+  await expectNoOverflow(page);
+});

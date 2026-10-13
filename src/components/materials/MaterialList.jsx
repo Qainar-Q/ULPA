@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, Eye, FileArchive, FileImage, FileSpreadsheet, FileText, Presentation, Trash2 } from "lucide-react";
+import { Download, Eye, FileArchive, FileImage, FileSpreadsheet, FileText, GraduationCap, Presentation, Trash2 } from "lucide-react";
 import { deleteMaterial, materialUrl, materialViewUrl } from "../../features/materials/materialApi.js";
 import ImageLightbox from "../ui/ImageLightbox.jsx";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
@@ -20,10 +20,10 @@ function iconFor(mime = "") {
 }
 
 function MaterialRow({ item, course, showCourse, onDeleted }) {
-  const { student, isAdmin } = useAuth();
+  const { student, isAdmin, teacher } = useAuth();
   const [busy, setBusy] = useState(false);
   const Icon = iconFor(item.mime_type);
-  const canDelete = isAdmin || item.uploaded_by === student?.id;
+  const canDelete = isAdmin || (item.uploaded_by && item.uploaded_by === student?.id) || (item.teacher_id && item.teacher_id === teacher?.id);
 
   const isImage = (item.mime_type ?? "").startsWith("image/");
   const [imageUrl, setImageUrl] = useState(null);
@@ -64,7 +64,7 @@ function MaterialRow({ item, course, showCourse, onDeleted }) {
   }
 
   return (
-    <li className="material" style={courseAccent(course)}>
+    <li className={`material${item.teacher_id ? " material--teacher" : ""}`} style={courseAccent(course)}>
       <button type="button" className="material__main" onClick={open} disabled={busy}>
         <span className="material__icon" aria-hidden="true">
           <Icon size={20} />
@@ -76,6 +76,11 @@ function MaterialRow({ item, course, showCourse, onDeleted }) {
             {showCourse && course && <span className="course-code course-code--sm">{course.code}</span>}
             <span>{formatSize(item.size_bytes)}</span>
             <span>{item.group_no ? `${item.group_no}-топ` : "Барлығына"}</span>
+            {item.teacher_id && (
+              <span className="material__teacher">
+                <GraduationCap size={13} aria-hidden="true" /> Оқытушы
+              </span>
+            )}
             <span>{item.uploader_name}</span>
             <span>{formatDateTime(item.created_at)}</span>
           </span>

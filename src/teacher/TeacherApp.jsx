@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { useScrollMemory } from "../lib/useScrollMemory.js";
-import { House, LogOut, Megaphone, Send, UserRound } from "lucide-react";
+import { FolderUp, House, LogOut, Megaphone, Send, UserRound } from "lucide-react";
 import BrandMark from "../components/layout/BrandMark.jsx";
 import DemoBanner from "../components/layout/DemoBanner.jsx";
 import DemoStartPage from "../pages/DemoStartPage.jsx";
@@ -16,6 +16,7 @@ import { formatDateTime } from "../lib/due.js";
 import LessonsBoard from "./LessonsBoard.jsx";
 import { CheckinRoute, CourseRoute, RollRoute } from "./LessonRoutes.jsx";
 import QrTestView from "./QrTestView.jsx";
+import TeacherFiles from "./TeacherFiles.jsx";
 import { announce, myAnnouncements } from "./teacherApi.js";
 
 function TeacherHome() {
@@ -34,6 +35,9 @@ function TeacherHome() {
           <div className="hero__actions">
             <Link to="/announce" className="button button--ghost">
               <Megaphone size={16} /> Топқа хабарландыру
+            </Link>
+            <Link to="/files" className="button button--ghost">
+              <FolderUp size={16} /> Файл жіберу
             </Link>
           </div>
         </div>
@@ -157,6 +161,7 @@ function TeacherProfile() {
 const NAV = [
   { to: "/", label: "Басты", icon: House, end: true },
   { to: "/announce", label: "Хабарландыру", icon: Megaphone },
+  { to: "/files", label: "Файлдар", icon: FolderUp },
   { to: "/profile", label: "Профиль", icon: UserRound },
 ];
 
@@ -208,6 +213,7 @@ export default function TeacherApp() {
           <Route path="course/:courseId" element={<CourseRoute />} />
           <Route path="qr-test" element={<QrTestView />} />
           <Route path="announce" element={<AnnouncePage />} />
+          <Route path="files" element={<TeacherFiles />} />
           <Route path="profile" element={<TeacherProfile />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
