@@ -1,4 +1,6 @@
 import { courseAccent } from "../../lib/courseStyle.js";
+import { cachedSignedUrl, preloadImage } from "../../lib/signedUrls.js";
+import { PHOTO_BUCKET } from "../../features/photos/photoApi.js";
 import { Heart, MessageCircle } from "lucide-react";
 import { PHOTO_TYPES } from "../../config/app.js";
 
@@ -13,7 +15,14 @@ export default function PhotoGrid({ photos, thumbs, courseById, onOpen, engageme
         const social = engagement[photo.id];
         return (
           <li key={photo.id} style={courseAccent(course)}>
-            <button type="button" className="photo-tile" onClick={() => onOpen(index)} aria-label={`${course?.name ?? ""} — ${TYPE_LABEL[photo.photo_type]}`}>
+            <button
+              type="button"
+              className="photo-tile"
+              onClick={() => onOpen(index)}
+              // Start fetching the big photo as soon as a finger touches it.
+              onPointerDown={() => preloadImage(cachedSignedUrl(PHOTO_BUCKET, photo.storage_path))}
+              aria-label={`${course?.name ?? ""} — ${TYPE_LABEL[photo.photo_type]}`}
+            >
               {thumbs[photo.thumb_path] ? (
                 <img src={thumbs[photo.thumb_path]} alt="" loading="lazy" decoding="async" />
               ) : (

@@ -6,9 +6,9 @@ import { aiErrorText, photoToNote } from "../../features/classlife/studyAi.js";
 import { storeDraft } from "../../features/notes/notesApi.js";
 import { holdBusy } from "../../lib/busy.js";
 import { canShareFiles, fetchImageFile, saveImageFile } from "../../lib/saveImage.js";
-import { preloadImage } from "../../lib/signedUrls.js";
+import { cachedSignedUrl, preloadImage } from "../../lib/signedUrls.js";
 import PhotoSocial from "./PhotoSocial.jsx";
-import { deletePhoto, signUrls } from "../../features/photos/photoApi.js";
+import { PHOTO_BUCKET, deletePhoto, signUrls } from "../../features/photos/photoApi.js";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 import { APP_TIME_ZONE, SESSION_TYPES } from "../../config/app.js";
 
@@ -81,8 +81,10 @@ export default function PhotoViewer({ photos, index, thumbs, courseById, onIndex
 
   useEffect(() => {
     let cancelled = false;
-    setFullUrl(null);
     setFailed(false);
+    const ready = cachedSignedUrl(PHOTO_BUCKET, photo.storage_path);
+    setFullUrl(ready);
+    if (ready) return undefined; // link already signed with the list: no extra request
     signUrls([photo.storage_path])
       .then((urls) => !cancelled && setFullUrl(urls[photo.storage_path] ?? null))
       .catch(() => !cancelled && setFailed(true));

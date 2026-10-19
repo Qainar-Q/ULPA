@@ -4,7 +4,8 @@ import { ChevronRight } from "lucide-react";
 import SectionTitle from "../ui/SectionTitle.jsx";
 import PhotoGrid from "./PhotoGrid.jsx";
 import PhotoViewer from "./PhotoViewer.jsx";
-import { listTopPhotos, signUrls } from "../../features/photos/photoApi.js";
+import { listTopPhotos } from "../../features/photos/photoApi.js";
+import { signPhotoLinks } from "../../features/photos/usePhotos.js";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 import { useCatalog } from "../../features/catalog/CatalogContext.jsx";
 
@@ -18,7 +19,7 @@ export default function TopPhotos({ limit = 6 }) {
   const load = useCallback(async () => {
     try {
       const { photos, weekly } = await listTopPhotos(limit);
-      const thumbs = await signUrls(photos.map((photo) => photo.thumb_path));
+      const thumbs = await signPhotoLinks(photos);
       setState({ photos, weekly, thumbs });
     } catch {
       setState({ photos: [], weekly: {}, thumbs: {} });
