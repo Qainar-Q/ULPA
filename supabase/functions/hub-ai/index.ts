@@ -87,6 +87,53 @@ async function askGroq(key: string, prompt: string, quick: boolean): Promise<str
   throw last ?? new UpstreamError("upstream");
 }
 
+// Pictures (food photos, textbook pages): a Groq vision model, then Gemini.
+const GROQ_VISION = (Deno.env.get("GROQ_VISION_MODEL") ?? "meta-llama/llama-4-scout-17b-16e-instruct,meta-llama/llama-4-maverick-17b-128e-instruct").split(",").map((m) => m.trim()).filter(Boolean);
+async function askGroqVision(key: string, prompt: string, image: string): Promise<string> {
+  let last: unknown = null;
+  for (const model of GROQ_VISION) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 40000);
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST", signal: ctl.signal,
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({ model, max_completion_tokens: 4000, temperature: 0.3, response_format: { type: "json_object" },
+          messages: [{ role: "system", content: SYSTEM }, { role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: image } }] }] }),
+      });
+      if (!response.ok) {
+        console.error("groq vision error", model, response.status, (await response.text()).slice(0, 300));
+        last = new UpstreamError(response.status === 429 ? "busy" : "upstream");
+        continue;
+      }
+      const result = await response.json();
+      const text = result.choices?.[0]?.message?.content ?? "";
+      if (text.trim()) return text;
+    } catch (error) { console.error("groq vision failed", model, String(error)); last = error; }
+    finally { clearTimeout(timer); }
+  }
+  throw last ?? new UpstreamError("upstream");
+}
+
+// Speech to text (IELTS speaking): Groq Whisper.
+async function transcribe(key: string, audio: string, mime: string): Promise<string> {
+  const bytes = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0));
+  const ext = /mp4|m4a|aac/.test(mime) ? "m4a" : /ogg/.test(mime) ? "ogg" : /wav/.test(mime) ? "wav" : "webm";
+  let last: unknown = null;
+  for (const model of ["whisper-large-v3-turbo", "whisper-large-v3"]) {
+    const form = new FormData();
+    form.append("file", new Blob([bytes], { type: mime || "audio/webm" }), `answer.${ext}`);
+    form.append("model", model);
+    form.append("language", "en");
+    form.append("response_format", "json");
+    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", { method: "POST", headers: { authorization: `Bearer ${key}` }, body: form });
+    if (response.ok) return String((await response.json()).text ?? "").trim();
+    console.error("whisper error", model, response.status, (await response.text()).slice(0, 300));
+    last = new UpstreamError(response.status === 429 ? "busy" : "upstream");
+  }
+  throw last ?? new UpstreamError("upstream");
+}
+
 const PREFERRED = (Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-latest,gemini-flash-lite-latest").split(",").map((m) => m.trim()).filter(Boolean);
 let discovered: Promise<string[]> | null = null;
 const versionOf = (name: string) => Number((name.match(/gemini-(\d+(?:\.\d+)?)/) ?? [])[1] ?? 0);
@@ -105,7 +152,7 @@ async function availableFlash(apiKey: string): Promise<string[]> {
 }
 
 // Each model gets a time box: a busy model that hangs no longer eats the whole 150 s request.
-async function askGemini(apiKey: string, prompt: string, quick: boolean): Promise<string> {
+async function askGemini(apiKey: string, prompt: string, quick: boolean, image?: string): Promise<string> {
   discovered ??= availableFlash(apiKey);
   const found = await discovered;
   if (!found.length) discovered = null;
@@ -128,7 +175,7 @@ async function askGemini(apiKey: string, prompt: string, quick: boolean): Promis
         headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM }] },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          contents: [{ role: "user", parts: image ? [{ text: prompt }, { inline_data: { mime_type: image.slice(5, image.indexOf(";")), data: image.slice(image.indexOf(",") + 1) } }] : [{ text: prompt }] }],
           generationConfig: { temperature: 0.4, maxOutputTokens: 12000, responseMimeType: "application/json", ...(thinkingHint ? { thinkingConfig: { thinkingLevel: "low" } } : {}) },
         }),
       });
@@ -184,7 +231,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return json({ error: "method" }, 405, origin);
 
-  let body: { prompt?: unknown; tier?: unknown; action?: unknown; login?: unknown; password?: unknown; code?: unknown };
+  let body: { prompt?: unknown; tier?: unknown; action?: unknown; login?: unknown; password?: unknown; code?: unknown; image?: unknown; audio?: unknown; mime?: unknown };
   try { body = await req.json(); } catch { return json({ error: "bad_request" }, 400, origin); }
 
   // A friend signs himself up with an invite code: no account yet, so no token.
@@ -217,6 +264,23 @@ Deno.serve(async (req) => {
   const { data: owner } = await db.from("students").select("id").eq("user_id", userData.user.id).eq("code", "01").maybeSingle();
   const { data: member } = owner ? { data: null } : await db.from("hub_members").select("login").eq("user_id", userData.user.id).maybeSingle();
   if (!owner && !member) return json({ error: "forbidden" }, 403, origin);
+
+  // Speech to text for the speaking test (any hub user).
+  if (body.action === "transcribe") {
+    const audio = typeof body.audio === "string" ? body.audio : "";
+    if (!audio || audio.length > 12_000_000) return json({ error: "bad_request" }, 400, origin);
+    const key = Deno.env.get("HUB_GROQ_API_KEY") ?? Deno.env.get("GROQ_API_KEY");
+    if (!key) return json({ error: "not_configured" }, 503, origin);
+    try {
+      const t0 = Date.now();
+      const text = await transcribe(key, audio, String(body.mime ?? ""));
+      console.log(`hub-ai transcribe ${Date.now() - t0}ms ${text.length} chars`);
+      return json({ text }, 200, origin);
+    } catch (error) {
+      const code = error instanceof UpstreamError ? error.code : "upstream";
+      return json({ error: code }, code === "busy" ? 429 : 502, origin);
+    }
+  }
 
   // Owner-only: manage friends' accounts.
   if (body.action) {
@@ -257,6 +321,7 @@ Deno.serve(async (req) => {
   const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
   if (!prompt || prompt.length > MAX_PROMPT) return json({ error: "bad_request" }, 400, origin);
   const quick = body.tier === "quick";
+  const image = typeof body.image === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(body.image) && body.image.length < 4_000_000 ? body.image : undefined;
 
   const day = today();
   for (const key of used.keys()) if (!key.startsWith(day)) used.delete(key);
@@ -276,7 +341,13 @@ Deno.serve(async (req) => {
     let raw: string;
     let via = claude ? "claude" : groq ? "groq" : "gemini";
     const t0 = Date.now();
-    if (claude) raw = await askClaude(claude, prompt, quick);
+    if (image) {
+      if (groq) {
+        try { raw = await askGroqVision(groq, prompt, image); via = "groq-vision"; }
+        catch (error) { if (!gemini) throw error; via = "gemini"; raw = await askGemini(gemini, prompt, false, image); }
+      } else if (gemini) { via = "gemini"; raw = await askGemini(gemini, prompt, false, image); }
+      else return json({ error: "not_configured" }, 503, origin);
+    } else if (claude) raw = await askClaude(claude, prompt, quick);
     else if (groq) {
       try { raw = await askGroq(groq, prompt, quick); }
       catch (error) { if (!gemini) throw error; console.error("groq gave up, using gemini"); via = "gemini"; raw = await askGemini(gemini, prompt, quick); }

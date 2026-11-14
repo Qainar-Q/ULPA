@@ -24,7 +24,7 @@ function defaults(){
   return {v:3,updatedAt:0,_stamps:{},todos:[],study:[],workouts:[],weights:[],food:[],fasts:[],
   fast:{on:false,start:0,lastEnd:0},
   habits:[{id:"h1",icon:"h-drop",color:"#40c8e0",name:"喝够 8 杯水"},{id:"h2",icon:"h-book",color:"#ffb340",name:"阅读 20 分钟"},{id:"h3",icon:"h-moon",color:"#bf7cff",name:"11 点前睡"}],
-  habitLog:{},subjects:null,plan:null,planChecks:{},
+  habitLog:{},subjects:null,plan:null,planChecks:{},lifts:{},exams:[],
   profile:{sex:"m",age:20,h:0,w:0,act:1,goal:1},
   eng:{level:null,tests:[],vocab:{},newLog:{},drills:[],mistakes:[],writings:[],speaks:[],days:{},prefs:{explain:0,words:15,drill:10},cache:{}},
   settings:{focus:25,brk:5,goal:120,moveGoal:30,fastH:16,lang}};
@@ -118,18 +118,19 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 H.aiReady=async()=>!!HUB.uid;
 H.aiJson=async(prompt,opts)=>{
   if(!HUB.uid) throw {code:"unavailable"};
-  const {data,error}=await HUB.sb.functions.invoke("hub-ai",{body:{prompt,tier:(opts&&opts.modelTier)||"default"}});
+  const body={prompt,tier:(opts&&opts.modelTier)||"default"};if(opts&&opts.image)body.image=opts.image;const {data,error}=await HUB.sb.functions.invoke("hub-ai",{body});
   if(error){let code="upstream";try{const b=await error.context.json();code=b.error||code;}catch(e){}throw {code};}
   if(!data||data.result===undefined) throw {code:"invalid_json"};
   return data.result;
 };
+H.shrinkImage=(file,max)=>new Promise((res,rej)=>{const url=URL.createObjectURL(file);const img=new Image();img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL("image/jpeg",.78));};img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("img"));};img.src=url;});
 H.aiErr=e=>e&&(e.code==="busy"||e.code==="limit")?t("rateLimited"):e&&e.code==="unavailable"?t("aiNeeded"):t("err",{x:(e&&(e.code||e.message))||"?"});
 
 // ---------- router ----------
 const VIEWS=["today","study","eng","body","habits"];
 function route(){const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):"today";
   $$("section").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));
-  $$(".tabbar a").forEach(a=>a.classList.toggle("on",a.dataset.v===v)); window.scrollTo(0,0); if(v==="eng"&&window.ENG) ENG.render();}
+  $$(".tabbar a").forEach(a=>a.classList.toggle("on",a.dataset.v===v)); window.scrollTo(0,0); if(v==="eng"&&window.ENG) ENG.render(); if(v==="study"&&H.renderFocus) H.renderFocus();}
 window.addEventListener("hashchange",route);
 
 // ---------- calc ----------
@@ -266,7 +267,7 @@ function renderBody(){
      (doneToday?`<div class="donebox">${ic("i-check")} ${t("planDone")}</div>`:
       (day.rest||!exs.length?"":`${totalSets?`<div class="pbar" style="margin:4px 0 12px"><div style="width:${doneSets/totalSets*100}%;background:var(--move)"></div></div>`:""}
        ${day.warm?`<button class="warmrow" id="open-warm">${ic("i-flame","","stroke:var(--todo)")}<span><b>${{zh:"热身",en:"Warm-up",kk:"Жаттығу алды қыздыру"}[S.settings.lang]}</b><small>${day.warm.map(w=>esc(pick(DATA.WARM[w].name))).join(" · ")}</small></span>${ic("i-chev")}</button>`:""}
-       <ul class="exl">${exs.map((e,i)=>{const n=sets[i]||0,full=n>=e[1];return `<li class="${full?"on":""}"><div class="et"><span class="t">${esc(e[0])}</span><span class="num sr">${e[1]} × ${esc(e[2])}${e[3]?` · ${e[3]>=60?(e[3]/60)+"′":e[3]+"″"}`:""}</span></div>${e[4]?`<div class="en">${esc(e[4])}</div>`:""}<div class="setdots">${Array.from({length:e[1]},(_,k)=>`<button class="sd ${k<n?"on":""}" data-set="${i}|${k}" aria-label="set ${k+1}">${k<n?ic("i-check"):k+1}</button>`).join("")}</div></li>`;}).join("")}</ul>`)+
+       <ul class="exl">${exs.map((e,i)=>{const n=sets[i]||0,full=n>=e[1];return `<li class="${full?"on":""}"><div class="et"><span class="t">${esc(e[0])}</span><span class="num sr">${e[1]} × ${esc(e[2])}${e[3]?` · ${e[3]>=60?(e[3]/60)+"′":e[3]+"″"}`:""}</span></div>${e[4]?`<div class="en">${esc(e[4])}</div>`:""}${liftRow(e,i)}<div class="setdots">${Array.from({length:e[1]},(_,k)=>`<button class="sd ${k<n?"on":""}" data-set="${i}|${k}" aria-label="set ${k+1}">${k<n?ic("i-check"):k+1}</button>`).join("")}</div></li>`;}).join("")}</ul>`)+
       `<div class="btnrow" style="margin-top:12px"><button class="pill pri" id="plan-finish">${day.rest||!exs.length?t("done"):t("finishDay")}</button><button class="pill" id="plan-skip" style="flex:0 0 auto;padding:14px 18px">${t("skipDay")}</button></div>`);}
   const tm=S.workouts.filter(w=>w.date===tk).sort((a,b)=>b.ts-a.ts);
   $("#mv-today").textContent=tm.length?moveOn(tk)+" / "+S.settings.moveGoal+" "+t("min"):"";
@@ -323,7 +324,7 @@ function renderHabits(){
 const L3=H.L3=(zh,en,kk)=>({zh,en,kk})[S.settings.lang]||zh;
 // ---------- sheet ----------
 const openSheet=H.openSheet=(html,onMount,full)=>{const ob=$("#sheet-body"),nb=ob.cloneNode(false);ob.replaceWith(nb);nb.innerHTML=html;$("#sheet").classList.toggle("full",!!full);$("#scrim").classList.add("on");$("#sheet").classList.add("on");onMount&&onMount();};
-const closeSheet=H.closeSheet=()=>{if(window.ENG&&ENG.endWork)ENG.endWork();$("#scrim").classList.remove("on");$("#sheet").classList.remove("on");if(H.onSheetClose){const f=H.onSheetClose;H.onSheetClose=null;f();}};
+const closeSheet=H.closeSheet=()=>{if(window.ENG&&ENG.endWork)ENG.endWork();if(H.onSheetCloseMock)try{H.onSheetCloseMock();}catch(e){}$("#scrim").classList.remove("on");$("#sheet").classList.remove("on");if(H.onSheetClose){const f=H.onSheetClose;H.onSheetClose=null;f();}};
 $("#scrim").addEventListener("click",closeSheet);
 // Pull the sheet down by its handle (or title bar) to close it, like a native app; a tap on the handle closes it too.
 (function(){const sh=$("#sheet"),inner=()=>$("#sheet .in");let y0=null,dy=0,moved=false,onGrab=false;
@@ -398,16 +399,19 @@ const foodCtx=()=>`The user lives in Almaty, Kazakhstan (Central Asian and post-
 function aiItemsHtml(items){return `<ul class="log">${items.map((x,i)=>`<li><label style="display:flex;gap:12px;align-items:center;flex:1;min-width:0"><input type="checkbox" data-ai-i="${i}" checked style="width:20px;height:20px;accent-color:var(--todo)"><div class="mid"><b>${esc(x.name)}</b><small>${esc(x.amount||"")}${x.protein?` · ${L3("蛋白质","protein","ақуыз")} ${Math.round(x.protein)}g`:""}</small></div></label><div class="rt num">${Math.round(x.kcal)}</div></li>`).join("")}</ul>`;}
 function saveAiItems(items,meal){const now=Date.now();let n=0;$$("[data-ai-i]").forEach(c=>{if(!c.checked)return;const x=items[+c.dataset.aiI];S.food.push({id:uid(),date:today(),meal,name:String(x.name).slice(0,40),kcal:Math.max(0,Math.round(+x.kcal||0)),p:Math.round(+x.protein||0),qty:1,ts:now+n});n++;});if(n){save();closeSheet();toast(t("logged",{x:n+" "+L3("项","items","тағам")}));}}
 function aiEstimate(meal){
-  $("#f-list").innerHTML=`<div class="fl">${L3("吃了什么？随便写，越具体越准","What did you eat? Describe it freely","Не жедіңіз? Еркін жазыңыз")}</div>
+  let photo=null;
+  $("#f-list").innerHTML=`<label class="photobtn" id="ai-photo-l"><input type="file" accept="image/*" capture="environment" id="ai-photo" hidden>${ic("i-camera")}<span>${L3("拍照识别","Snap a photo","Суретке түсіру")}</span><small>${L3("拍下这顿饭，AI 认出是什么、多少克、多少大卡","Photograph the meal; AI finds the foods, grams and calories","Тағамды суретке түсіріңіз")}</small></label><img id="ai-photo-pv" class="photopv" alt="" hidden>
+   <div class="fl">${L3("或者用文字写（拍照时也可以补充，比如“米饭只吃了一半”）","Or describe it (with a photo you can add details, e.g. “ate half the rice”)","Немесе жазыңыз")}</div>
    <textarea class="field ta" id="ai-food" style="min-height:90px" placeholder="${L3("比如：一盘抓饭、两个包子、一杯奶茶","e.g. a plate of plov, 2 manty, tea with milk","мысалы: бір тәрелке палау, 2 манты, сүтті шай")}"></textarea>
    <button class="go" id="ai-food-go" style="background:var(--eng);margin-top:10px">${L3("算卡路里","Estimate","Есептеу")}</button><div id="ai-food-out"></div>`;
   $("#f-pick").innerHTML="";
-  $("#ai-food-go").onclick=async()=>{const txt=$("#ai-food").value.trim();if(!txt)return;const b=$("#ai-food-go");b.disabled=true;const t0=Date.now();const tk=setInterval(()=>{b.textContent=t("thinking")+" "+Math.round((Date.now()-t0)/1000)+"s";},500);
+  $("#ai-photo").onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{photo=await H.shrinkImage(f,896);const pv=$("#ai-photo-pv");pv.src=photo;pv.hidden=false;$("#ai-food-go").click();}catch(err){toast(L3("照片读不了，换一张试试","Couldn't read that photo","Сурет оқылмады"));}};
+  $("#ai-food-go").onclick=async()=>{const txt=$("#ai-food").value.trim();if(!txt&&!photo)return;const b=$("#ai-food-go");b.disabled=true;const t0=Date.now();const tk=setInterval(()=>{b.textContent=t("thinking")+" "+Math.round((Date.now()-t0)/1000)+"s";},500);
     try{const r=await H.aiJson(`${foodCtx()}
 Estimate calories and protein for what the user ate, split into separate items with realistic portion sizes for this region. If an amount is vague, assume a typical portion and say so in "amount".
-Food description: """${txt.slice(0,1500)}"""
+${photo?`The attached photo shows the meal. Identify every food and drink in it, judge each portion's weight in grams from the plate, cutlery and hand sizes, and count only what is visible.${txt?` The user adds: """${txt.slice(0,800)}"""`:""}`:`Food description: """${txt.slice(0,1500)}"""`}
 Write "name" and "amount" in ${{zh:"Simplified Chinese",en:"English",kk:"Kazakh"}[S.settings.lang]}.
-Reply with only JSON: {"items":[{"name":"...","amount":"e.g. 1 plate ~300 g","kcal":0,"protein":0}],"note":"one short remark (e.g. how to make this meal lighter), or empty"}`,{modelTier:"quick"});
+Reply with only JSON: {"items":[{"name":"...","amount":"e.g. 1 plate ~300 g","kcal":0,"protein":0}],"note":"one short remark (e.g. how to make this meal lighter), or empty"}`,{modelTier:"quick",image:photo||undefined});
       const items=(r&&Array.isArray(r.items)?r.items:[]).filter(x=>x&&x.name&&+x.kcal>=0);
       if(!items.length)throw {code:"invalid_json"};
       const tot=items.reduce((s,x)=>s+(+x.kcal||0),0),pro=items.reduce((s,x)=>s+(+x.protein||0),0);
@@ -539,6 +543,27 @@ function settingsSheet(){const p=S.profile,st=S.settings;
       S.settings.goal=Math.max(10,+$("#st-sg").value||120);S.settings.moveGoal=Math.max(5,+$("#st-mg").value||30);save();closeSheet();};
   });}
 
+// ---------- weights per set (progressive overload) ----------
+const isLift=e=>e&&!/分钟|min|мин|сек|秒|sec/i.test(String(e[2]))&&!/有氧|cardio|кардио|跑|walk/i.test(String(e[0]));
+const repHi=e=>{const m=String(e[2]).match(/\d+/g);return m?Math.max(...m.map(Number)):10;};
+const liftHist=name=>((S.lifts||{})[name]||[]).filter(x=>x.date<today()).sort((a,b)=>a.date<b.date?1:-1);
+function liftSuggest(e){const last=liftHist(e[0])[0];if(!last||!last.sets.length)return null;const top=Math.max(...last.sets.map(s=>+s.kg||0));const hi=repHi(e);
+  const allTop=last.sets.filter(s=>+s.kg===top).every(s=>+s.r>=hi)&&last.sets.length>=Math.min(e[1],3);
+  const step=top>=40?2.5:top>=10?1:0.5;return {last,kg:allTop?+(top+step).toFixed(1):top,up:allTop,hi};}
+function liftRow(e,i){if(!isLift(e))return "";const tk=today();const inp=((S.planChecks.date===tk&&S.planChecks.inp)||{})[i]||{};const sg=liftSuggest(e);
+  const todays=(((S.lifts||{})[e[0]]||[]).find(x=>x.date===tk)||{sets:[]}).sets;
+  const kg=inp.kg??(sg?sg.kg:""),r=inp.r??repHi(e);
+  const tip=sg?L3(`上次 ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → 今天加到 ${sg.kg}kg`:` → 今天争取多做 1 次`),`Last ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → go ${sg.kg} kg`:` → aim for +1 rep`),`Соңғы ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → ${sg.kg} кг`:` → +1 рет`)):L3("第一次：填重量和次数，点组号记录","First time: enter weight and reps, tap a set to log","Алғаш рет: салмақ пен рет")
+  return `<div class="lift"><input type="number" inputmode="decimal" step="0.5" min="0" data-lkg="${i}" value="${kg}" placeholder="—" aria-label="kg"><span>kg ×</span><input type="number" inputmode="numeric" min="0" data-lr="${i}" value="${r}" aria-label="reps"><small class="${sg&&sg.up?"up":""}">${esc(tip)}</small></div>${todays.length?`<div class="liftd">${L3("今天","Today","Бүгін")} ${todays.map(s=>`<b>${s.kg}×${s.r}</b>`).join(" ")}</div>`:""}`;}
+function logLift(i,k,on){const cp=curPlan();const e=cp&&cp.day.ex[i];if(!isLift(e))return;const tk=today();S.lifts=S.lifts||{};const arr=S.lifts[e[0]]=S.lifts[e[0]]||[];let d=arr.find(x=>x.date===tk);if(!d){d={date:tk,sets:[]};arr.push(d);}
+  if(!on){d.sets=d.sets.slice(0,k);if(!d.sets.length)S.lifts[e[0]]=arr.filter(x=>x!==d);return;}
+  const kg=parseFloat(($(`[data-lkg="${i}"]`)||{}).value),r=parseInt(($(`[data-lr="${i}"]`)||{}).value);if(!(kg>=0)||!(r>0))return;
+  d.sets[k]={kg,r};d.sets=d.sets.filter(Boolean);if(arr.length>40)arr.splice(0,arr.length-40);}
+document.addEventListener("change",e=>{const el=e.target;if(!el.dataset||(el.dataset.lkg===undefined&&el.dataset.lr===undefined))return;const i=el.dataset.lkg??el.dataset.lr,tk=today();
+  if(S.planChecks.date!==tk)S.planChecks={date:tk,sets:{}};S.planChecks.inp=S.planChecks.inp||{};const o=S.planChecks.inp[i]=S.planChecks.inp[i]||{};
+  if(el.dataset.lkg!==undefined)o.kg=el.value===""?undefined:+el.value;else o.r=+el.value||undefined;save(true);});
+H.liftHist=liftHist;
+
 // ---------- rest timer & warm-up ----------
 let rest=null;
 function startRest(sec,name){rest={end:Date.now()+sec*1000,total:sec,name};try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume();}catch(e){}drawRest();}
@@ -572,7 +597,7 @@ document.addEventListener("click",e=>{
   if(d.subj!==undefined){if(T.running)return;T.subject=T.subject===d.subj?"":d.subj;persistT();renderStudy();return;}
   if(d.subjOpen){subjSheet(d.subjOpen);return;}
   if(d.set){const[i,k]=d.set.split("|").map(Number);const tk=today();if(S.planChecks.date!==tk||!S.planChecks.sets)S.planChecks={date:tk,sets:{}};const sets=S.planChecks.sets;const cur=sets[i]||0;
-    if(k<cur){sets[i]=k;rest=null;}else{sets[i]=k+1;const cp=curPlan();const ex=cp&&cp.day.ex[i];if(ex&&ex[3]&&!(i===cp.day.ex.length-1&&k+1>=ex[1]))startRest(ex[3],ex[0]);}save();return;}
+    if(k<cur){sets[i]=k;rest=null;logLift(i,k,false);}else{logLift(i,k,true);sets[i]=k+1;const cp=curPlan();const ex=cp&&cp.day.ex[i];if(ex&&ex[3]&&!(i===cp.day.ex.length-1&&k+1>=ex[1]))startRest(ex[3],ex[0]);}save();return;}
   if(d.pex!==undefined){const tk=today();if(S.planChecks.date!==tk)S.planChecks={date:tk,c:[]};const i=+d.pex,c=S.planChecks.c,j=c.indexOf(i);if(j>=0)c.splice(j,1);else c.push(i);save();return;}
   if(d.usePlan){S.plan={id:d.usePlan,idx:0,doneDate:null};save();closeSheet();return;}
   if(d.planDay){const[id,i]=d.planDay.split("|");S.plan={id,idx:+i,doneDate:null};S.planChecks={};save();closeSheet();return;}
@@ -644,6 +669,8 @@ function tick(){tickN++;
 $("#tm-start").onclick=()=>{try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume();}catch(e){}
   if(T.running){T.left=leftNow();T.running=false;T.paused=true;}else{if(!T.paused){T.total=durOf(T.mode);T.left=T.total;}T.endAt=Date.now()+T.left*1000;T.running=true;T.paused=false;}persistT();drawTimer();};
 $("#tm-reset").onclick=resetTimer;
+H.timerState=()=>({running:T.running,paused:T.paused,mode:T.mode,left:leftNow(),total:T.total,subject:T.subject,text:$("#tm").textContent});
+H.timerToggle=()=>$("#tm-start").click();
 $("#tm-stop").onclick=()=>{const done=Math.floor((T.total-leftNow())/60);if(done>0)H.addStudy(done,T.subject,true);toast(done>0?t("stopped",{m:done}):t("stopNone"));T.mode="focus";resetTimer();};
 $("#mode-seg").onclick=e=>{const b=e.target.closest("button");if(!b||T.running)return;T.mode=b.dataset.m;resetTimer();};
 $("#dur").onclick=e=>{const b=e.target.closest("button");if(!b||T.running||T.paused)return;const m=+b.dataset.dur;if(T.mode==="focus")S.settings.focus=m;else S.settings.brk=m;save();resetTimer();};
