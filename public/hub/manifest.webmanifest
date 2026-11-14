@@ -1,6 +1,6 @@
 {
- "name": "我的效率站",
- "short_name": "效率站",
+ "name": "1% Better",
+ "short_name": "1% Better",
  "start_url": "/hub/",
  "scope": "/hub/",
  "display": "standalone",

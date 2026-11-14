@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>我的效率站</title>
+<title>1% Better</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="效率站">
+<meta name="apple-mobile-web-app-title" content="1% Better">
 <link rel="manifest" href="/hub/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/hub/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="/hub/icon-192.png">
@@ -427,6 +427,57 @@ th{color:var(--t3)}
 .gate-in b{font-size:20px;font-weight:900;display:block}
 .gate-in p{color:var(--t2);font-weight:700;margin:8px 0 18px}
 .gate-in .go{display:block;text-decoration:none;text-align:center;background:var(--study);color:#000}
+
+/* 1% Better */
+.sheet .pill:not(.pri),.sheet .chip:not(.on){background:var(--s2)}
+.sheet .dur button.on{background:var(--s3)}
+#ob-next{background:var(--habit)}
+.p1{margin-bottom:18px}
+.p1h{display:flex;align-items:center;gap:14px}
+.p1r{position:relative;width:64px;height:64px;flex:0 0 64px}.p1r svg{width:64px;height:64px}
+.p1r b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900}.p1r b small{font-size:12px;color:var(--t2)}
+.p1t{flex:1;min-width:0}.p1t b{display:block;font-size:19px;font-weight:900}.p1t span{display:block;font-size:13px;color:var(--t2);font-weight:700;margin-top:2px}
+.p1s{display:flex;flex-direction:column;align-items:center;min-width:44px}.p1s svg{width:22px;height:22px}.p1s b{font-size:18px;line-height:1.1}.p1s small{font-size:11px;color:var(--t2);font-weight:800}
+.p1l{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:2px}
+.p1l a{display:flex;align-items:center;gap:12px;padding:9px 4px;color:inherit;text-decoration:none;border-radius:12px}
+.p1l a:active{background:var(--s2)}
+.p1i{width:34px;height:34px;flex:0 0 34px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ac) 18%,transparent)}
+.p1i svg{width:19px;height:19px;stroke:var(--ac)}
+.p1l a.on .p1i{background:var(--ac)}.p1l a.on .p1i svg{stroke:#000}
+.p1n{flex:1;min-width:0}.p1n b{display:block;font-size:15px;font-weight:800}.p1n small{display:block;font-size:12.5px;color:var(--t2);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p1l a.on .p1n b{color:var(--t2);text-decoration:line-through;text-decoration-color:var(--t3)}
+.p1c{width:16px;height:16px;stroke:var(--t3)}
+.p1w{width:100%;margin-top:10px;display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;background:var(--s2);font-weight:800;font-size:14px;text-align:left}
+.p1w span{flex:1}.p1w svg{width:18px;height:18px;stroke:var(--t2)}
+.bud{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.bud li{display:flex;align-items:center;gap:12px}
+.ba{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px}
+.bm{flex:1;min-width:0}.bm b{display:block;font-weight:800}.bm small{display:flex;align-items:center;gap:3px;color:var(--t2);font-size:12.5px;font-weight:700}
+.bm .bf{width:13px;height:13px;stroke:var(--todo)}
+.bd{display:flex;gap:4px}.bd i{width:26px;height:26px;border-radius:8px;background:var(--s2);display:flex;align-items:center;justify-content:center}
+.bd i svg{width:15px;height:15px;stroke:var(--t3)}.bd i.on{background:var(--ac)}.bd i.on svg{stroke:#000}
+.wnav{display:flex;align-items:center;justify-content:space-between;margin:-4px 0 12px}.wnav b{font-weight:900}.wnav button[disabled]{opacity:.25}
+.wsc{display:block;text-align:left}.wsc .k,.wc .k{font-size:12.5px;font-weight:800;color:var(--t2)}
+.wbars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px}
+.wbars>div{display:flex;flex-direction:column;align-items:center;gap:4px}.wbars small{font-size:11px;color:var(--t2);font-weight:800}
+.wb{height:64px;width:100%;max-width:26px;background:var(--s1);border-radius:8px;display:flex;align-items:flex-end;overflow:hidden}.wb i{display:block;width:100%;border-radius:8px}
+.wsc .v,.wc .v{font-size:24px;font-weight:900}.wsc .v small{font-size:14px;color:var(--t2)}
+.wgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.wc{background:var(--s2);border-radius:16px;padding:12px 13px;display:flex;flex-direction:column;align-items:flex-start;text-align:left}.wc>div{width:100%;text-align:left}.wc .ms{font-size:12.5px;color:var(--t2);font-weight:700;margin-top:2px;min-height:16px}
+em.up,em.dn{font-style:normal;font-size:12.5px;font-weight:800}em.up{color:var(--habit)}em.dn{color:var(--move)}
+.rrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--s2)}
+.rrow span{flex:1}.rrow b{display:block;font-weight:800}.rrow small{display:block;font-size:12.5px;color:var(--t2);font-weight:700}
+.rrow .tm{width:auto;flex:0 0 auto;padding:8px 10px;margin:0}
+.sw{appearance:none;-webkit-appearance:none;width:50px;height:30px;border-radius:15px;background:var(--s3);position:relative;flex:0 0 50px;transition:background .2s;cursor:pointer;margin:0}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw:checked{background:var(--habit)}.sw:checked::after{transform:translateX(20px)}
+.sw:focus-visible{outline:2px solid var(--study);outline-offset:2px}
+.obd{display:flex;gap:6px;justify-content:center;margin:8px 0 18px}.obd i{width:22px;height:5px;border-radius:3px;background:var(--s3)}.obd i.on{background:var(--habit)}
+.obh b{display:block;font-size:24px;font-weight:900}.obh p{color:var(--t2);font-weight:700;margin:6px 0 4px;line-height:1.45}
+.obs{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:6px}
+.obs li{display:flex;align-items:center;gap:10px;background:var(--s2);border-radius:12px;padding:8px 8px 8px 12px}.obs li i{width:10px;height:10px;border-radius:3px;flex:0 0 10px}.obs li span{flex:1;font-weight:800}
+.obp{display:grid;gap:8px}.obp button{display:flex;flex-direction:column;align-items:flex-start;padding:12px 14px;border-radius:14px;background:var(--s2);border:2px solid transparent;text-align:left}
+.obp button.on{border-color:var(--habit)}.obp b{font-weight:800}.obp small{color:var(--t2);font-weight:700;font-size:12.5px}
 </style>
 </head>
 <body>
@@ -477,6 +528,7 @@ th{color:var(--t3)}
 <div class="app">
   <section id="v-today">
     <div class="top"><div><div class="sub dsub"></div><h1 data-t="tabToday"></h1></div><div class="topr"><div class="sync" id="sync"></div><button class="iconbtn" id="open-settings" aria-label="settings"><svg><use href="#i-gear"/></svg></button></div></div>
+    <div id="plus-today"></div>
     <div class="hero"><div id="rings"></div><div class="legend" id="lg"></div></div>
     <div class="minis" id="minis"></div>
     <h2><span data-t="habits"></span> <a class="side" href="#habits" style="color:var(--t2);text-decoration:none" data-t="all"></a></h2>
@@ -484,6 +536,7 @@ th{color:var(--t3)}
     <h2><span data-t="todo"></span> <span class="side" id="td-left"></span></h2>
     <form class="add" id="todo-form"><input id="todo-in" maxlength="120" autocomplete="off"><button class="plus" aria-label="add"><svg><use href="#i-plus"/></svg></button></form>
     <ul class="todos" id="todo-list"></ul>
+    <div id="plus-buddies"></div>
     <h2 data-t="thisWeek"></h2>
     <div class="panel"><div class="week" id="week"></div></div>
   </section>
@@ -574,8 +627,9 @@ th{color:var(--t3)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script src="i18n.js?v=2"></script>
 <script src="data.js?v=1"></script>
-<script src="app.js?v=7"></script>
-<script src="eng.js?v=4"></script>
-<script src="hub.js?v=4"></script>
+<script src="app.js?v=8"></script>
+<script src="eng.js?v=5"></script>
+<script src="plus.js?v=1"></script>
+<script src="hub.js?v=5"></script>
 </body>
 </html>
