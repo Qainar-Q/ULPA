@@ -41,6 +41,10 @@ ENG.speak=speak;
 ENG.todaySummary=()=>{const d=E().days[today()]||{};const goal=E().prefs.words;const dn=due().length;
   return `<span class="eb ${d.w>=goal?"ok":""}">${t("newWords")} ${d.w||0}/${goal}</span><span class="eb ${dn===0&&learnedCount()>0?"ok":""}">${t("review")} ${dn}</span><span class="eb ${d.d?"ok":""}">${t("drill")}${d.d?" ✓":""}</span>`;};
 
+ENG.todayState=()=>{const d=E().days[today()]||{};return {w:d.w||0,goal:E().prefs.words,due:due().length,drill:!!d.d,learned:learnedCount()};};
+ENG.weekStats=(keys)=>{const e=E();let w=0,drills=0,right=0,total=0;keys.forEach(k=>{const d=e.days[k]||{};w+=d.w||0;});
+  e.drills.filter(x=>keys.includes(x.date)).forEach(x=>{drills++;right+=+x.s||0;total+=+x.n||0;});
+  return {words:w,drills,acc:total?Math.round(right/total*100):null,mistakes:e.mistakes.filter(m=>keys.includes(m.date)).length,writings:e.writings.filter(x=>keys.includes(x.date)).length};};
 // ---------- main render ----------
 ENG.render=()=>{
   const root=$("#eng-root"); if(!root) return; const e=E(),d=e.days[today()]||{},goal=e.prefs.words,dn=due().length,st=streak();

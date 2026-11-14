@@ -3,7 +3,8 @@
 // AI for the owner's personal hub (kainar.online/hub): IELTS practice questions, vocabulary,
 // essay and speaking feedback, syllabus topics. The page sends a finished prompt; this returns
 // the model's answer parsed as JSON. Same provider as study-ai (Claude if ANTHROPIC_API_KEY is
-// set, otherwise Gemini with GEMINI_API_KEY). HUB_ANTHROPIC_API_KEY switches only the hub to Claude.
+// set, otherwise Gemini with GEMINI_API_KEY). HUB_ANTHROPIC_API_KEY switches only the hub to Claude;
+// HUB_GROQ_API_KEY (free, fast) is tried before Gemini, which stays the fallback.
 //
 // Who may call it: student 01 (the site owner) and friends he invited (table hub_members).
 // The owner can also invite / list / remove friends here (actions "invite", "members", "remove", "invite_code").
@@ -55,6 +56,35 @@ async function askClaude(key: string, prompt: string, quick: boolean): Promise<s
   }
   const result = await response.json();
   return (result.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("\n");
+}
+
+// Groq: free, very fast (OpenAI-compatible). HUB_GROQ_API_KEY turns it on; on failure the next model, then Gemini.
+const GROQ_MODELS = (Deno.env.get("GROQ_MODEL") ?? "openai/gpt-oss-120b,openai/gpt-oss-20b").split(",").map((m) => m.trim()).filter(Boolean);
+async function askGroq(key: string, prompt: string, quick: boolean): Promise<string> {
+  const models = quick ? [...GROQ_MODELS].reverse() : GROQ_MODELS;
+  let last: unknown = null;
+  for (const model of models) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), quick ? 20000 : 40000);
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST", signal: ctl.signal,
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({ model, max_completion_tokens: 8000, reasoning_effort: "low",
+          messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }] }),
+      });
+      if (!response.ok) {
+        console.error("groq error", model, response.status, (await response.text()).slice(0, 300));
+        last = new UpstreamError(response.status === 401 ? "bad_key" : response.status === 429 ? "busy" : "upstream");
+        continue;
+      }
+      const result = await response.json();
+      const text = result.choices?.[0]?.message?.content ?? "";
+      if (text.trim()) return text;
+    } catch (error) { console.error("groq failed", model, String(error)); last = error; }
+    finally { clearTimeout(timer); }
+  }
+  throw last ?? new UpstreamError("upstream");
 }
 
 const PREFERRED = (Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-latest,gemini-flash-lite-latest").split(",").map((m) => m.trim()).filter(Boolean);
@@ -239,10 +269,16 @@ Deno.serve(async (req) => {
   // HUB_ANTHROPIC_API_KEY: a Claude key used only by the hub (so the class's study-ai keeps its own provider).
   const claude = Deno.env.get("HUB_ANTHROPIC_API_KEY") ?? Deno.env.get("ANTHROPIC_API_KEY");
   const gemini = Deno.env.get("GEMINI_API_KEY");
-  if (!claude && !gemini) return json({ error: "not_configured" }, 503, origin);
+  const groq = Deno.env.get("HUB_GROQ_API_KEY") ?? Deno.env.get("GROQ_API_KEY");
+  if (!claude && !gemini && !groq) return json({ error: "not_configured" }, 503, origin);
 
   try {
-    const raw = claude ? await askClaude(claude, prompt, quick) : await askGemini(gemini!, prompt, quick);
+    let raw: string;
+    if (claude) raw = await askClaude(claude, prompt, quick);
+    else if (groq) {
+      try { raw = await askGroq(groq, prompt, quick); }
+      catch (error) { if (!gemini) throw error; console.error("groq gave up, using gemini"); raw = await askGemini(gemini, prompt, quick); }
+    } else raw = await askGemini(gemini!, prompt, quick);
     return json({ result: parseJson(raw) }, 200, origin);
   } catch (error) {
     const code = error instanceof UpstreamError ? error.code : "upstream";

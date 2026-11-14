@@ -19,7 +19,7 @@
   const LOGO = () => document.querySelector("#gate .gate-logo") ? document.querySelector("#gate .gate-logo").outerHTML : "";
   function loginForm(msg){
     const g = document.getElementById("gate"); const logo = LOGO();
-    g.innerHTML = `<form class="gate-in" id="hub-login" autocomplete="on">${logo}<b>${T.login}</b><p>${msg?`<span style="color:var(--move)">${msg}</span>`:T.loginHint}</p>
+    g.innerHTML = `<form class="gate-in" id="hub-login" autocomplete="on">${logo}<b>1% Better</b><p>${msg?`<span style="color:var(--move)">${msg}</span>`:T.loginHint}</p>
       <input class="field" type="text" id="hub-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${T.user}" value="${lastLogin()}" required style="margin-bottom:8px;text-align:center">
       <input class="field" type="password" id="hub-pw" name="password" autocomplete="current-password" placeholder="${T.pw}" required style="margin-bottom:12px;text-align:center">
       <button class="go" type="submit" style="background:var(--study);margin:0">${T.loginBtn}</button>
@@ -78,11 +78,11 @@
     const { data: role, error } = await HUB.sb.rpc("hub_role");
     if (error) { gate(T.off, "", T.retry, location.href); return; }
     if (!role) { await HUB.sb.auth.signOut().catch(()=>{}); loginForm(T.priv); return; }
-    HUB.uid = session.user.id; HUB.role = role;
+    HUB.uid = session.user.id; HUB.role = role; HUB.email = session.user.email || "";
     H.useUser(session.user.id, role);
     document.getElementById("gate").classList.remove("on");
     H.boot();
-    H.pull();
+    Promise.resolve(H.pull()).catch(()=>{}).finally(()=>{ if (H.plusStart) H.plusStart(); });
   }
   start();
 })();

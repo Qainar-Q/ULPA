@@ -95,7 +95,7 @@ async function flush(){
   if(!ready||writing||!dirty) return; writing=true; dirty=false;
   try{
     const {error}=await HUB.sb.from("hub_state").upsert({user_id:HUB.uid,data:JSON.parse(JSON.stringify(S)),updated_at:new Date(S.updatedAt).toISOString()});
-    if(error) throw error; setSync("ok",t("synced"));
+    if(error) throw error; setSync("ok",t("synced")); if(H.onFlush)try{H.onFlush();}catch(e){}
   }catch(e){ setSync("warn",t("syncFail")); }
   writing=false; if(dirty) flush();
 }
@@ -166,6 +166,7 @@ function render(){
 H.render=render;
 
 function renderToday(){
+  if(H.plusToday)try{H.plusToday();}catch(e){console.error(e);}
   const tk=today(),sm=studyOn(tk),mm=moveOn(tk),g=S.settings.goal,mg=S.settings.moveGoal,hd=S.habits.filter(h=>hDone(h.id,tk)).length;
   const R=$("#rings");R.innerHTML=rings(Math.min(176,window.innerWidth-60),[[sm/g,"var(--study)"],[mm/mg,"var(--move)"],[habitFrac(tk),"var(--habit)"]],20,4,firstRender);kick(R);
   $("#lg").innerHTML=[["study",sm,g,t("min")],["move",mm,mg,t("min")],["habit",hd,S.habits.length,t("count")]].map(([c,a,b,u])=>`<div class="item"><div class="lbl c-${c}">${t(c==="habit"?"habits":c)}</div><div class="val num">${a}<small>/${b} ${u}</small></div></div>`).join("");
@@ -319,7 +320,7 @@ function renderHabits(){
   $("#h-month").innerHTML=S.habits.length?S.habits.map(h=>`<div class="mrow">${ic(h.icon,"hi","stroke:"+h.color)}<div class="mcells">${days.map(k=>`<i style="${hDone(h.id,k)?"background:"+h.color:""}"></i>`).join("")}</div></div>`).join(""):`<div class="empty">${t("habitsEmpty")}</div>`;
 }
 
-const L3=(zh,en,kk)=>({zh,en,kk})[S.settings.lang]||zh;
+const L3=H.L3=(zh,en,kk)=>({zh,en,kk})[S.settings.lang]||zh;
 // ---------- sheet ----------
 const openSheet=H.openSheet=(html,onMount,full)=>{const ob=$("#sheet-body"),nb=ob.cloneNode(false);ob.replaceWith(nb);nb.innerHTML=html;$("#sheet").classList.toggle("full",!!full);$("#scrim").classList.add("on");$("#sheet").classList.add("on");onMount&&onMount();};
 const closeSheet=H.closeSheet=()=>{if(window.ENG&&ENG.endWork)ENG.endWork();$("#scrim").classList.remove("on");$("#sheet").classList.remove("on");if(H.onSheetClose){const f=H.onSheetClose;H.onSheetClose=null;f();}};
@@ -447,7 +448,7 @@ Reply with only JSON: {"meals":[{"meal":0,"title":"short name","items":[{"name":
 // ---------- friends (owner only) ----------
 async function friendsSheet(){
   const body=(list,msg)=>`<h3>${L3("给朋友开账号","Accounts for friends","Достарға аккаунт")}<button data-close>${t("close")}</button></h3>
-   <div class="hint" style="margin-top:-6px">${L3("每个朋友有自己独立的效率站，看不到你的数据，也进不了 ULPA。","Each friend gets a separate hub. They can't see your data or ULPA.","Әр досыңыздың жеке беті болады. Сіздің деректеріңізді көрмейді.")}</div>
+   <div class="hint" style="margin-top:-6px">${L3("每个朋友有自己独立的 1% Better，看不到你的数据，也进不了 ULPA。","Each friend gets a separate hub. They can't see your data or ULPA.","Әр досыңыздың жеке беті болады. Сіздің деректеріңізді көрмейді.")}</div>
    <button class="go" id="fr-link" style="background:var(--habit)">${L3("生成邀请链接","Create invite link","Шақыру сілтемесін жасау")}</button>
    <div class="hint">${L3("朋友打开链接，自己设用户名和密码。每个链接只能用一次，7 天内有效。","Your friend opens it and picks his own username and password. One use, valid 7 days.","Досыңыз сілтемені ашып, өзі аты мен құпиясөзді қояды. Бір рет, 7 күн.")}</div>
    <div id="fr-out"></div>
@@ -465,7 +466,7 @@ async function friendsSheet(){
       try{const {code}=await call({action:"invite_code"});const link=`https://kainar.online/hub/?invite=${code}`;
         $("#fr-out").innerHTML=`<div class="prompt" style="margin-top:10px;word-break:break-all"><b>${link}</b><div class="ms" style="margin-top:6px">${L3("邀请码","Code","Код")}：<b class="num" style="letter-spacing:2px">${code}</b></div></div><div class="btnrow"><button class="pill" id="fr-copy">${L3("复制链接","Copy link","Көшіру")}</button>${navigator.share?`<button class="pill" id="fr-share">${L3("发给朋友","Share","Бөлісу")}</button>`:""}</div>`;
         $("#fr-copy").onclick=()=>navigator.clipboard.writeText(link).then(()=>toast(L3("已复制","Copied","Көшірілді"))).catch(()=>{});
-        if($("#fr-share"))$("#fr-share").onclick=()=>navigator.share({title:"Hub",text:L3("用这个链接注册我的效率站：","Sign up with this link:","Осы сілтемемен тіркел:"),url:link}).catch(()=>{});
+        if($("#fr-share"))$("#fr-share").onclick=()=>navigator.share({title:"Hub",text:L3("用这个链接注册 1% Better：","Sign up with this link:","Осы сілтемемен тіркел:"),url:link}).catch(()=>{});
       }catch(e){toast(H.aiErr(e));}finally{b.disabled=false;b.textContent=L3("再生成一个","Create another","Тағы біреу");}};
     $("#fr-add").onclick=async()=>{const login=$("#fr-login").value.trim().toLowerCase(),pw=$("#fr-pw").value;
       if(!/^[a-z][a-z0-9_.-]{2,23}$/.test(login)){toast(L3("用户名要英文字母开头，3–24 位","Username: letter first, 3–24 chars","Аты әріптен басталсын"));return;}
@@ -524,6 +525,7 @@ function settingsSheet(){const p=S.profile,st=S.settings;
    <div class="hint" id="s-kcal"></div>
    <div class="fl">${t("goal")}</div><div class="steps" style="grid-template-columns:1fr 1fr">${stepper("sg",t("studyGoal"),st.goal,10)}${stepper("mg",t("moveGoal"),st.moveGoal,5)}</div>
    <button class="go" id="s-save">${t("save")}</button>
+   ${H.plusSettings?H.plusSettings():""}
    ${H.role==="owner"?`<button class="pill" id="open-friends" style="width:100%;margin-top:12px">${ic("i-habits")} ${L3("给朋友开账号","Accounts for friends","Достарға аккаунт")}</button>`:""}
    <button class="linkbtn danger" id="sign-out" style="margin-top:14px">${L3("退出登录","Sign out","Шығу")}</button>`,()=>{
     const grp=(id,fn)=>{$(id).onclick=e=>{const b=e.target.closest("button");if(!b)return;$$(id+" button").forEach(x=>x.classList.toggle("on",x===b));fn(b);upd();};};
@@ -597,7 +599,7 @@ document.addEventListener("click",e=>{
         const nSets=done.length?done.reduce((a,x)=>a+Math.min(x[1],sets[cp.day.ex.indexOf(x)]),0):cp.day.ex.reduce((a,x)=>a+x[1],0);
         S.workouts.push({id:uid(),kind:"力量",name:pick(cp.day.name),date:tk,ts:Date.now(),min:Math.max(30,Math.round(nSets*2.5)),detail:list.map(x=>x[0]).join("、")});toast(t("logged",{x:pick(cp.day.name)}));}
       S.plan.idx++;S.plan.doneDate=tk;S.planChecks={};rest=null;save();break;}
-    case "fast-cancel": S.fast.on=false;S.fast.start=0;toast({zh:"已取消，没有记录",en:"Cancelled, not saved",kk:"Болдырылмады"}[S.settings.lang]);save();break;
+    case "fast-cancel": S.fast.on=false;S.fast.start=0;S.fast.lastEnd=S.fast.lastEnd||0;toast({zh:"已取消，没有记录",en:"Cancelled, not saved",kk:"Болдырылмады"}[S.settings.lang]);save();break;
     case "fast-toggle": {const f=S.fast;if(f.on&&Date.now()-f.start<60000){f.on=false;f.start=0;toast({zh:"已取消",en:"Cancelled",kk:"Болдырылмады"}[S.settings.lang]);save();break;}
       if(f.on){const now=Date.now();S.fasts.push({s:f.start,e:now});if(S.fasts.length>60)S.fasts=S.fasts.slice(-60);f.on=false;f.lastEnd=now;toast(t("fastEnded",{t:fmtHM((now-f.start)/60000)}));}else{f.on=true;f.start=Date.now();toast(t("fastStarted"));}save();break;}
   }
@@ -646,6 +648,7 @@ $("#tm-stop").onclick=()=>{const done=Math.floor((T.total-leftNow())/60);if(done
 $("#mode-seg").onclick=e=>{const b=e.target.closest("button");if(!b||T.running)return;T.mode=b.dataset.m;resetTimer();};
 $("#dur").onclick=e=>{const b=e.target.closest("button");if(!b||T.running||T.paused)return;const m=+b.dataset.dur;if(T.mode==="focus")S.settings.focus=m;else S.settings.brk=m;save();resetTimer();};
 
+H.kit={moveOn,kcalOn,kcalTarget,latestWeight,curPlan,fastState,weekKeys,fmtDay,hDone,habitFrac,settingsSheet,planSheet:()=>planSheet(),fmtHM,L:()=>L(),stepper:H.stepper};
 // ---------- boot ----------
 H.boot=()=>{route();render();if(!T.running&&!T.paused)resetTimer();setInterval(tick,1000);
   let lastDay=today();setInterval(()=>{if(today()!==lastDay){lastDay=today();render();}},60000);
