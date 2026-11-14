@@ -6,9 +6,9 @@
   const HUB = window.HUB = { sb: null, uid: null };
   const lang = (()=>{ try{ const s=JSON.parse(localStorage.getItem("efficiency-hub-v1")||"{}"); return (s.settings&&s.settings.lang)||"zh"; }catch(e){ return "zh"; } })();
   const T = {
-    zh:{wait:"正在连接…",login:"登录",loginBtn:"登录",loginHint:"登录一次以后会一直记住",pw:"密码",user:"用户名",bad:"密码不对，再试一次",priv:"这个账号没有开通，请找 Қайнар",privHint:"只有页面主人可以使用。",home:"回到 ULPA",off:"连不上服务器，请检查网络后刷新。",retry:"刷新"},
-    en:{wait:"Connecting…",login:"Sign in",loginBtn:"Sign in",loginHint:"You stay signed in after this.",pw:"Password",user:"Username",bad:"Wrong password, try again",priv:"This account has no access. Ask Kainar.",privHint:"Only its owner can use it.",home:"Back to ULPA",off:"Can't reach the server. Check your connection and refresh.",retry:"Refresh"},
-    kk:{wait:"Қосылуда…",login:"Кіру",loginBtn:"Кіру",loginHint:"Бір рет кірсеңіз, есте сақталады.",pw:"Құпиясөз",user:"Пайдаланушы аты",bad:"Құпиясөз қате, қайталаңыз",priv:"Бұл аккаунтқа рұқсат жоқ. Қайнарға жазыңыз.",privHint:"Тек иесі ғана қолдана алады.",home:"ULPA-ға оралу",off:"Серверге қосылу мүмкін емес. Интернетті тексеріп, жаңартыңыз.",retry:"Жаңарту"}
+    zh:{wait:"正在连接…",login:"登录",loginBtn:"登录",loginHint:"登录一次以后会一直记住",pw:"密码",user:"用户名",pw2:"再输一次密码",join:"注册",joinT:"创建你的账号",joinHint:"自己设一个用户名（英文字母开头，3–24 位）和密码（至少 8 位）",haveCode:"有邀请码？注册",haveAcc:"已经有账号？登录",code:"邀请码",mism:"两次密码不一样",badCode:"邀请码无效或已经用过了",taken:"这个用户名已经有人用了",badLogin:"用户名要英文字母开头，3–24 位",badPw:"密码至少 8 位",bad:"密码不对，再试一次",priv:"这个账号没有开通，请找 Қайнар",privHint:"只有页面主人可以使用。",home:"回到 ULPA",off:"连不上服务器，请检查网络后刷新。",retry:"刷新"},
+    en:{wait:"Connecting…",login:"Sign in",loginBtn:"Sign in",loginHint:"You stay signed in after this.",pw:"Password",user:"Username",pw2:"Repeat password",join:"Sign up",joinT:"Create your account",joinHint:"Pick a username (starts with a letter, 3–24) and a password (8+)",haveCode:"Have an invite code? Sign up",haveAcc:"Have an account? Sign in",code:"Invite code",mism:"Passwords don't match",badCode:"The invite code is invalid or used",taken:"That username is taken",badLogin:"Username: a letter first, 3–24 characters",badPw:"Password needs 8+ characters",bad:"Wrong password, try again",priv:"This account has no access. Ask Kainar.",privHint:"Only its owner can use it.",home:"Back to ULPA",off:"Can't reach the server. Check your connection and refresh.",retry:"Refresh"},
+    kk:{wait:"Қосылуда…",login:"Кіру",loginBtn:"Кіру",loginHint:"Бір рет кірсеңіз, есте сақталады.",pw:"Құпиясөз",user:"Пайдаланушы аты",pw2:"Құпиясөзді қайталаңыз",join:"Тіркелу",joinT:"Аккаунт ашу",joinHint:"Пайдаланушы аты (әріптен басталсын, 3–24) және құпиясөз (8+)",haveCode:"Шақыру коды бар ма? Тіркелу",haveAcc:"Аккаунт бар ма? Кіру",code:"Шақыру коды",mism:"Құпиясөздер сәйкес емес",badCode:"Шақыру коды жарамсыз",taken:"Бұл ат бос емес",badLogin:"Аты әріптен басталсын, 3–24 таңба",badPw:"Құпиясөз 8+ таңба",bad:"Құпиясөз қате, қайталаңыз",priv:"Бұл аккаунтқа рұқсат жоқ. Қайнарға жазыңыз.",privHint:"Тек иесі ғана қолдана алады.",home:"ULPA-ға оралу",off:"Серверге қосылу мүмкін емес. Интернетті тексеріп, жаңартыңыз.",retry:"Жаңарту"}
   }[lang] || {};
   const gate = (title, hint, btn, href) => {
     const g = document.getElementById("gate");
@@ -22,9 +22,11 @@
     g.innerHTML = `<form class="gate-in" id="hub-login" autocomplete="on">${logo}<b>${T.login}</b><p>${msg?`<span style="color:var(--move)">${msg}</span>`:T.loginHint}</p>
       <input class="field" type="text" id="hub-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${T.user}" value="${lastLogin()}" required style="margin-bottom:8px;text-align:center">
       <input class="field" type="password" id="hub-pw" name="password" autocomplete="current-password" placeholder="${T.pw}" required style="margin-bottom:12px;text-align:center">
-      <button class="go" type="submit" style="background:var(--study);margin:0">${T.loginBtn}</button></form>`;
+      <button class="go" type="submit" style="background:var(--study);margin:0">${T.loginBtn}</button>
+      <button class="linkbtn" type="button" id="to-join">${T.haveCode}</button></form>`;
     g.classList.add("on");
     const f = document.getElementById("hub-login");
+    document.getElementById("to-join").onclick = () => joinForm("");
     setTimeout(()=>document.getElementById("hub-pw").focus(), 100);
     f.onsubmit = async (e) => {
       e.preventDefault(); const btn = f.querySelector("button"); btn.disabled = true; btn.textContent = T.wait;
@@ -36,13 +38,43 @@
       start();
     };
   }
+  const inviteCode = () => new URLSearchParams(location.search).get("invite") || "";
+  function joinForm(msg){
+    const g = document.getElementById("gate"); const logo = LOGO();
+    g.innerHTML = `<form class="gate-in" id="hub-join" autocomplete="on">${logo}<b>${T.joinT}</b><p>${msg?`<span style="color:var(--move)">${msg}</span>`:T.joinHint}</p>
+      <input class="field" id="j-code" placeholder="${T.code}" value="${inviteCode()}" autocapitalize="characters" spellcheck="false" style="margin-bottom:8px;text-align:center;letter-spacing:2px">
+      <input class="field" id="j-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${T.user}" style="margin-bottom:8px;text-align:center">
+      <input class="field" type="password" id="j-pw" name="new-password" autocomplete="new-password" placeholder="${T.pw}" style="margin-bottom:8px;text-align:center">
+      <input class="field" type="password" id="j-pw2" autocomplete="new-password" placeholder="${T.pw2}" style="margin-bottom:12px;text-align:center">
+      <button class="go" type="submit" style="background:var(--habit);margin:0">${T.join}</button>
+      <button class="linkbtn" type="button" id="to-login">${T.haveAcc}</button></form>`;
+    g.classList.add("on");
+    document.getElementById("to-login").onclick = () => loginForm();
+    const f = document.getElementById("hub-join");
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const code = document.getElementById("j-code").value.trim().toUpperCase(), login = document.getElementById("j-user").value.trim().toLowerCase();
+      const pw = document.getElementById("j-pw").value, pw2 = document.getElementById("j-pw2").value;
+      if (!/^[a-z][a-z0-9_.-]{2,23}$/.test(login)) { joinForm(T.badLogin); return; }
+      if (pw.length < 8) { joinForm(T.badPw); return; }
+      if (pw !== pw2) { joinForm(T.mism); return; }
+      const btn = f.querySelector("button[type=submit]"); btn.disabled = true; btn.textContent = T.wait;
+      const { error } = await HUB.sb.functions.invoke("hub-ai", { body: { action: "join", code, login, password: pw } });
+      if (error) { let c = ""; try { c = (await error.context.json()).error; } catch (x) {} joinForm(c === "taken" ? T.taken : c === "bad_login" ? T.badLogin : c === "bad_password" ? T.badPw : c === "bad_code" ? T.badCode : T.off); return; }
+      try { localStorage.setItem("hub-last-login", login); } catch (x) {}
+      const { error: e2 } = await HUB.sb.auth.signInWithPassword({ email: `${login}@hub.kainar.online`, password: pw });
+      history.replaceState(null, "", location.pathname);
+      if (e2) { loginForm(); return; }
+      start();
+    };
+  }
   async function start(){
     gate(T.wait);
     if (!window.supabase) { gate(T.off, "", T.retry, location.href); return; }
     HUB.sb = HUB.sb || window.supabase.createClient(URL_, KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
     let session = null;
     try { session = (await HUB.sb.auth.getSession()).data.session; } catch (e) {}
-    if (!session) { loginForm(); return; }
+    if (!session) { if (inviteCode()) joinForm(""); else loginForm(); return; }
     const { data: role, error } = await HUB.sb.rpc("hub_role");
     if (error) { gate(T.off, "", T.retry, location.href); return; }
     if (!role) { await HUB.sb.auth.signOut().catch(()=>{}); loginForm(T.priv); return; }

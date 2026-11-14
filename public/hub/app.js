@@ -438,16 +438,25 @@ Reply with only JSON: {"meals":[{"meal":0,"title":"short name","items":[{"name":
 async function friendsSheet(){
   const body=(list,msg)=>`<h3>${L3("给朋友开账号","Accounts for friends","Достарға аккаунт")}<button data-close>${t("close")}</button></h3>
    <div class="hint" style="margin-top:-6px">${L3("每个朋友有自己独立的效率站，看不到你的数据，也进不了 ULPA。","Each friend gets a separate hub. They can't see your data or ULPA.","Әр досыңыздың жеке беті болады. Сіздің деректеріңізді көрмейді.")}</div>
-   <div class="fl">${L3("新账号","New account","Жаңа аккаунт")}</div>
-   <input class="field" id="fr-login" placeholder="${L3("用户名（英文字母开头，3–24 位）","Username (starts with a letter, 3–24)","Пайдаланушы аты (3–24)")}" autocapitalize="none" spellcheck="false" style="margin-bottom:8px">
+   <button class="go" id="fr-link" style="background:var(--habit)">${L3("生成邀请链接","Create invite link","Шақыру сілтемесін жасау")}</button>
+   <div class="hint">${L3("朋友打开链接，自己设用户名和密码。每个链接只能用一次，7 天内有效。","Your friend opens it and picks his own username and password. One use, valid 7 days.","Досыңыз сілтемені ашып, өзі аты мен құпиясөзді қояды. Бір рет, 7 күн.")}</div>
+   <div id="fr-out"></div>
+   <details style="margin-top:14px"><summary>${L3("或者我帮他设好账号密码","Or set them up myself","Немесе өзім ашамын")}</summary>
+   <input class="field" id="fr-login" placeholder="${L3("用户名（英文字母开头，3–24 位）","Username (starts with a letter, 3–24)","Пайдаланушы аты (3–24)")}" autocapitalize="none" spellcheck="false" style="margin:10px 0 8px">
    <input class="field" id="fr-pw" placeholder="${L3("密码（至少 8 位）","Password (8+ characters)","Құпиясөз (8+)")}" autocapitalize="none" spellcheck="false">
-   <button class="go" id="fr-add" style="background:var(--habit)">${L3("创建账号","Create account","Аккаунт ашу")}</button>
+   <button class="go" id="fr-add" style="background:var(--s3);color:var(--t1)">${L3("创建账号","Create account","Аккаунт ашу")}</button></details>
    ${msg?`<div class="prompt" style="margin-top:12px">${msg}</div>`:""}
    <div class="fl">${L3("已开通","Accounts","Аккаунттар")}</div>
    ${list===null?`<div class="hint">${t("generating")}</div>`:list.length?`<ul class="log">${list.map(m=>`<li><div class="mid"><b>${esc(m.login)}</b><small>${fmtDay(String(m.created_at).slice(0,10))}</small></div><button class="del" data-fr-del="${esc(m.login)}">${ic("i-x")}</button></li>`).join("")}</ul>`:`<div class="empty">—</div>`}`;
   const call=async(b)=>{const {data,error}=await HUB.sb.functions.invoke("hub-ai",{body:b});if(error){let code="upstream";try{code=(await error.context.json()).error||code;}catch(e){}throw {code};}return data;};
   let list=null; const re=msg=>{$("#sheet-body").innerHTML=body(list,msg);mount();};
   const mount=()=>{
+    $("#fr-link").onclick=async()=>{const b=$("#fr-link");b.disabled=true;
+      try{const {code}=await call({action:"invite_code"});const link=`https://kainar.online/hub/?invite=${code}`;
+        $("#fr-out").innerHTML=`<div class="prompt" style="margin-top:10px;word-break:break-all"><b>${link}</b><div class="ms" style="margin-top:6px">${L3("邀请码","Code","Код")}：<b class="num" style="letter-spacing:2px">${code}</b></div></div><div class="btnrow"><button class="pill" id="fr-copy">${L3("复制链接","Copy link","Көшіру")}</button>${navigator.share?`<button class="pill" id="fr-share">${L3("发给朋友","Share","Бөлісу")}</button>`:""}</div>`;
+        $("#fr-copy").onclick=()=>navigator.clipboard.writeText(link).then(()=>toast(L3("已复制","Copied","Көшірілді"))).catch(()=>{});
+        if($("#fr-share"))$("#fr-share").onclick=()=>navigator.share({title:"Hub",text:L3("用这个链接注册我的效率站：","Sign up with this link:","Осы сілтемемен тіркел:"),url:link}).catch(()=>{});
+      }catch(e){toast(H.aiErr(e));}finally{b.disabled=false;b.textContent=L3("再生成一个","Create another","Тағы біреу");}};
     $("#fr-add").onclick=async()=>{const login=$("#fr-login").value.trim().toLowerCase(),pw=$("#fr-pw").value;
       if(!/^[a-z][a-z0-9_.-]{2,23}$/.test(login)){toast(L3("用户名要英文字母开头，3–24 位","Username: letter first, 3–24 chars","Аты әріптен басталсын"));return;}
       if(pw.length<8){toast(L3("密码至少 8 位","Password needs 8+ characters","Құпиясөз 8+ таңба"));return;}
