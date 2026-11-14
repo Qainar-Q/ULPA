@@ -3,7 +3,7 @@
 // AI for the owner's personal hub (kainar.online/hub): IELTS practice questions, vocabulary,
 // essay and speaking feedback, syllabus topics. The page sends a finished prompt; this returns
 // the model's answer parsed as JSON. Same provider as study-ai (Claude if ANTHROPIC_API_KEY is
-// set, otherwise Gemini with GEMINI_API_KEY).
+// set, otherwise Gemini with GEMINI_API_KEY). HUB_ANTHROPIC_API_KEY switches only the hub to Claude.
 //
 // Only student 01 (the site owner) may call it, checked with the caller's own token.
 // Limit: HUB_AI_DAILY_LIMIT calls per Almaty day (default 120).
@@ -127,7 +127,8 @@ Deno.serve(async (req) => {
   if (n > DAILY) return json({ error: "limit", limit: DAILY }, 429, origin);
   used.set(day, n);
 
-  const claude = Deno.env.get("ANTHROPIC_API_KEY");
+  // HUB_ANTHROPIC_API_KEY: a Claude key used only by the hub (so the class's study-ai keeps its own provider).
+  const claude = Deno.env.get("HUB_ANTHROPIC_API_KEY") ?? Deno.env.get("ANTHROPIC_API_KEY");
   const gemini = Deno.env.get("GEMINI_API_KEY");
   if (!claude && !gemini) return json({ error: "not_configured" }, 503, origin);
 
