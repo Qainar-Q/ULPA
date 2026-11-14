@@ -54,6 +54,7 @@ H.plusToday=()=>{
     <div class="p1t"><b>${L3("今天的 1%","Today's 1%","Бүгінгі 1%")}</b><span>${sc>=5?L3("全部完成，比昨天更好一点","All five done. Better than yesterday.","Бәрі орындалды"):sc>=3?L3("达标了，再多做一件更好","Goal reached. One more is a bonus.","Мақсатқа жеттіңіз"):L3(`再完成 ${3-sc} 件就达标`,`${3-sc} more to reach today's goal`,`Тағы ${3-sc} іс қалды`)}</span></div>
     <div class="p1s" title="${L3("连续达标天数","Days in a row","Қатарынан күн")}">${ic("i-flame","","stroke:var(--todo)")}<b class="num">${st}</b><small>${L3("天","days","күн")}</small></div></div>
     <ul class="p1l">${AREAS.map(a=>`<li><a href="${a.href}"${a.seg?` data-seg="${a.seg}"`:""} class="${it[a.k]?"on":""}" style="--ac:${a.col}"><span class="p1i">${ic(it[a.k]?"i-check":a.icon)}</span><span class="p1n"><b>${NAME[a.k]()}</b><small>${esc(d[a.k]||"")}</small></span>${ic("i-chev","p1c")}</a></li>`).join("")}</ul>
+    ${H.examStrip?H.examStrip():""}
     ${dow===0||dow===1?`<button class="p1w" id="open-week">${ic("i-cards","","stroke:var(--study)")}<span>${dow===0?L3("本周报告出来了","This week's report is ready","Апталық есеп дайын"):L3("看看上周报告","See last week's report","Өткен аптаның есебі")}</span>${ic("i-chev")}</button>`:""}</div>`;
   renderBuddies();
 };

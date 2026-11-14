@@ -41,6 +41,7 @@ ENG.speak=speak;
 ENG.todaySummary=()=>{const d=E().days[today()]||{};const goal=E().prefs.words;const dn=due().length;
   return `<span class="eb ${d.w>=goal?"ok":""}">${t("newWords")} ${d.w||0}/${goal}</span><span class="eb ${dn===0&&learnedCount()>0?"ok":""}">${t("review")} ${dn}</span><span class="eb ${d.d?"ok":""}">${t("drill")}${d.d?" ✓":""}</span>`;};
 
+ENG.lvl=lvl;ENG.explainRule=explainRule;ENG.markMock=(band,summary)=>{day().sp=1;day().mock=1;E().speaks.push({date:today(),q:"Mock test",band,mock:true});logTime();H.save(true);H.render();};ENG.beginWork=()=>actBegin();
 ENG.todayState=()=>{const d=E().days[today()]||{};return {w:d.w||0,goal:E().prefs.words,due:due().length,drill:!!d.d,learned:learnedCount()};};
 ENG.weekStats=(keys)=>{const e=E();let w=0,drills=0,right=0,total=0;keys.forEach(k=>{const d=e.days[k]||{};w+=d.w||0;});
   e.drills.filter(x=>keys.includes(x.date)).forEach(x=>{drills++;right+=+x.s||0;total+=+x.n||0;});
@@ -60,6 +61,7 @@ ENG.render=()=>{
     ${task("eng-drill","i-target","#ffb340",t("drill"),d.d?`${t("score",{a:d.ds||0,b:d.dn||0})}`:`${e.prefs.drill} Q`,!!d.d)}
     ${task("eng-write","h-pen","#3ddc97",t("writing"),"IELTS Task 2",!!d.wr)}
     ${task("eng-speak","i-mic","#ff7aa8",t("speaking"),"IELTS Part 1–3",!!d.sp)}
+    ${window.MOCK?task("eng-mock","i-target","#ff7aa8",H.L3("口语模拟考官","Speaking mock test","Сөйлеу: сынақ емтихан"),H.L3("Part 1 + 2 + 3 · 约 12 分钟 · AI 打分","Part 1 + 2 + 3 · ~12 min · AI band","Part 1–3 · ~12 мин"),!!d.mock):""}
    </div>
    <h2>${t("progress")}</h2>
    <div class="panel"><div class="kpi" style="margin:0"><div><div class="k">${t("learned")}</div><div class="v num">${learnedCount()}<small>${t("words")}</small></div></div><div><div class="k">${t("masteredW")}</div><div class="v num">${masteredCount()}</div></div><div><div class="k">${t("accuracy")}</div><div class="v num">${accP==null?"--":accP+"<small>%</small>"}</div></div></div>
@@ -71,7 +73,7 @@ function task(id,icn,col,name,sub,ok){return `<button class="task ${ok?"ok":""}"
 
 document.addEventListener("click",ev=>{const b=ev.target.closest("button");if(!b)return;
   switch(b.id){case"eng-test":testIntro();break;case"eng-new":newWords();break;case"eng-rev":review();break;case"eng-drill":drill();break;
-    case"eng-write":writing();break;case"eng-speak":speaking();break;case"eng-mist":mistakes();break;case"eng-prefs":prefs();break;case"eng-hist":history();break;}
+    case"eng-write":writing();break;case"eng-speak":speaking();break;case"eng-mock":MOCK.start();break;case"eng-mist":mistakes();break;case"eng-prefs":prefs();break;case"eng-hist":history();break;}
   if(b.dataset.say){ev.stopPropagation();speak(b.dataset.say);}
 });
 
