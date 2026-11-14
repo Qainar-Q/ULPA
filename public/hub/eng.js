@@ -18,7 +18,14 @@ function explainRule(){return ["Write every explanation in Simplified Chinese.",
 const due=()=>Object.values(E().vocab).filter(c=>c.due<=today());
 const learnedCount=()=>Object.keys(E().vocab).length;
 const masteredCount=()=>Object.values(E().vocab).filter(c=>c.ivl>=21).length;
-function logTime(start){const m=Math.round((Date.now()-start)/60000);if(m>=1)H.addStudy(m,SUBJ,true);}
+// Study time = only the time you are actually working: each tap/keystroke adds the gap since the last one,
+// capped at 90 s (so leaving the page open or waiting for the AI does not count).
+let work=null;
+function actBegin(){if(!work)work={last:Date.now(),ms:0};}
+["pointerdown","keydown","input"].forEach(ev=>document.addEventListener(ev,()=>{if(!work)return;const n=Date.now();work.ms+=Math.min(n-work.last,90000);work.last=n;},true));
+ENG.endWork=()=>logTime();
+function logTime(){if(!work)return;const m=Math.round(work.ms/60000);work=null;
+  if(m>=1){H.addStudy(m,SUBJ,true);toast(({zh:"记录了 "+m+" 分钟英语学习",en:"Logged "+m+" min of English",kk:m+" мин ағылшын жазылды"})[H.lang()]);}}
 const bandOf={A1:"3.0–3.5",A2:"4.0–4.5",B1:"4.5–5.5",B2:"5.5–6.5",C1:"7.0–8.0",C2:"8.5–9.0"};
 
 // pronunciation (browser voice, British English if available)
@@ -86,10 +93,18 @@ function mcqView(q,i,total,onDone,title,passage){
     let done=false;
     $("#sheet-body .opts").onclick=e=>{const b=e.target.closest(".opt");if(!b||done)return;done=true;const j=+b.dataset.o,ok=j===q.a;
       $$("#sheet-body .opt").forEach((x,k)=>{if(k===q.a)x.classList.add("right");else if(k===j)x.classList.add("wrong");x.disabled=true;});
-      $("#qexp").innerHTML=`<div class="exp ${ok?"ok":"no"}"><b>${ok?"✓":"✗"} ${t("explain")}</b><p>${esc(q.exp||"")}</p></div><button class="go" id="qnext" style="background:var(--eng)">${i+1<total?t("next"):t("finish")}</button>`;
+      $("#qexp").innerHTML=expBox(q,j)+`<button class="go" id="qnext" style="background:var(--eng)">${i+1<total?t("next"):t("finish")}</button>`;
       $("#qnext").onclick=()=>onDone(ok,j); $("#qnext").scrollIntoView({behavior:"smooth",block:"nearest"});};
   });
 }
+
+const L3=(zh,en,kk)=>({zh,en,kk})[H.lang()]||zh;
+function expBox(q,j){const ok=j===q.a,letters="ABCD",why=Array.isArray(q.why)?q.why:[];
+  return `<div class="exp ${ok?"ok":"no"}"><b>${ok?"✓ "+L3("答对了","Correct","Дұрыс"):"✗ "+L3("答错了","Not quite","Қате")}</b>
+   ${!ok&&j!=null?`<p class="whyline"><span class="wl no">${letters[j]}</span>${L3("你选的","Your choice","Сіздің таңдау")}「${esc(q.opts[j]??"")}」${why[j]?" — "+esc(why[j]):""}</p>`:""}
+   <p class="whyline"><span class="wl ok">${letters[q.a]}</span>${L3("正确答案","Answer","Дұрыс жауап")}「${esc(q.opts[q.a])}」</p>
+   <p>${esc(q.exp||"")}</p>
+   ${why.length?`<details class="others"><summary>${L3("看每个选项为什么对/错","Why each option is right or wrong","Әр нұсқаның түсіндірмесі")}</summary>${q.opts.map((o,k)=>`<p class="whyline"><span class="wl ${k===q.a?"ok":""}">${letters[k]}</span>${esc(o)}${why[k]?" — "+esc(why[k]):""}</p>`).join("")}</details>`:""}</div>`;}
 
 // ---------- placement test ----------
 function testIntro(){full(hdr(t("takeTest"))+`<p class="lead">${t("testIntro")}</p><button class="go" id="t-go" style="background:var(--eng)">${t("startTest")}</button>`,()=>{$("#t-go").onclick=runTest;});}
@@ -99,14 +114,14 @@ async function runTest(){
   const one=lv=>H.aiJson(`You are an expert IELTS examiner writing part of a placement test for a Chinese/Kazakh-speaking university student preparing for IELTS Academic (graduate study).
 Write exactly 5 multiple-choice questions at CEFR level ${lv}: mix grammar, vocabulary-in-context and one short reading-inference item (put any short text inside the question). Each has exactly 4 options and one unambiguous correct answer; vary its position.
 ${explainRule()} Explanations under 35 words.
-Reply with only a JSON array of 5 objects: {"lv":"${lv}","sec":"grammar"|"vocab"|"reading","q":"...","opts":["","","",""],"a":0,"exp":"..."}`,{modelTier:"default"}).then(a=>Array.isArray(a)?a.map(q=>Object.assign(q,{lv})):[]);
+Reply with only a JSON array of 5 objects: {"lv":"${lv}","sec":"grammar"|"vocab"|"reading","q":"...","opts":["","","",""],"a":0,"exp":"why the answer is right","why":["one short reason per option: why it is right or wrong"]}`,{modelTier:"default"}).then(a=>Array.isArray(a)?a.map(q=>Object.assign(q,{lv})):[]);
   let qs;
   try{ const parts=await Promise.allSettled(["A2","B1","B2","C1","C2"].map(one)); qs=parts.flatMap(p=>p.status==="fulfilled"?p.value:[]);
     if(qs.length<10){ const err=parts.find(p=>p.status==="rejected"); throw err?err.reason:{code:"invalid_json"}; } }
   catch(e){ busy=false; clearInterval(tick); fail(title,e,runTest); return; }
   busy=false; clearInterval(tick);
   qs=qs.filter(q=>q&&Array.isArray(q.opts)&&q.opts.length>=2&&Number.isInteger(q.a));
-  const res=[]; const start=Date.now();
+  const res=[]; actBegin();
   const step=i=>{ if(i>=qs.length) return testResult(qs,res,start); mcqView(qs[i],i,qs.length,(ok,j)=>{res.push(ok);if(!ok)addMistake(qs[i],j);step(i+1);},title); };
   step(0);
 }
@@ -116,7 +131,7 @@ function testResult(qs,res,start){
   let est="A1";for(const l of L){const x=by[l];if(x.n&&x.c/x.n>=.6)est=l;else break;}
   if(est==="A1"&&by.A2.n&&by.A2.c/by.A2.n>=.4)est="A2";
   const lv={cefr:est,band:bandOf[est],date:today(),detail:by};
-  const e=E(); e.level=lv; e.tests.push({date:today(),cefr:est,score:res.filter(Boolean).length,n:res.length}); day().d=day().d||0; logTime(start); H.save(true);
+  const e=E(); e.level=lv; e.tests.push({date:today(),cefr:est,score:res.filter(Boolean).length,n:res.length}); day().d=day().d||0; logTime(); H.save(true);
   full(hdr(t("levelResult",{l:est}))+`<div class="lvbig num">${est}</div><div class="ms" style="text-align:center;margin-bottom:18px">${t("estBand",{b:bandOf[est]})}</div>
    <div class="fl">${t("levelDetail")}</div>${L.map(l=>{const x=by[l];const p=x.n?Math.round(x.c/x.n*100):0;return `<div class="srow"><span style="width:34px" class="num">${l}</span><span style="flex:1"><div class="pbar"><div style="width:${p}%;background:${p>=60?"var(--eng)":"var(--s3)"}"></div></div></span><span class="num">${x.c}/${x.n}</span></div>`;}).join("")}
    <button class="go" data-close style="background:var(--eng)">${t("done")}</button>`);
@@ -140,9 +155,9 @@ Reply with only a JSON array of ${goal} objects.`,{}); }catch(err){ fail(title,e
 }
 function review(){const q=due().sort(()=>Math.random()-.5).slice(0,80); if(!q.length){toast(t("noDue"));return;} cards(q.map(x=>Object.assign({},x)),t("review"));}
 function cards(queue,title){
-  const start=Date.now(); let i=0, total=queue.length, doneN=0;
+  actBegin(); let i=0, total=queue.length, doneN=0;
   const show=()=>{
-    if(i>=queue.length){ logTime(start); H.save(); full(hdr(title)+`<div class="gen"><div class="lvbig num" style="font-size:44px">✓</div><div>${t("sessionDone")} · ${doneN}</div><button class="go" data-close style="background:var(--eng)">${t("done")}</button></div>`); return; }
+    if(i>=queue.length){ logTime(); H.save(); full(hdr(title)+`<div class="gen"><div class="lvbig num" style="font-size:44px">✓</div><div>${t("sessionDone")} · ${doneN}</div><button class="go" data-close style="background:var(--eng)">${t("done")}</button></div>`); return; }
     const c=queue[i];
     full(hdr(title,`<span class="num" style="font-size:14px;color:var(--t2)">${Math.min(doneN+1,total)} / ${total}</span>`)+`<div class="qbar"><i style="width:${doneN/total*100}%"></i></div>
      <div class="card" id="fc"><div class="cw">${esc(c.w)}</div><div class="cipa">${esc(c.ipa)} <button class="say" data-say="${esc(c.w)}">${ic("i-sound")}</button></div>
@@ -183,14 +198,14 @@ async function drill(){
 Exactly ${n} multiple-choice questions in this mix: about 40% "vocab" (meaning, collocation or word form in an academic sentence; reuse these recently learned words where possible: ${words||"none yet"}), about 30% "grammar" (errors typical in IELTS writing at this level: articles, tense, agreement, relative clauses, conditionals, passive, prepositions, sentence structure), and about 30% "reading": write one short academic passage (130-170 words, IELTS style, any science/society topic) and ask TRUE / FALSE / NOT GIVEN or multiple-choice questions about it.
 ${mist?"Also re-test the concepts behind some of these earlier mistakes (new wording):\n"+mist:""}
 Every question: exactly one correct answer; TRUE/FALSE/NOT GIVEN items use opts ["TRUE","FALSE","NOT GIVEN"]; otherwise 4 options. Vary the correct position. ${explainRule()} Explanations under 45 words and say why the wrong choice is wrong when useful.
-Reply with only JSON: {"passage":{"title":"...","text":"..."},"questions":[{"sec":"vocab"|"grammar"|"reading","q":"...","opts":["..."],"a":0,"exp":"..."}]}  Put the reading questions last.`,{}); }
+Reply with only JSON: {"passage":{"title":"...","text":"..."},"questions":[{"sec":"vocab"|"grammar"|"reading","q":"...","opts":["..."],"a":0,"exp":"why the answer is right","why":["one short reason per option, same order as opts: why it is right or wrong"]}]}  Put the reading questions last.`,{}); }
     catch(err){ fail(title,err,drill); return; }
     if(!r||!Array.isArray(r.questions)){fail(title,{code:"invalid_json"},drill);return;}
     r.questions=r.questions.filter(q=>q&&Array.isArray(q.opts)&&q.opts.length>=2&&Number.isInteger(q.a));
     c.dr=r; H.save(true);
   }
-  const r=c.dr, res=[], picks=[], start=Date.now();
-  const step=i=>{ if(i>=r.questions.length){ const s=res.filter(Boolean).length; const d=day(); d.d=1; d.ds=s; d.dn=res.length; e.drills.push({date:today(),s,n:res.length}); c.drillDone=1; c.drillRes=picks; logTime(start); H.save();
+  const r=c.dr, res=[], picks=[]; actBegin();
+  const step=i=>{ if(i>=r.questions.length){ const s=res.filter(Boolean).length; const d=day(); d.d=1; d.ds=s; d.dn=res.length; e.drills.push({date:today(),s,n:res.length}); c.drillDone=1; c.drillRes=picks; logTime(); H.save();
       full(hdr(title)+`<div class="gen"><div class="lvbig num">${s}/${res.length}</div><div>${t("score",{a:s,b:res.length})}</div><button class="go" data-close style="background:var(--eng)">${t("done")}</button></div>`); return; }
     mcqView(r.questions[i],i,r.questions.length,(ok,j)=>{res.push(ok);picks.push(j);if(!ok)addMistake(r.questions[i],j,r.passage);step(i+1);},title,r.passage); };
   step(0);
@@ -199,17 +214,58 @@ function drillReview(r,picks){
   full(hdr(t("drill"))+(r.passage?`<details class="passage"><summary>${t("reading")} · ${esc(r.passage.title||"")}</summary><div>${esc(r.passage.text)}</div></details>`:"")+
    r.questions.map((q,i)=>{const p=picks?picks[i]:null;const ok=p===q.a;return `<div class="rv ${ok?"ok":"no"}"><div class="qtext" style="font-size:15px">${i+1}. ${esc(q.q)}</div><div class="ms">${p!=null&&!ok?`${t("yourAns")}: ${esc(q.opts[p])} · `:""}${t("correct")}: <b>${esc(q.opts[q.a])}</b></div><p class="ms">${esc(q.exp||"")}</p></div>`;}).join(""));
 }
-function addMistake(q,j,passage){const e=E();e.mistakes.push({q:q.q,opts:q.opts,a:q.a,p:j,exp:q.exp,sec:q.sec,date:today(),ctx:q.sec==="reading"&&passage?passage.title:""});if(e.mistakes.length>150)e.mistakes=e.mistakes.slice(-150);}
-function mistakes(){const m=E().mistakes.slice().reverse();
-  full(hdr(t("mistakes"))+(m.length?m.map((x,i)=>`<div class="rv no"><div class="ms">${H.fmtDay(x.date)} · ${esc({vocab:t("vocab"),grammar:t("grammar"),reading:t("reading")}[x.sec]||"")}</div><div class="qtext" style="font-size:15px">${esc(x.q)}</div><div class="ms">${t("yourAns")}: ${esc(x.opts[x.p]??"")} · ${t("correct")}: <b>${esc(x.opts[x.a])}</b></div><p class="ms">${esc(x.exp||"")}</p><button class="linkbtn" data-mdel="${m.length-1-i}">${t("del")}</button></div>`).join(""):`<div class="empty">${t("noMistakes")}</div>`),()=>{
-    $("#sheet-body").onclick=e=>{const b=e.target.closest("[data-mdel]");if(!b)return;E().mistakes.splice(+b.dataset.mdel,1);H.save(true);mistakes();};});}
+function addMistake(q,j,passage){const e=E();
+  e.mistakes.push({id:H.uid(),q:q.q,opts:q.opts,a:q.a,p:j,exp:q.exp,why:Array.isArray(q.why)?q.why:[],sec:q.sec,lv:q.lv||"",date:today(),
+    ctx:q.sec==="reading"&&passage?passage.title:"",ptext:q.sec==="reading"&&passage?String(passage.text||"").slice(0,1600):"",right:0});
+  if(e.mistakes.length>150)e.mistakes=e.mistakes.slice(-150);}
+let mFilter="all";
+function mistakes(){
+  const all=E().mistakes; all.forEach(x=>{if(!x.id)x.id=H.uid();});
+  const list=all.filter(x=>mFilter==="all"||x.sec===mFilter).slice().reverse();
+  const cnt=k=>all.filter(x=>k==="all"||x.sec===k).length;
+  const tabs=[["all",L3("全部","All","Барлығы")],["vocab",t("vocab")],["grammar",t("grammar")],["reading",t("reading")]];
+  full(hdr(t("mistakes"))+
+   `<div class="chips" style="justify-content:flex-start;margin:0 0 12px" id="mf">${tabs.map(([k,n])=>`<button class="chip ${mFilter===k?"on":""}" data-mf="${k}" style="--cc:var(--eng)">${n} ${cnt(k)}</button>`).join("")}</div>`+
+   (list.length?`<button class="go" id="m-redo" style="background:var(--eng);margin:0 0 14px">${L3("重做错题","Retry mistakes","Қателерді қайта шешу")} (${Math.min(list.length,15)})</button>`:"")+
+   (list.length?list.map(x=>mCard(x)).join(""):`<div class="empty">${t("noMistakes")}</div>`)+
+   `<div class="hint">${L3("重做时连续答对 2 次，会自动移出错题本","Answer one right twice in a retry and it leaves the book","Екі рет дұрыс жауап берсеңіз, тізімнен шығады")}</div>`,()=>{
+    $("#sheet-body").onclick=async e=>{const b=e.target.closest("[data-mf],[data-mdel],[data-mdeep],#m-redo");if(!b)return;
+      if(b.dataset.mf){mFilter=b.dataset.mf;mistakes();return;}
+      if(b.dataset.mdel){E().mistakes=E().mistakes.filter(x=>x.id!==b.dataset.mdel);H.save(true);mistakes();return;}
+      if(b.id==="m-redo"){redo(list.slice(0,15));return;}
+      if(b.dataset.mdeep){const x=E().mistakes.find(y=>y.id===b.dataset.mdeep);if(!x)return;b.disabled=true;b.textContent=t("thinking");
+        try{const r=await H.aiJson(`A CEFR ${lvl()} IELTS learner got this question wrong.
+${x.ptext?`Reading passage:\n"""${x.ptext}"""\n`:""}Question: ${x.q}
+Options: ${x.opts.map((o,k)=>"ABCD"[k]+". "+o).join(" | ")}
+Correct: ${"ABCD"[x.a]}. The learner chose: ${"ABCD"[x.p]}.
+Teach it like a patient tutor. ${explainRule()}
+Reply with only JSON: {"rule":"the rule or key idea, 2-4 sentences","trap":"why the learner's choice was tempting and why it is wrong","examples":["2 or 3 new example sentences that use the rule correctly (English), each followed by a short translation in brackets"],"tip":"one memory tip"}`,{modelTier:"default"});
+          x.deep=r;H.save(true);mistakes();}catch(err){toast(H.aiErr(err));b.disabled=false;b.textContent=L3("AI 详细讲解","Explain in depth","AI толық түсіндіру");}}
+    };});
+}
+function mCard(x){const letters="ABCD";const d=x.deep;
+  return `<div class="rv no mcard"><div class="ms">${H.fmtDay(x.date)} · ${esc({vocab:t("vocab"),grammar:t("grammar"),reading:t("reading")}[x.sec]||"")}${x.lv?" · "+esc(x.lv):""}${x.right?` · ${L3("已对","right","дұрыс")} ${x.right}/2`:""}</div>
+   ${x.ptext?`<details class="passage" style="margin:6px 0"><summary>${t("reading")} · ${esc(x.ctx||"")}</summary><div>${esc(x.ptext)}</div></details>`:""}
+   <div class="qtext" style="font-size:15.5px;margin-bottom:8px">${esc(x.q)}</div>
+   <div class="mopts">${x.opts.map((o,k)=>`<div class="mo ${k===x.a?"ok":k===x.p?"no":""}"><span class="ol">${letters[k]}</span><span>${esc(o)}${Array.isArray(x.why)&&x.why[k]&&(k===x.a||k===x.p)?`<small>${esc(x.why[k])}</small>`:""}</span></div>`).join("")}</div>
+   <div class="exp" style="margin-top:10px"><b>${t("explain")}</b><p>${esc(x.exp||"")}</p></div>
+   ${d?`<div class="deep"><b>${L3("规则","Rule","Ереже")}</b><p>${esc(d.rule||"")}</p><b>${L3("为什么会选错","Why it was a trap","Неге қателестіңіз")}</b><p>${esc(d.trap||"")}</p><b>${L3("例句","Examples","Мысалдар")}</b><ul class="tips">${(d.examples||[]).map(s=>`<li>${esc(s)}</li>`).join("")}</ul><b>${L3("记忆技巧","Tip","Кеңес")}</b><p>${esc(d.tip||"")}</p></div>`
+     :`<button class="pill" data-mdeep="${x.id}" style="width:100%;margin-top:10px">${ic("i-spark")} ${L3("AI 详细讲解","Explain in depth","AI толық түсіндіру")}</button>`}
+   <button class="linkbtn" data-mdel="${x.id}">${L3("我已经会了，移出错题本","I've got it — remove","Түсіндім — өшіру")}</button></div>`;}
+function redo(items){const title=L3("重做错题","Retry mistakes","Қателерді қайта шешу");let right=0;actBegin();
+  const step=i=>{if(i>=items.length){logTime();H.save(true);full(hdr(title)+`<div class="gen"><div class="lvbig num">${right}/${items.length}</div><div>${L3("移出了","Removed","Шығарылды")} ${items.filter(x=>x._gone).length}</div><button class="go" id="back-m" style="background:var(--eng)">${t("mistakes")}</button></div>`,()=>{$("#back-m").onclick=mistakes;});H.render();return;}
+    const x=items[i];const q={q:x.q,opts:x.opts,a:x.a,exp:x.exp,why:x.why,sec:x.sec,lv:x.lv};
+    mcqView(q,i,items.length,(ok,j)=>{const m=E().mistakes.find(y=>y.id===x.id);
+      if(m){if(ok){right++;m.right=(m.right||0)+1;if(m.right>=2){E().mistakes=E().mistakes.filter(y=>y.id!==m.id);x._gone=1;}}else{m.right=0;m.p=j;m.date=today();}}
+      step(i+1);},title,x.ptext?{title:x.ctx,text:x.ptext}:null);};
+  step(0);}
 
 // ---------- writing ----------
 async function writing(){
   const c=cache(), title=t("writing");
   if(!c.wp){ let r; try{ r=await gen(title,`Write one IELTS Academic Writing Task 2 question suitable for a CEFR ${lvl()} candidate aiming for band 7. Choose a common real-exam topic area (education, technology, environment, society, work, health, government). Also give 3 short planning tips for this specific question. ${explainRule()} (tips only; the question itself in English).
 Reply with only JSON: {"type":"opinion|discussion|problem-solution|advantages|two-part","prompt":"...","tips":["...","...","..."]}`,{modelTier:"quick"}); }catch(err){ fail(title,err,writing); return; } if(!r||!r.prompt){fail(title,{code:"invalid_json"},writing);return;} c.wp=r; H.save(true); }
-  const p=c.wp, start=c.wStart||(c.wStart=Date.now());
+  const p=c.wp; actBegin();
   const done=c.wFeedback;
   full(hdr(title)+`<div class="fl">${t("writePrompt")} · ${esc(p.type||"Task 2")}</div><div class="prompt">${esc(p.prompt)}</div>
    ${p.tips?`<details class="passage"><summary>${t("tips")}</summary><ul class="tips">${p.tips.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>`:""}
@@ -229,7 +285,7 @@ Response (${n} words):
 ${explainRule()}
 Reply with only JSON: {"overall":6.0,"TR":6,"CC":6,"LR":6,"GRA":6,"summary":"2-3 sentences","corrections":[{"orig":"exact phrase from the text","fix":"corrected version","why":"short reason"}],"improved":"a band-8 rewrite of the candidate's own essay (keep their ideas, 260-300 words)","tips":["3 specific things to improve next time"]}
 Give 5-10 of the most useful corrections.`,{modelTier:"default"});
-          c.wFeedback=fb; const d=day(); d.wr=1; E().writings.push({date:today(),prompt:p.prompt,words:n,band:fb.overall}); logTime(start); H.save(true); writing(); H.render();
+          c.wFeedback=fb; const d=day(); d.wr=1; E().writings.push({date:today(),prompt:p.prompt,words:n,band:fb.overall}); logTime(); H.save(true); writing(); H.render();
         }catch(err){ toast(H.aiErr(err)); b.disabled=false; b.textContent=t("submit"); } };
     }
   });
@@ -260,7 +316,7 @@ async function speaking(){
   const c=cache(), title=t("speaking");
   if(!c.sq){ let r; try{ r=await gen(title,`Write one IELTS Speaking question for a CEFR ${lvl()} candidate. Pick Part 1, 2 or 3 at random (Part 2 must include the cue-card bullet points). Use a common real-exam topic.
 Reply with only JSON: {"part":2,"q":"...","cue":["...","...","..."],"time":"answer length advice, e.g. 1-2 minutes"}`,{modelTier:"quick"}); }catch(err){ fail(title,err,speaking); return; } if(!r||!r.q){fail(title,{code:"invalid_json"},speaking);return;} c.sq=r; H.save(true); }
-  const q=c.sq, start=Date.now(), done=c.sFeedback;
+  const q=c.sq, done=c.sFeedback; actBegin();
   if(dict===undefined) dict=makeDictation();
   full(hdr(title)+`<div class="fl">${t("speakQ")} · ${t("part",{n:q.part||1})}</div><div class="prompt">${esc(q.q)}${q.cue&&q.cue.length?`<ul class="tips">${q.cue.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}<div class="ms">${esc(q.time||"")}</div></div>
    <button class="pill" data-say="${esc(q.q+(q.cue?". "+q.cue.join(". "):""))}" style="width:100%">${ic("i-sound")} ${t("listen")}</button>
@@ -283,7 +339,7 @@ Reply with only JSON: {"part":2,"q":"...","cue":["...","...","..."],"time":"answ
 Transcript: """${txt.slice(0,5000)}"""
 Estimate Fluency & Coherence, Lexical Resource and Grammatical Range & Accuracy from the words only (pronunciation cannot be judged). ${explainRule()}
 Reply with only JSON: {"overall":6.0,"FC":6,"LR":6,"GRA":6,"summary":"2-3 sentences","corrections":[{"orig":"...","fix":"...","why":"..."}],"better":"a natural band-8 answer to the same question (Part 1: 3-4 sentences; Part 2: ~200 words; Part 3: ~100 words)","phrases":["5 useful phrases or idioms for this topic with short meaning"]}`,{modelTier:"default"});
-          c.sFeedback=fb; day().sp=1; E().speaks.push({date:today(),q:q.q,band:fb.overall}); logTime(start); H.save(true); speaking(); H.render();
+          c.sFeedback=fb; day().sp=1; E().speaks.push({date:today(),q:q.q,band:fb.overall}); logTime(); H.save(true); speaking(); H.render();
         }catch(err){ toast(H.aiErr(err)); b.disabled=false; b.textContent=t("submit"); } };
     }
   });

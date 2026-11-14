@@ -40,6 +40,8 @@ function normalize(s){
   ["tests","drills","mistakes","writings","speaks"].forEach(k=>{if(!Array.isArray(s.eng[k]))s.eng[k]=[];});
   s.habits.forEach((h,i)=>{if(!HICONS.includes(h.icon))h.icon=HICONS[i%HICONS.length];if(!h.color)h.color=HCOLORS[i%HCOLORS.length];});
   s.workouts.forEach(w=>{if(w.min==null)w.min=0;});
+  s.fasts=(s.fasts||[]).filter(x=>x&&x.e-x.s>=60000);
+  if(s.fast&&s.fast.lastEnd&&!s.fasts.some(x=>x.e===s.fast.lastEnd))s.fast.lastEnd=0;
   if(!Array.isArray(s.subjects)){
     s.subjects=DATA.SUBJECTS.map(x=>({id:uid(),name:x.name,color:x.color,tag:x.tag,topics:[]}));
     [...new Set(s.study.map(x=>x.subject).filter(Boolean))].forEach((n,i)=>{if(!s.subjects.some(x=>x.name===n))s.subjects.push({id:uid(),name:n,color:SCOLORS[(s.subjects.length)%SCOLORS.length],topics:[]});});
@@ -291,9 +293,10 @@ function renderFast(){
   $("#fast-hero").innerHTML=`<div class="fring">${rings(240,[[fs.frac,col]],18,0,false)}<div class="fc"><div class="ms" style="color:${col}">${fs.on?t("fastingNow"):f.lastEnd&&fs.big!=="--"?t("eatingNow"):""}</div><div class="num" style="font-size:46px;line-height:1.05">${fs.on?fmtHM(fs.el*60):fs.big}</div><div class="ms">${esc(fs.on?fs.small:fs.big!=="--"?t("windowLeft",{t:fs.big}):fs.small)}</div></div></div>
    ${fs.on?`<div class="ftimes"><div><div class="k">${t("startFast")}</div><b class="num">${tm(f.start)}</b></div><div><div class="k">${H8}h</div><b class="num">${tm(f.start+H8*3600000)}</b></div></div>`:""}
    <button class="go" id="fast-toggle" style="background:${fs.on?"var(--s2)":"var(--fast)"};color:${fs.on?"var(--t1)":"#000"}">${fs.on?t("endFast"):t("startFast")}</button>
+   ${fs.on?`<button class="linkbtn danger" id="fast-cancel">${{zh:"点错了，取消这次（不记录）",en:"Started by mistake — cancel (not saved)",kk:"Қате басылды — болдырмау (жазылмайды)"}[S.settings.lang]}</button>`:""}
    <div class="dur" id="fast-plan">${[14,16,18,20].map(h=>`<button data-fh="${h}" class="${H8===h?"on":""}">${h}:${24-h}</button>`).join("")}</div>`;
   const last=S.fasts.slice(-7);
-  $("#fast-hist").innerHTML=last.length?`<div class="fbars">${last.map(x=>{const h=(x.e-x.s)/3600000;return `<div data-fdel="${x.s}" style="cursor:pointer"><div class="fb"><i style="height:${Math.min(100,h/24*100)}%;background:${h>=H8?"var(--fast)":"var(--s3)"}"></i></div><div class="num">${h.toFixed(1)}</div><small>${fmtDay(dkey(new Date(x.e)))}</small></div>`;}).join("")}</div>`:`<div class="empty">—</div>`;
+  $("#fast-hist").innerHTML=last.length?`<div class="fbars">${last.map(x=>{const h=(x.e-x.s)/3600000;return `<div><div class="fb"><i style="height:${Math.min(100,h/24*100)}%;background:${h>=H8?"var(--fast)":"var(--s3)"}"></i></div><div class="num">${h.toFixed(1)}</div><small>${fmtDay(dkey(new Date(x.e)))}</small></div>`;}).join("")}</div><ul class="log" style="margin-top:12px">${last.slice().reverse().map(x=>`<li><div class="mid"><b class="num">${fmtHM((x.e-x.s)/60000)}</b><small>${fmtDay(dkey(new Date(x.e)))} ${tm(x.s)} → ${tm(x.e)}</small></div><button class="del" data-fdel="${x.s}" aria-label="${t("del")}">${ic("i-x")}</button></li>`).join("")}</ul>`:`<div class="empty">—</div>`;
 }
 const tm=ts=>{const d=new Date(ts);return pad(d.getHours())+":"+pad(d.getMinutes());};
 
@@ -307,7 +310,7 @@ function renderHabits(){
 
 // ---------- sheet ----------
 const openSheet=H.openSheet=(html,onMount,full)=>{$("#sheet-body").innerHTML=html;$("#sheet").classList.toggle("full",!!full);$("#scrim").classList.add("on");$("#sheet").classList.add("on");onMount&&onMount();};
-const closeSheet=H.closeSheet=()=>{$("#scrim").classList.remove("on");$("#sheet").classList.remove("on");if(H.onSheetClose){const f=H.onSheetClose;H.onSheetClose=null;f();}};
+const closeSheet=H.closeSheet=()=>{if(window.ENG&&ENG.endWork)ENG.endWork();$("#scrim").classList.remove("on");$("#sheet").classList.remove("on");if(H.onSheetClose){const f=H.onSheetClose;H.onSheetClose=null;f();}};
 $("#scrim").addEventListener("click",closeSheet);
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet();});
 const stepper=H.stepper=(f,lbl,val,step)=>`<div class="step"><div class="sv"><button type="button" data-step="${f}|-${step}">−</button><input id="st-${f}" inputmode="decimal" value="${val}"><button type="button" data-step="${f}|${step}">+</button></div><div class="sl">${lbl}</div></div>`;
@@ -476,6 +479,7 @@ document.addEventListener("click",e=>{
         const nSets=done.length?done.reduce((a,x)=>a+Math.min(x[1],sets[cp.day.ex.indexOf(x)]),0):cp.day.ex.reduce((a,x)=>a+x[1],0);
         S.workouts.push({id:uid(),kind:"力量",name:pick(cp.day.name),date:tk,ts:Date.now(),min:Math.max(30,Math.round(nSets*2.5)),detail:list.map(x=>x[0]).join("、")});toast(t("logged",{x:pick(cp.day.name)}));}
       S.plan.idx++;S.plan.doneDate=tk;S.planChecks={};rest=null;save();break;}
+    case "fast-cancel": S.fast.on=false;S.fast.start=0;toast({zh:"已取消，没有记录",en:"Cancelled, not saved",kk:"Болдырылмады"}[S.settings.lang]);save();break;
     case "fast-toggle": {const f=S.fast;if(f.on&&Date.now()-f.start<60000){f.on=false;f.start=0;toast({zh:"已取消",en:"Cancelled",kk:"Болдырылмады"}[S.settings.lang]);save();break;}
       if(f.on){const now=Date.now();S.fasts.push({s:f.start,e:now});if(S.fasts.length>60)S.fasts=S.fasts.slice(-60);f.on=false;f.lastEnd=now;toast(t("fastEnded",{t:fmtHM((now-f.start)/60000)}));}else{f.on=true;f.start=Date.now();toast(t("fastStarted"));}save();break;}
   }
