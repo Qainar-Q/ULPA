@@ -324,6 +324,16 @@ const L3=(zh,en,kk)=>({zh,en,kk})[S.settings.lang]||zh;
 const openSheet=H.openSheet=(html,onMount,full)=>{const ob=$("#sheet-body"),nb=ob.cloneNode(false);ob.replaceWith(nb);nb.innerHTML=html;$("#sheet").classList.toggle("full",!!full);$("#scrim").classList.add("on");$("#sheet").classList.add("on");onMount&&onMount();};
 const closeSheet=H.closeSheet=()=>{if(window.ENG&&ENG.endWork)ENG.endWork();$("#scrim").classList.remove("on");$("#sheet").classList.remove("on");if(H.onSheetClose){const f=H.onSheetClose;H.onSheetClose=null;f();}};
 $("#scrim").addEventListener("click",closeSheet);
+// Pull the sheet down by its handle (or title bar) to close it, like a native app; a tap on the handle closes it too.
+(function(){const sh=$("#sheet"),inner=()=>$("#sheet .in");let y0=null,dy=0,moved=false,onGrab=false;
+  const start=e=>{const tgt=e.target;const onHandle=tgt.closest(".grab")||(tgt.closest("#sheet h3")&&!tgt.closest("button,input,textarea,select,a"));
+    if(!onHandle&&inner().scrollTop>0)return; if(!onHandle&&!tgt.closest(".grab"))return;
+    onGrab=!!tgt.closest(".grab");y0=e.touches?e.touches[0].clientY:e.clientY;dy=0;moved=false;sh.style.transition="none";};
+  const move=e=>{if(y0==null)return;const y=e.touches?e.touches[0].clientY:e.clientY;dy=Math.max(0,y-y0);if(dy>4)moved=true;sh.style.transform=`translateY(${dy}px)`;if(moved&&e.cancelable)e.preventDefault();};
+  const end=()=>{if(y0==null)return;sh.style.transition="";sh.style.transform="";if(dy>90||(!moved&&onGrab))closeSheet();y0=null;};
+  sh.addEventListener("touchstart",start,{passive:true});sh.addEventListener("touchmove",move,{passive:false});sh.addEventListener("touchend",end);
+  sh.addEventListener("mousedown",start);window.addEventListener("mousemove",move);window.addEventListener("mouseup",end);
+})();
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet();});
 const stepper=H.stepper=(f,lbl,val,step)=>`<div class="step"><div class="sv"><button type="button" data-step="${f}|-${step}">−</button><input id="st-${f}" inputmode="decimal" value="${val}"><button type="button" data-step="${f}|${step}">+</button></div><div class="sl">${lbl}</div></div>`;
 const head=(title)=>`<h3>${title}<button data-close>${t("cancel")}</button></h3>`;
