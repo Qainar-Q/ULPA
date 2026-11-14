@@ -402,6 +402,19 @@ th{color:var(--t3)}
 @keyframes pulse{50%{opacity:.75}}
 .rv{background:var(--s2);border-radius:14px;padding:12px 14px;margin-bottom:8px;border-left:4px solid var(--habit)}
 .rv.no{border-left-color:var(--move)}
+.whyline{display:flex;gap:8px;align-items:flex-start;margin-top:6px!important}
+.wl{width:22px;height:22px;border-radius:7px;background:var(--s3);display:grid;place-items:center;font-size:12px;font-weight:900;flex:0 0 22px;color:var(--t1)}
+.wl.ok{background:var(--habit);color:#000}.wl.no{background:var(--move);color:#000}
+.others{margin-top:10px}.others summary{color:var(--t2);font-size:13px;font-weight:800;cursor:pointer}
+.mopts{display:grid;gap:6px}
+.mo{display:flex;gap:10px;align-items:flex-start;background:var(--s1);border-radius:12px;padding:9px 11px;font-weight:700;font-size:14px;border:2px solid transparent}
+.mo small{display:block;color:var(--t2);font-weight:600;font-size:12.5px;margin-top:3px}
+.mo.ok{border-color:var(--habit)}.mo.no{border-color:var(--move)}
+.mo .ol{width:22px;height:22px;border-radius:7px;background:var(--s3);display:grid;place-items:center;font-size:12px;font-weight:900;flex:0 0 22px}
+.mo.ok .ol{background:var(--habit);color:#000}.mo.no .ol{background:var(--move);color:#000}
+.deep{background:color-mix(in srgb,var(--eng) 12%,var(--s1));border-radius:14px;padding:12px 14px;margin-top:10px}
+.deep b{display:block;color:var(--eng);font-size:13px;margin-top:8px}.deep b:first-child{margin-top:0}
+.deep p{font-weight:600;line-height:1.55;margin-top:3px}
 .lvbig{font-size:72px;text-align:center;letter-spacing:-2px;color:var(--eng)}
 .lead{font-weight:700;color:var(--t2);line-height:1.6}
 .sheet h3{gap:10px}
@@ -560,8 +573,8 @@ th{color:var(--t3)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script src="i18n.js?v=1"></script>
 <script src="data.js?v=1"></script>
-<script src="app.js?v=3"></script>
-<script src="eng.js?v=2"></script>
+<script src="app.js?v=4"></script>
+<script src="eng.js?v=4"></script>
 <script src="hub.js?v=2"></script>
 </body>
 </html>
