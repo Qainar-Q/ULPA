@@ -274,11 +274,14 @@ Deno.serve(async (req) => {
 
   try {
     let raw: string;
+    let via = claude ? "claude" : groq ? "groq" : "gemini";
+    const t0 = Date.now();
     if (claude) raw = await askClaude(claude, prompt, quick);
     else if (groq) {
       try { raw = await askGroq(groq, prompt, quick); }
-      catch (error) { if (!gemini) throw error; console.error("groq gave up, using gemini"); raw = await askGemini(gemini, prompt, quick); }
+      catch (error) { if (!gemini) throw error; console.error("groq gave up, using gemini"); via = "gemini"; raw = await askGemini(gemini, prompt, quick); }
     } else raw = await askGemini(gemini!, prompt, quick);
+    console.log(`hub-ai via ${via} ${Date.now() - t0}ms quick=${quick}`);
     return json({ result: parseJson(raw) }, 200, origin);
   } catch (error) {
     const code = error instanceof UpstreamError ? error.code : "upstream";
