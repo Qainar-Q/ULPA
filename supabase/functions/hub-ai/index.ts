@@ -6,7 +6,8 @@
 // set, otherwise Gemini with GEMINI_API_KEY). HUB_ANTHROPIC_API_KEY switches only the hub to Claude.
 //
 // Who may call it: student 01 (the site owner) and friends he invited (table hub_members).
-// The owner can also invite / list / remove friends here (actions "invite", "members", "remove").
+// The owner can also invite / list / remove friends here (actions "invite", "members", "remove", "invite_code").
+// A friend with an invite code signs himself up with action "join" (no sign-in needed; code is single-use, 7 days).
 // Limits per Almaty day: HUB_AI_DAILY_LIMIT for the owner (default 120), HUB_AI_MEMBER_LIMIT for friends (default 60).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -145,12 +146,40 @@ function parseJson(raw: string): unknown {
 
 // Calls per Almaty day, kept in memory per server instance (a soft limit for the owner's own use).
 const used = new Map<string, number>();
+const joinTries = new Map<string, number[]>();
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Almaty" }).format(new Date());
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (req.method !== "POST") return json({ error: "method" }, 405, origin);
+
+  let body: { prompt?: unknown; tier?: unknown; action?: unknown; login?: unknown; password?: unknown; code?: unknown };
+  try { body = await req.json(); } catch { return json({ error: "bad_request" }, 400, origin); }
+
+  // A friend signs himself up with an invite code: no account yet, so no token.
+  if (body.action === "join") {
+    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "?";
+    const tries = (joinTries.get(ip) ?? []).filter((t) => Date.now() - t < 3600_000);
+    if (tries.length >= 10) return json({ error: "busy" }, 429, origin);
+    joinTries.set(ip, [...tries, Date.now()]);
+    const code = String(body.code ?? "").trim().toUpperCase();
+    const login = String(body.login ?? "").trim().toLowerCase();
+    const password = String(body.password ?? "");
+    if (!/^[A-Z0-9]{8}$/.test(code)) return json({ error: "bad_code" }, 400, origin);
+    if (!LOGIN_RE.test(login)) return json({ error: "bad_login" }, 400, origin);
+    if (password.length < 8 || password.length > 72) return json({ error: "bad_password" }, 400, origin);
+    const { data: invite } = await db.from("hub_invites").select("code, expires_at, used_by").eq("code", code).maybeSingle();
+    if (!invite || invite.used_by || new Date(invite.expires_at) < new Date()) return json({ error: "bad_code" }, 400, origin);
+    const { data: created, error } = await db.auth.admin.createUser({ email: memberEmail(login), password, email_confirm: true, user_metadata: { hub_login: login } });
+    if (error || !created?.user) return json({ error: /already/i.test(error?.message ?? "") ? "taken" : "create_failed" }, 409, origin);
+    // Claim the code only if nobody claimed it in the meantime.
+    const { data: claimed } = await db.from("hub_invites").update({ used_by: created.user.id, used_at: new Date().toISOString() }).eq("code", code).is("used_by", null).select("code");
+    if (!claimed?.length) { await db.auth.admin.deleteUser(created.user.id); return json({ error: "bad_code" }, 400, origin); }
+    const { error: insertError } = await db.from("hub_members").insert({ user_id: created.user.id, login });
+    if (insertError) { await db.auth.admin.deleteUser(created.user.id); return json({ error: "taken" }, 409, origin); }
+    return json({ ok: true, login }, 200, origin);
+  }
 
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   const { data: userData } = await db.auth.getUser(token);
@@ -159,12 +188,17 @@ Deno.serve(async (req) => {
   const { data: member } = owner ? { data: null } : await db.from("hub_members").select("login").eq("user_id", userData.user.id).maybeSingle();
   if (!owner && !member) return json({ error: "forbidden" }, 403, origin);
 
-  let body: { prompt?: unknown; tier?: unknown; action?: unknown; login?: unknown; password?: unknown };
-  try { body = await req.json(); } catch { return json({ error: "bad_request" }, 400, origin); }
-
   // Owner-only: manage friends' accounts.
   if (body.action) {
     if (!owner) return json({ error: "forbidden" }, 403, origin);
+    if (body.action === "invite_code") {
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const bytes = crypto.getRandomValues(new Uint8Array(8));
+      const code = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+      const { error } = await db.from("hub_invites").insert({ code });
+      if (error) return json({ error: "create_failed" }, 500, origin);
+      return json({ code }, 200, origin);
+    }
     if (body.action === "members") {
       const { data } = await db.from("hub_members").select("login, created_at").order("created_at");
       return json({ members: data ?? [] }, 200, origin);
