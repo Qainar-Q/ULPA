@@ -293,7 +293,7 @@ function renderFast(){
    <button class="go" id="fast-toggle" style="background:${fs.on?"var(--s2)":"var(--fast)"};color:${fs.on?"var(--t1)":"#000"}">${fs.on?t("endFast"):t("startFast")}</button>
    <div class="dur" id="fast-plan">${[14,16,18,20].map(h=>`<button data-fh="${h}" class="${H8===h?"on":""}">${h}:${24-h}</button>`).join("")}</div>`;
   const last=S.fasts.slice(-7);
-  $("#fast-hist").innerHTML=last.length?`<div class="fbars">${last.map(x=>{const h=(x.e-x.s)/3600000;return `<div><div class="fb"><i style="height:${Math.min(100,h/24*100)}%;background:${h>=H8?"var(--fast)":"var(--s3)"}"></i></div><div class="num">${h.toFixed(1)}</div><small>${fmtDay(dkey(new Date(x.e)))}</small></div>`;}).join("")}</div>`:`<div class="empty">—</div>`;
+  $("#fast-hist").innerHTML=last.length?`<div class="fbars">${last.map(x=>{const h=(x.e-x.s)/3600000;return `<div data-fdel="${x.s}" style="cursor:pointer"><div class="fb"><i style="height:${Math.min(100,h/24*100)}%;background:${h>=H8?"var(--fast)":"var(--s3)"}"></i></div><div class="num">${h.toFixed(1)}</div><small>${fmtDay(dkey(new Date(x.e)))}</small></div>`;}).join("")}</div>`:`<div class="empty">—</div>`;
 }
 const tm=ts=>{const d=new Date(ts);return pad(d.getHours())+":"+pad(d.getMinutes());};
 
@@ -432,6 +432,8 @@ function warmSheet(){const cp=curPlan();if(!cp||!cp.day.warm)return;
 // ---------- events ----------
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-seg]");if(a){bodySeg=a.dataset.seg;renderBody();}
+  const fdel=e.target.closest("[data-fdel]");if(fdel){const s=+fdel.dataset.fdel;const x=S.fasts.find(y=>y.s===s);if(!x)return;
+    openSheet(`<h3>${{zh:"删除这次断食？",en:"Delete this fast?",kk:"Бұл оразаны жою керек пе?"}[S.settings.lang]}<button data-close>${t("cancel")}</button></h3><div class="hint">${fmtDay(dkey(new Date(x.e)))} · ${fmtHM((x.e-x.s)/60000)}</div><button class="go" id="fdel-ok" style="background:var(--move)">${t("del")}</button>`,()=>{$("#fdel-ok").onclick=()=>{S.fasts=S.fasts.filter(y=>y.s!==s);if(S.fast.lastEnd===x.e)S.fast.lastEnd=0;save();closeSheet();};});return;}
   const b=e.target.closest("button,[data-hdel],[data-pex]");if(!b)return;const d=b.dataset;
   if(d.close!==undefined){closeSheet();return;}
   if(d.step){const[f,s]=d.step.split("|");const el=$("#st-"+f);const dec=(s.split(".")[1]||"").length;el.value=Math.max(0,+((parseFloat(el.value)||0)+parseFloat(s)).toFixed(dec));el.dispatchEvent(new Event("input",{bubbles:true}));return;}
@@ -474,7 +476,8 @@ document.addEventListener("click",e=>{
         const nSets=done.length?done.reduce((a,x)=>a+Math.min(x[1],sets[cp.day.ex.indexOf(x)]),0):cp.day.ex.reduce((a,x)=>a+x[1],0);
         S.workouts.push({id:uid(),kind:"力量",name:pick(cp.day.name),date:tk,ts:Date.now(),min:Math.max(30,Math.round(nSets*2.5)),detail:list.map(x=>x[0]).join("、")});toast(t("logged",{x:pick(cp.day.name)}));}
       S.plan.idx++;S.plan.doneDate=tk;S.planChecks={};rest=null;save();break;}
-    case "fast-toggle": {const f=S.fast;if(f.on){const now=Date.now();S.fasts.push({s:f.start,e:now});if(S.fasts.length>60)S.fasts=S.fasts.slice(-60);f.on=false;f.lastEnd=now;toast(t("fastEnded",{t:fmtHM((now-f.start)/60000)}));}else{f.on=true;f.start=Date.now();toast(t("fastStarted"));}save();break;}
+    case "fast-toggle": {const f=S.fast;if(f.on&&Date.now()-f.start<60000){f.on=false;f.start=0;toast({zh:"已取消",en:"Cancelled",kk:"Болдырылмады"}[S.settings.lang]);save();break;}
+      if(f.on){const now=Date.now();S.fasts.push({s:f.start,e:now});if(S.fasts.length>60)S.fasts=S.fasts.slice(-60);f.on=false;f.lastEnd=now;toast(t("fastEnded",{t:fmtHM((now-f.start)/60000)}));}else{f.on=true;f.start=Date.now();toast(t("fastStarted"));}save();break;}
   }
 });
 $("#todo-form").addEventListener("submit",e=>{e.preventDefault();const v=$("#todo-in").value.trim();if(!v)return;S.todos.push({id:uid(),text:v,done:false,date:today(),ts:Date.now()});$("#todo-in").value="";save();});

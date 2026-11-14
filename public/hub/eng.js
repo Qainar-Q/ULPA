@@ -71,9 +71,10 @@ function loading(title,msg){full(hdr(title)+`<div class="gen"><div class="spin">
 function fail(title,e,retry){full(hdr(title)+`<div class="gen"><div>${esc(H.aiErr(e))}</div>${retry?`<button class="go" id="retry" style="background:var(--eng)">${t("tryAgain")}</button>`:""}</div>`,()=>{if(retry)$("#retry").onclick=retry;});}
 let busy=false;
 async function gen(title,prompt,opts,countKey){
-  if(busy) return null; busy=true; loading(title);
-  try{ return await H.aiJson(prompt,Object.assign({modelTier:"default",onText:countKey?({text})=>{const n=(text.match(new RegExp('"'+countKey+'"',"g"))||[]).length;const m=$("#gen-msg");if(m&&n)m.textContent=t("generating")+" "+n;}:undefined},opts||{})); }
-  finally{ busy=false; }
+  if(busy) return null; busy=true; loading(title); const t0=Date.now();
+  const tick=setInterval(()=>{const m=$("#gen-msg");if(m)m.textContent=t("generating")+" "+Math.round((Date.now()-t0)/1000)+"s";},1000);
+  try{ return await H.aiJson(prompt,Object.assign({modelTier:"default"},opts||{})); }
+  finally{ busy=false; clearInterval(tick); }
 }
 function mcqView(q,i,total,onDone,title,passage){
   const letters="ABCD";
@@ -93,13 +94,17 @@ function mcqView(q,i,total,onDone,title,passage){
 // ---------- placement test ----------
 function testIntro(){full(hdr(t("takeTest"))+`<p class="lead">${t("testIntro")}</p><button class="go" id="t-go" style="background:var(--eng)">${t("startTest")}</button>`,()=>{$("#t-go").onclick=runTest;});}
 async function runTest(){
-  const title=t("takeTest"); let qs;
-  try{ qs=await gen(title,`You are an expert IELTS examiner building an adaptive-style placement test for a Chinese/Kazakh-speaking university student who will take IELTS Academic for graduate study.
-Create exactly 25 multiple-choice questions: 5 at each CEFR level A2, B1, B2, C1, C2 (in that order). Mix grammar, vocabulary-in-context and short reading-inference items (put any short text inside the question). Each question has exactly 4 options and one unambiguous correct answer. Vary the position of the correct answer.
-${explainRule()} Keep each explanation under 40 words.
-Reply with only a JSON array of 25 objects: {"lv":"B1","sec":"grammar"|"vocab"|"reading","q":"...","opts":["","","",""],"a":0,"exp":"..."}`,{},"q"); }
-  catch(e){ fail(title,e,runTest); return; }
-  if(!Array.isArray(qs)||!qs.length){fail(title,{code:"invalid_json"},runTest);return;}
+  const title=t("takeTest"); if(busy) return; busy=true; loading(title); const t0=Date.now();
+  const tick=setInterval(()=>{const m=$("#gen-msg");if(m)m.textContent=t("generating")+" "+Math.round((Date.now()-t0)/1000)+"s";},1000);
+  const one=lv=>H.aiJson(`You are an expert IELTS examiner writing part of a placement test for a Chinese/Kazakh-speaking university student preparing for IELTS Academic (graduate study).
+Write exactly 5 multiple-choice questions at CEFR level ${lv}: mix grammar, vocabulary-in-context and one short reading-inference item (put any short text inside the question). Each has exactly 4 options and one unambiguous correct answer; vary its position.
+${explainRule()} Explanations under 35 words.
+Reply with only a JSON array of 5 objects: {"lv":"${lv}","sec":"grammar"|"vocab"|"reading","q":"...","opts":["","","",""],"a":0,"exp":"..."}`,{modelTier:"default"}).then(a=>Array.isArray(a)?a.map(q=>Object.assign(q,{lv})):[]);
+  let qs;
+  try{ const parts=await Promise.allSettled(["A2","B1","B2","C1","C2"].map(one)); qs=parts.flatMap(p=>p.status==="fulfilled"?p.value:[]);
+    if(qs.length<10){ const err=parts.find(p=>p.status==="rejected"); throw err?err.reason:{code:"invalid_json"}; } }
+  catch(e){ busy=false; clearInterval(tick); fail(title,e,runTest); return; }
+  busy=false; clearInterval(tick);
   qs=qs.filter(q=>q&&Array.isArray(q.opts)&&q.opts.length>=2&&Number.isInteger(q.a));
   const res=[]; const start=Date.now();
   const step=i=>{ if(i>=qs.length) return testResult(qs,res,start); mcqView(qs[i],i,qs.length,(ok,j)=>{res.push(ok);if(!ok)addMistake(qs[i],j);step(i+1);},title); };
@@ -125,7 +130,7 @@ async function newWords(){
     const known=Object.keys(e.vocab).slice(-500).join(", ");
     let arr; try{ arr=await gen(title,`Generate ${goal} IELTS Academic vocabulary items for a learner at CEFR ${lvl()} aiming for band 7+ (graduate study abroad, engineering background). Prefer high-value academic words and collocations useful in IELTS Writing Task 2 and Reading; slightly above the learner's level. Do not include any of these already-learned words: ${known||"(none)"}.
 For each item give: "w" (the word or short phrase), "ipa" (British IPA), "pos" (n./v./adj./adv./phr.), "zh" (concise Simplified Chinese meaning), "en" (simple English definition, max 12 words), "ex" (one natural academic example sentence), "exZh" (Chinese translation of the example), "col" (one or two common collocations).
-Reply with only a JSON array of ${goal} objects.`,{},"w"); }catch(err){ fail(title,err,newWords); return; }
+Reply with only a JSON array of ${goal} objects.`,{}); }catch(err){ fail(title,err,newWords); return; }
     if(!Array.isArray(arr)||!arr.length){fail(title,{code:"invalid_json"},newWords);return;}
     c.nw=arr.filter(x=>x&&x.w&&!e.vocab[String(x.w).toLowerCase()]).map(x=>({w:String(x.w),ipa:x.ipa||"",pos:x.pos||"",zh:x.zh||"",en:x.en||"",ex:x.ex||"",exZh:x.exZh||"",col:x.col||""})); H.save(true);
   }
@@ -178,7 +183,7 @@ async function drill(){
 Exactly ${n} multiple-choice questions in this mix: about 40% "vocab" (meaning, collocation or word form in an academic sentence; reuse these recently learned words where possible: ${words||"none yet"}), about 30% "grammar" (errors typical in IELTS writing at this level: articles, tense, agreement, relative clauses, conditionals, passive, prepositions, sentence structure), and about 30% "reading": write one short academic passage (130-170 words, IELTS style, any science/society topic) and ask TRUE / FALSE / NOT GIVEN or multiple-choice questions about it.
 ${mist?"Also re-test the concepts behind some of these earlier mistakes (new wording):\n"+mist:""}
 Every question: exactly one correct answer; TRUE/FALSE/NOT GIVEN items use opts ["TRUE","FALSE","NOT GIVEN"]; otherwise 4 options. Vary the correct position. ${explainRule()} Explanations under 45 words and say why the wrong choice is wrong when useful.
-Reply with only JSON: {"passage":{"title":"...","text":"..."},"questions":[{"sec":"vocab"|"grammar"|"reading","q":"...","opts":["..."],"a":0,"exp":"..."}]}  Put the reading questions last.`,{},"q"); }
+Reply with only JSON: {"passage":{"title":"...","text":"..."},"questions":[{"sec":"vocab"|"grammar"|"reading","q":"...","opts":["..."],"a":0,"exp":"..."}]}  Put the reading questions last.`,{}); }
     catch(err){ fail(title,err,drill); return; }
     if(!r||!Array.isArray(r.questions)){fail(title,{code:"invalid_json"},drill);return;}
     r.questions=r.questions.filter(q=>q&&Array.isArray(q.opts)&&q.opts.length>=2&&Number.isInteger(q.a));
