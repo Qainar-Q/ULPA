@@ -63,8 +63,10 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,woff2,webp,png,svg}"],
         // Login backgrounds are only needed before signing in — don't download them for everyone.
         // The campus picture is fetched only by people who open the campus map.
-        globIgnores: ["**/login-bg-*", "**/campus/**"],
+        globIgnores: ["**/login-bg-*", "**/campus/**", "hub/**"],
         navigateFallback: "/index.html",
+        // The owner's personal hub (public/hub) is its own page, not part of the app.
+        navigateFallbackDenylist: [/^\/hub(\/|$)/],
         cleanupOutdatedCaches: true,
         importScripts: ["push-sw.js"], // push + notification click handlers
         runtimeCaching: [
