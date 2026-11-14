@@ -501,8 +501,8 @@ function drawTimer(){const l=leftNow();if(!T.total)T.total=durOf(T.mode);
   $$("#mode-seg button").forEach(b=>{b.classList.toggle("on",b.dataset.m===T.mode);b.textContent=t(b.dataset.m==="focus"?"focus":"brk");});
   $("#dur").innerHTML=(T.mode==="focus"?[15,25,45,60,90]:[5,10,15]).map(m=>`<button data-dur="${m}" class="${(T.mode==="focus"?S.settings.focus:S.settings.brk)===m?"on":""}">${m} ${t("min")}</button>`).join("");
   $("#f-sub").textContent=T.mode==="focus"?t("todayFocused",{m:studyOn(today())}):t("brk");
-  document.title=T.running?$("#tm").textContent+" · "+(T.mode==="focus"?short(T.subject||t("focus")):t("brk")):"My Hub";}
-let actx=null;
+  document.title=T.running?$("#tm").textContent+" · "+(T.mode==="focus"?short(T.subject||t("focus")):t("brk")):baseTitle;}
+let actx=null;const baseTitle=document.title;
 function beep(){try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();[0,.3,.6].forEach(x=>{const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=x===.6?1175:880;o.connect(g);g.connect(actx.destination);g.gain.setValueAtTime(.0001,actx.currentTime+x);g.gain.exponentialRampToValueAtTime(.28,actx.currentTime+x+.02);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+x+.28);o.start(actx.currentTime+x);o.stop(actx.currentTime+x+.3);});}catch(e){}}
 let tickN=0;
 function tick(){tickN++;
