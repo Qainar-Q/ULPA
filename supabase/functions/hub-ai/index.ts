@@ -5,8 +5,9 @@
 // the model's answer parsed as JSON. Same provider as study-ai (Claude if ANTHROPIC_API_KEY is
 // set, otherwise Gemini with GEMINI_API_KEY). HUB_ANTHROPIC_API_KEY switches only the hub to Claude.
 //
-// Only student 01 (the site owner) may call it, checked with the caller's own token.
-// Limit: HUB_AI_DAILY_LIMIT calls per Almaty day (default 120).
+// Who may call it: student 01 (the site owner) and friends he invited (table hub_members).
+// The owner can also invite / list / remove friends here (actions "invite", "members", "remove").
+// Limits per Almaty day: HUB_AI_DAILY_LIMIT for the owner (default 120), HUB_AI_MEMBER_LIMIT for friends (default 60).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -14,6 +15,9 @@ const ALLOWED_ORIGINS = new Set(["https://kainar.online", "https://www.kainar.on
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const db = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
 const DAILY = Number(Deno.env.get("HUB_AI_DAILY_LIMIT") ?? 120);
+const MEMBER_DAILY = Number(Deno.env.get("HUB_AI_MEMBER_LIMIT") ?? 60);
+const LOGIN_RE = /^[a-z][a-z0-9_.-]{2,23}$/;
+const memberEmail = (login: string) => `${login}@hub.kainar.online`;
 const MAX_PROMPT = 40_000;
 
 const SYSTEM = `You are a precise assistant inside a student's personal study app. Follow the user's instructions exactly.
@@ -53,25 +57,64 @@ async function askClaude(key: string, prompt: string, quick: boolean): Promise<s
 }
 
 const PREFERRED = (Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-latest,gemini-flash-lite-latest").split(",").map((m) => m.trim()).filter(Boolean);
+let discovered: Promise<string[]> | null = null;
+const versionOf = (name: string) => Number((name.match(/gemini-(\d+(?:\.\d+)?)/) ?? [])[1] ?? 0);
 
-async function askGemini(apiKey: string, prompt: string): Promise<string> {
+// Whatever "flash" models this key can use, newest first (Google renames them over time).
+async function availableFlash(apiKey: string): Promise<string[]> {
+  try {
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { headers: { "x-goog-api-key": apiKey } });
+    if (!r.ok) return [];
+    const { models = [] } = await r.json();
+    return models
+      .filter((m: { name: string; supportedGenerationMethods?: string[] }) => /flash/i.test(m.name) && !/image|tts|audio|live|embed|preview|exp/i.test(m.name) && (m.supportedGenerationMethods ?? []).includes("generateContent"))
+      .map((m: { name: string }) => m.name.replace(/^models\//, ""))
+      .sort((a: string, b: string) => versionOf(b) - versionOf(a) || Number(/lite/.test(a)) - Number(/lite/.test(b)));
+  } catch { return []; }
+}
+
+// Each model gets a time box: a busy model that hangs no longer eats the whole 150 s request.
+async function askGemini(apiKey: string, prompt: string, quick: boolean): Promise<string> {
+  discovered ??= availableFlash(apiKey);
+  const found = await discovered;
+  if (!found.length) discovered = null;
+  let models = [...new Set([...PREFERRED, ...found.slice(0, 4)])];
+  if (quick) models = [...models.filter((m) => /lite/.test(m)), ...models.filter((m) => !/lite/.test(m))];
+  const deadline = Date.now() + 135_000;
   let lastError = new UpstreamError("upstream");
   let thinkingHint = true;
-  for (let i = 0; i < PREFERRED.length; i += 1) {
-    const model = PREFERRED[i];
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 16000, responseMimeType: "application/json", ...(thinkingHint ? { thinkingConfig: { thinkingLevel: "low" } } : {}) },
-      }),
-    });
+  for (let i = 0; i < models.length; i += 1) {
+    const left = deadline - Date.now();
+    if (left < 8000) break;
+    const model = models[i];
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), Math.min(quick ? 25_000 : 45_000, left));
+    let response: Response;
+    try {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 12000, responseMimeType: "application/json", ...(thinkingHint ? { thinkingConfig: { thinkingLevel: "low" } } : {}) },
+        }),
+      });
+    } catch {
+      clearTimeout(timer);
+      console.error("gemini timeout", model);
+      lastError = new UpstreamError("busy");
+      continue;
+    }
+    clearTimeout(timer);
     if (response.ok) {
       const result = await response.json();
       const parts = result.candidates?.[0]?.content?.parts ?? [];
-      return parts.filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought).map((p: { text: string }) => p.text).join("");
+      const text = parts.filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought).map((p: { text: string }) => p.text).join("");
+      if (text) return text;
+      lastError = new UpstreamError("upstream");
+      continue;
     }
     const detail = await response.text();
     console.error("gemini error", model, response.status, detail.slice(0, 300));
@@ -113,19 +156,51 @@ Deno.serve(async (req) => {
   const { data: userData } = await db.auth.getUser(token);
   if (!userData?.user) return json({ error: "unauthorized" }, 401, origin);
   const { data: owner } = await db.from("students").select("id").eq("user_id", userData.user.id).eq("code", "01").maybeSingle();
-  if (!owner) return json({ error: "forbidden" }, 403, origin);
+  const { data: member } = owner ? { data: null } : await db.from("hub_members").select("login").eq("user_id", userData.user.id).maybeSingle();
+  if (!owner && !member) return json({ error: "forbidden" }, 403, origin);
 
-  let body: { prompt?: unknown; tier?: unknown };
+  let body: { prompt?: unknown; tier?: unknown; action?: unknown; login?: unknown; password?: unknown };
   try { body = await req.json(); } catch { return json({ error: "bad_request" }, 400, origin); }
+
+  // Owner-only: manage friends' accounts.
+  if (body.action) {
+    if (!owner) return json({ error: "forbidden" }, 403, origin);
+    if (body.action === "members") {
+      const { data } = await db.from("hub_members").select("login, created_at").order("created_at");
+      return json({ members: data ?? [] }, 200, origin);
+    }
+    const login = String(body.login ?? "").trim().toLowerCase();
+    if (!LOGIN_RE.test(login)) return json({ error: "bad_login" }, 400, origin);
+    if (body.action === "invite") {
+      const password = String(body.password ?? "");
+      if (password.length < 8 || password.length > 72) return json({ error: "bad_password" }, 400, origin);
+      const { data: created, error } = await db.auth.admin.createUser({ email: memberEmail(login), password, email_confirm: true, user_metadata: { hub_login: login } });
+      if (error || !created?.user) return json({ error: /already/i.test(error?.message ?? "") ? "taken" : "create_failed" }, 409, origin);
+      const { error: insertError } = await db.from("hub_members").insert({ user_id: created.user.id, login });
+      if (insertError) { await db.auth.admin.deleteUser(created.user.id); return json({ error: "taken" }, 409, origin); }
+      return json({ ok: true, login }, 200, origin);
+    }
+    if (body.action === "remove") {
+      const { data: row } = await db.from("hub_members").select("user_id").eq("login", login).maybeSingle();
+      if (!row) return json({ error: "not_found" }, 404, origin);
+      await db.from("hub_state").delete().eq("user_id", row.user_id);
+      await db.auth.admin.deleteUser(row.user_id); // cascades to hub_members
+      return json({ ok: true }, 200, origin);
+    }
+    return json({ error: "bad_request" }, 400, origin);
+  }
+
   const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
   if (!prompt || prompt.length > MAX_PROMPT) return json({ error: "bad_request" }, 400, origin);
   const quick = body.tier === "quick";
 
   const day = today();
-  for (const key of used.keys()) if (key !== day) used.delete(key);
-  const n = (used.get(day) ?? 0) + 1;
-  if (n > DAILY) return json({ error: "limit", limit: DAILY }, 429, origin);
-  used.set(day, n);
+  for (const key of used.keys()) if (!key.startsWith(day)) used.delete(key);
+  const key = `${day}:${userData.user.id}`;
+  const n = (used.get(key) ?? 0) + 1;
+  const cap = owner ? DAILY : MEMBER_DAILY;
+  if (n > cap) return json({ error: "limit", limit: cap }, 429, origin);
+  used.set(key, n);
 
   // HUB_ANTHROPIC_API_KEY: a Claude key used only by the hub (so the class's study-ai keeps its own provider).
   const claude = Deno.env.get("HUB_ANTHROPIC_API_KEY") ?? Deno.env.get("ANTHROPIC_API_KEY");
@@ -133,7 +208,7 @@ Deno.serve(async (req) => {
   if (!claude && !gemini) return json({ error: "not_configured" }, 503, origin);
 
   try {
-    const raw = claude ? await askClaude(claude, prompt, quick) : await askGemini(gemini!, prompt);
+    const raw = claude ? await askClaude(claude, prompt, quick) : await askGemini(gemini!, prompt, quick);
     return json({ result: parseJson(raw) }, 200, origin);
   } catch (error) {
     const code = error instanceof UpstreamError ? error.code : "upstream";

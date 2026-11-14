@@ -18,7 +18,7 @@ const SCOLORS=["#5b8cff","#bf7cff","#ff7a59","#40c8e0","#3ddc97","#ffb340","#ff7
 const KIND={力量:"var(--move)",有氧:"#ffb340",球类:"#40c8e0",拉伸:"#3ddc97",其他:"#a1a1a6"};
 
 // ---------- state ----------
-const LS="efficiency-hub-v1";
+let LS="efficiency-hub-v1";
 function defaults(){
   const lang=(navigator.language||"zh").toLowerCase().startsWith("kk")?"kk":(navigator.language||"").toLowerCase().startsWith("zh")?"zh":"zh";
   return {v:3,updatedAt:0,_stamps:{},todos:[],study:[],workouts:[],weights:[],food:[],fasts:[],
@@ -43,10 +43,9 @@ function normalize(s){
   s.fasts=(s.fasts||[]).filter(x=>x&&x.e-x.s>=60000);
   if(s.fast&&s.fast.lastEnd&&!s.fasts.some(x=>x.e===s.fast.lastEnd))s.fast.lastEnd=0;
   if(!Array.isArray(s.subjects)){
-    s.subjects=DATA.SUBJECTS.map(x=>({id:uid(),name:x.name,color:x.color,tag:x.tag,topics:[]}));
+    s.subjects=[];
     [...new Set(s.study.map(x=>x.subject).filter(Boolean))].forEach((n,i)=>{if(!s.subjects.some(x=>x.name===n))s.subjects.push({id:uid(),name:n,color:SCOLORS[(s.subjects.length)%SCOLORS.length],topics:[]});});
   }
-  if(!s.profile.h){s.profile.h=180;s.profile.w=83;s.profile.act=2;s.profile.goal=0;if(!s.weights.length)s.weights.push({date:dkey(new Date()),kg:83});}
   if(!s._stamps)s._stamps={};
   // prune old bulky logs
   const cut=dkey(daysAgo(200)); s.food=s.food.filter(f=>f.date>=cut);
@@ -57,6 +56,18 @@ function normalize(s){
   return s;
 }
 let S; try{S=normalize(JSON.parse(localStorage.getItem(LS)));}catch(e){S=normalize(null);}
+// After sign-in: each account keeps its own copy on this device; the owner gets his courses and body data once.
+H.useUser=(uid,role)=>{
+  const key="efficiency-hub-v1:"+uid; let raw=null;
+  try{raw=localStorage.getItem(key);if(!raw&&role==="owner")raw=localStorage.getItem("efficiency-hub-v1");}catch(e){}
+  LS=key; try{S=normalize(JSON.parse(raw));}catch(e){S=normalize(null);}
+  if(role==="owner"&&!S._seeded){
+    if(!S.subjects.length) S.subjects=DATA.SUBJECTS.map(x=>({id:uid_(),name:x.name,color:x.color,tag:x.tag,topics:[]}));
+    if(!S.profile.h){S.profile.h=180;S.profile.w=83;S.profile.act=2;S.profile.goal=0;if(!S.weights.length)S.weights.push({date:dkey(new Date()),kg:83});}
+  }
+  S._seeded=true; H.role=role;
+};
+const uid_=()=>uid();
 Object.defineProperty(H,"S",{get:()=>S});
 
 // ---------- i18n ----------
@@ -308,8 +319,9 @@ function renderHabits(){
   $("#h-month").innerHTML=S.habits.length?S.habits.map(h=>`<div class="mrow">${ic(h.icon,"hi","stroke:"+h.color)}<div class="mcells">${days.map(k=>`<i style="${hDone(h.id,k)?"background:"+h.color:""}"></i>`).join("")}</div></div>`).join(""):`<div class="empty">${t("habitsEmpty")}</div>`;
 }
 
+const L3=(zh,en,kk)=>({zh,en,kk})[S.settings.lang]||zh;
 // ---------- sheet ----------
-const openSheet=H.openSheet=(html,onMount,full)=>{$("#sheet-body").innerHTML=html;$("#sheet").classList.toggle("full",!!full);$("#scrim").classList.add("on");$("#sheet").classList.add("on");onMount&&onMount();};
+const openSheet=H.openSheet=(html,onMount,full)=>{const ob=$("#sheet-body"),nb=ob.cloneNode(false);ob.replaceWith(nb);nb.innerHTML=html;$("#sheet").classList.toggle("full",!!full);$("#scrim").classList.add("on");$("#sheet").classList.add("on");onMount&&onMount();};
 const closeSheet=H.closeSheet=()=>{if(window.ENG&&ENG.endWork)ENG.endWork();$("#scrim").classList.remove("on");$("#sheet").classList.remove("on");if(H.onSheetClose){const f=H.onSheetClose;H.onSheetClose=null;f();}};
 $("#scrim").addEventListener("click",closeSheet);
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet();});
@@ -350,9 +362,10 @@ function foodSheet(){
   const h=new Date().getHours();let meal=h<11?0:h<16?1:h<21?2:3,cat=h<11?"c":0,sel=null;
   openSheet(head(t("logFood"))+`<div class="seg" id="f-meal" style="margin:0 0 12px;width:auto">${L().meals.map((m,i)=>`<button data-m="${i}" class="${i===meal?"on":""}">${m}</button>`).join("")}</div>
    <input class="field" id="f-q" placeholder="${t("searchFood")}" autocomplete="off">
-   <div class="chips" style="justify-content:flex-start;margin:10px 0 4px" id="f-cat"><button class="chip ${cat==="c"?"on":""}" data-c="c" style="--cc:var(--todo)">${{zh:"早餐套餐",en:"Breakfast combos",kk:"Таңғы ас жиындары"}[S.settings.lang]}</button>${L().cats.map((c,i)=>`<button class="chip ${i===cat?"on":""}" data-c="${i}" style="--cc:var(--todo)">${c}</button>`).join("")}<button class="chip dashed" data-c="x">${t("custom")}</button></div>
+   <div class="chips" style="justify-content:flex-start;margin:10px 0 4px" id="f-cat"><button class="chip ${cat==="c"?"on":""}" data-c="c" style="--cc:var(--todo)">${{zh:"早餐套餐",en:"Breakfast combos",kk:"Таңғы ас жиындары"}[S.settings.lang]}</button>${L().cats.map((c,i)=>`<button class="chip ${i===cat?"on":""}" data-c="${i}" style="--cc:var(--todo)">${c}</button>`).join("")}<button class="chip dashed" data-c="x">${t("custom")}</button><button class="chip" data-c="ai" style="--cc:var(--eng)">${ic("i-spark","","width:13px;height:13px;stroke:currentColor;vertical-align:-2px")} ${L3("AI 估算","AI estimate","AI есептеу")}</button></div>
    <div id="f-list" class="flist"></div><div id="f-pick"></div><div class="hint">${t("approx")}</div>`,()=>{
     const list=()=>{const q=$("#f-q").value.trim().toLowerCase();
+      if(cat==="ai"){aiEstimate(meal);return;}
       if(cat==="x"){$("#f-list").innerHTML=`<div class="fl">${t("customName")}</div><input class="field" id="fc-n" maxlength="30"><div class="fl">${t("kcal")}</div><div class="steps" style="grid-template-columns:1fr">${stepper("fk",t("kcal"),200,10)}</div><button class="go" id="fc-save" style="background:var(--todo)">${t("save")}</button>`;
         $("#fc-save").onclick=()=>{const n=$("#fc-n").value.trim();const k=Math.round(parseFloat($("#st-fk").value)||0);if(!n||!(k>0))return;S.food.push({id:uid(),date:today(),meal,name:n,kcal:k,qty:1,ts:Date.now()});save();closeSheet();toast(t("logged",{x:n}));};return;}
       if(cat==="c"&&!q){$("#f-list").innerHTML=DATA.COMBOS.map(c=>{const k=c.items.reduce((s,[id,n])=>s+DATA.FOODS.find(f=>f[0]===id)[5]*n,0);return `<button class="fitem combo" data-combo="${c.id}"><span><b>${esc(pick(c.name))}</b><small>${esc(pick(c.note))} · ~${c.p}g ${{zh:"蛋白质",en:"protein",kk:"ақуыз"}[S.settings.lang]}</small></span><span class="num">${k}</span></button>`;}).join("");return;}
@@ -363,12 +376,93 @@ function foodSheet(){
       $("#f-save").onclick=()=>{const qn=parseFloat($("#st-fq").value)||0;if(!(qn>0))return;S.food.push({id:uid(),date:today(),meal,fid:sel[0],qty:qn,kcal:Math.round(sel[5]*qn),ts:Date.now()});save();closeSheet();toast(t("logged",{x:foodName(sel)}));};
       $("#f-pick").scrollIntoView({behavior:"smooth",block:"nearest"});};
     list();
-    $("#f-meal").onclick=e=>{const b=e.target.closest("button");if(!b)return;meal=+b.dataset.m;$$("#f-meal button").forEach(x=>x.classList.toggle("on",x===b));};
-    $("#f-cat").onclick=e=>{const b=e.target.closest("button");if(!b)return;cat=b.dataset.c==="x"||b.dataset.c==="c"?b.dataset.c:+b.dataset.c;$$("#f-cat .chip").forEach(x=>x.classList.toggle("on",x===b));$("#f-q").value="";sel=null;pickF();list();};
+    $("#f-meal").onclick=e=>{const b=e.target.closest("button");if(!b)return;meal=+b.dataset.m;H._meal=meal;$$("#f-meal button").forEach(x=>x.classList.toggle("on",x===b));};
+    $("#f-cat").onclick=e=>{const b=e.target.closest("button");if(!b)return;cat=["x","c","ai"].includes(b.dataset.c)?b.dataset.c:+b.dataset.c;$$("#f-cat .chip").forEach(x=>x.classList.toggle("on",x===b));$("#f-q").value="";sel=null;pickF();list();};
     $("#f-q").addEventListener("input",()=>{if(cat==="x")cat=0;list();});
     $("#f-list").addEventListener("click",e=>{const cb=e.target.closest("[data-combo]");if(cb){const c=DATA.COMBOS.find(x=>x.id===cb.dataset.combo);const now=Date.now();c.items.forEach(([id,n],i)=>{const f=DATA.FOODS.find(x=>x[0]===id);S.food.push({id:uid(),date:today(),meal,fid:id,qty:n,kcal:Math.round(f[5]*n),ts:now+i});});save();closeSheet();toast(t("logged",{x:pick(c.name)}));return;}
       const b=e.target.closest("[data-fid]");if(!b)return;sel=DATA.FOODS.find(f=>f[0]===b.dataset.fid);$$(".fitem").forEach(x=>x.classList.toggle("on",x===b));pickF();});
   });}
+// ---------- AI food ----------
+const foodCtx=()=>`The user lives in Almaty, Kazakhstan (Central Asian and post-Soviet home cooking, student canteen, fast food). Profile: ${S.profile.sex==="f"?"female":"male"}, ${S.profile.age||20} y, ${S.profile.h||"?"} cm, ${latestWeight()||"?"} kg, goal: ${["lose fat","maintain","build muscle"][S.profile.goal??1]}, trains 4x/week (4-day split). Daily target ${kcalTarget()||"unknown"} kcal.`;
+function aiItemsHtml(items){return `<ul class="log">${items.map((x,i)=>`<li><label style="display:flex;gap:12px;align-items:center;flex:1;min-width:0"><input type="checkbox" data-ai-i="${i}" checked style="width:20px;height:20px;accent-color:var(--todo)"><div class="mid"><b>${esc(x.name)}</b><small>${esc(x.amount||"")}${x.protein?` · ${L3("蛋白质","protein","ақуыз")} ${Math.round(x.protein)}g`:""}</small></div></label><div class="rt num">${Math.round(x.kcal)}</div></li>`).join("")}</ul>`;}
+function saveAiItems(items,meal){const now=Date.now();let n=0;$$("[data-ai-i]").forEach(c=>{if(!c.checked)return;const x=items[+c.dataset.aiI];S.food.push({id:uid(),date:today(),meal,name:String(x.name).slice(0,40),kcal:Math.max(0,Math.round(+x.kcal||0)),p:Math.round(+x.protein||0),qty:1,ts:now+n});n++;});if(n){save();closeSheet();toast(t("logged",{x:n+" "+L3("项","items","тағам")}));}}
+function aiEstimate(meal){
+  $("#f-list").innerHTML=`<div class="fl">${L3("吃了什么？随便写，越具体越准","What did you eat? Describe it freely","Не жедіңіз? Еркін жазыңыз")}</div>
+   <textarea class="field ta" id="ai-food" style="min-height:90px" placeholder="${L3("比如：一盘抓饭、两个包子、一杯奶茶","e.g. a plate of plov, 2 manty, tea with milk","мысалы: бір тәрелке палау, 2 манты, сүтті шай")}"></textarea>
+   <button class="go" id="ai-food-go" style="background:var(--eng);margin-top:10px">${L3("算卡路里","Estimate","Есептеу")}</button><div id="ai-food-out"></div>`;
+  $("#f-pick").innerHTML="";
+  $("#ai-food-go").onclick=async()=>{const txt=$("#ai-food").value.trim();if(!txt)return;const b=$("#ai-food-go");b.disabled=true;const t0=Date.now();const tk=setInterval(()=>{b.textContent=t("thinking")+" "+Math.round((Date.now()-t0)/1000)+"s";},500);
+    try{const r=await H.aiJson(`${foodCtx()}
+Estimate calories and protein for what the user ate, split into separate items with realistic portion sizes for this region. If an amount is vague, assume a typical portion and say so in "amount".
+Food description: """${txt.slice(0,1500)}"""
+Write "name" and "amount" in ${{zh:"Simplified Chinese",en:"English",kk:"Kazakh"}[S.settings.lang]}.
+Reply with only JSON: {"items":[{"name":"...","amount":"e.g. 1 plate ~300 g","kcal":0,"protein":0}],"note":"one short remark (e.g. how to make this meal lighter), or empty"}`,{modelTier:"quick"});
+      const items=(r&&Array.isArray(r.items)?r.items:[]).filter(x=>x&&x.name&&+x.kcal>=0);
+      if(!items.length)throw {code:"invalid_json"};
+      const tot=items.reduce((s,x)=>s+(+x.kcal||0),0),pro=items.reduce((s,x)=>s+(+x.protein||0),0);
+      $("#ai-food-out").innerHTML=`<div class="fpick">${aiItemsHtml(items)}<div class="srow" style="font-weight:900"><span style="flex:1">${L3("合计","Total","Барлығы")}</span><span class="num">${Math.round(tot)} ${t("kcal")} · ${Math.round(pro)}g</span></div>${r.note?`<div class="hint">${esc(r.note)}</div>`:""}<button class="go" id="ai-food-save" style="background:var(--todo)">${t("save")}</button></div>`;
+      $("#ai-food-save").onclick=()=>saveAiItems(items,H._meal??meal);
+    }catch(e){toast(H.aiErr(e));}finally{clearInterval(tk);b.disabled=false;b.textContent=L3("重新计算","Estimate again","Қайта есептеу");}};
+}
+function recoSheet(){
+  const kt=kcalTarget(),kc=kcalOn(today());
+  openSheet(`<h3>${L3("AI 推荐今天怎么吃","What to eat today","Бүгін не жеу керек")}<button data-close>${t("close")}</button></h3>
+   <div class="hint" style="margin-top:-6px">${kt?L3(`今天还能吃 ${Math.max(0,kt-kc)} 大卡`,`${Math.max(0,kt-kc)} kcal left today`,`Бүгін ${Math.max(0,kt-kc)} ккал қалды`):t("setProfile")}</div>
+   <div class="fl">${L3("我平时常吃的东西（会记住）","Foods I usually eat (saved)","Әдетте жейтінім (сақталады)")}</div>
+   <textarea class="field ta" id="usual" style="min-height:80px" placeholder="${L3("比如：早上香蕉、坚果、牛奶、苹果、鸡蛋；午饭食堂抓饭或拉条子；不喝饮料","e.g. banana, nuts, milk, eggs for breakfast; canteen plov","мысалы: таңертең банан, жаңғақ, сүт, жұмыртқа")}">${esc(S.profile.usual||"")}</textarea>
+   <div class="chips" style="justify-content:flex-start;margin-top:10px" id="reco-mode"><button class="chip on" data-v="rest" style="--cc:var(--todo)">${L3("今天剩下的几顿","The rest of today","Бүгінгі қалған тамақ")}</button><button class="chip" data-v="day" style="--cc:var(--todo)">${L3("一整天的菜单","A full day","Толық күн")}</button></div>
+   <button class="go" id="reco-go" style="background:var(--eng)">${L3("帮我推荐","Suggest","Ұсыну")}</button><div id="reco-out"></div>`,()=>{
+    let mode="rest";
+    $("#reco-mode").onclick=e=>{const b=e.target.closest("button");if(!b)return;mode=b.dataset.v;$$("#reco-mode .chip").forEach(x=>x.classList.toggle("on",x===b));};
+    $("#usual").addEventListener("change",()=>{S.profile.usual=$("#usual").value.trim().slice(0,800);save(true);});
+    $("#reco-go").onclick=async()=>{S.profile.usual=$("#usual").value.trim().slice(0,800);save(true);const b=$("#reco-go");b.disabled=true;const t0=Date.now();const tk=setInterval(()=>{b.textContent=t("thinking")+" "+Math.round((Date.now()-t0)/1000)+"s";},500);
+      const eaten=S.food.filter(f=>f.date===today()).map(f=>{const fd=f.fid&&DATA.FOODS.find(x=>x[0]===f.fid);return `${fd?fd[2]:f.name} (${f.kcal} kcal)`;}).join(", ")||"nothing yet";
+      const fastNote=S.fast.on?`They are fasting now (16:8), started at ${new Date(S.fast.start).toTimeString().slice(0,5)}.`:"";
+      try{const r=await H.aiJson(`${foodCtx()}
+Foods they usually eat and like: ${S.profile.usual||"(not given)"}.
+Already eaten today: ${eaten}. Time now: ${new Date().toTimeString().slice(0,5)}. ${fastNote}
+${mode==="rest"?"Plan the REST of today's meals so the day ends near the target.":"Plan one full day (breakfast, lunch, dinner, optional snack) near the target."}
+Use mostly foods they already eat and easy local options (Almaty supermarkets/canteens), high protein (aim ~1.8 g per kg), no extreme restriction, no sugary drinks. Give realistic portions.
+Write all text in ${{zh:"Simplified Chinese",en:"English",kk:"Kazakh"}[S.settings.lang]}.
+Reply with only JSON: {"meals":[{"meal":0,"title":"short name","items":[{"name":"...","amount":"...","kcal":0,"protein":0}],"why":"one short line"}],"tip":"one practical tip for today"}  (meal: 0 breakfast, 1 lunch, 2 dinner, 3 snack)`,{modelTier:"default"});
+        const meals=(r&&Array.isArray(r.meals)?r.meals:[]).filter(m=>m&&Array.isArray(m.items)&&m.items.length);
+        if(!meals.length)throw {code:"invalid_json"};
+        H._reco=meals;
+        $("#reco-out").innerHTML=meals.map((m,i)=>{const k=m.items.reduce((s,x)=>s+(+x.kcal||0),0),p=m.items.reduce((s,x)=>s+(+x.protein||0),0);
+          return `<div class="meal panel" style="margin-top:12px;background:var(--s2)"><div class="mh"><b>${esc(L().meals[m.meal]??"")} · ${esc(m.title||"")}</b><span class="num">${Math.round(k)} ${t("kcal")} · ${Math.round(p)}g</span></div><ul class="tips">${m.items.map(x=>`<li>${esc(x.name)} <span style="color:var(--t2)">${esc(x.amount||"")} · ${Math.round(+x.kcal||0)}</span></li>`).join("")}</ul>${m.why?`<div class="hint" style="margin-top:2px">${esc(m.why)}</div>`:""}<button class="pill" data-reco="${i}" style="width:100%;margin-top:8px">${ic("i-plus")} ${L3("吃了，记上","I ate this — log it","Жедім — жазу")}</button></div>`;}).join("")+(r.tip?`<div class="hint" style="margin-top:12px">💡 ${esc(r.tip)}</div>`:"");
+      }catch(e){toast(H.aiErr(e));}finally{clearInterval(tk);b.disabled=false;b.textContent=L3("换一套","Suggest again","Қайта ұсыну");}};
+    $("#sheet-body").addEventListener("click",e=>{const b=e.target.closest("[data-reco]");if(!b)return;const m=H._reco[+b.dataset.reco];const now=Date.now();
+      m.items.forEach((x,i)=>S.food.push({id:uid(),date:today(),meal:+m.meal||0,name:String(x.name).slice(0,40),kcal:Math.round(+x.kcal||0),p:Math.round(+x.protein||0),qty:1,ts:now+i}));save();toast(t("logged",{x:m.title||""}));b.disabled=true;});
+  });}
+// ---------- friends (owner only) ----------
+async function friendsSheet(){
+  const body=(list,msg)=>`<h3>${L3("给朋友开账号","Accounts for friends","Достарға аккаунт")}<button data-close>${t("close")}</button></h3>
+   <div class="hint" style="margin-top:-6px">${L3("每个朋友有自己独立的效率站，看不到你的数据，也进不了 ULPA。","Each friend gets a separate hub. They can't see your data or ULPA.","Әр досыңыздың жеке беті болады. Сіздің деректеріңізді көрмейді.")}</div>
+   <div class="fl">${L3("新账号","New account","Жаңа аккаунт")}</div>
+   <input class="field" id="fr-login" placeholder="${L3("用户名（英文字母开头，3–24 位）","Username (starts with a letter, 3–24)","Пайдаланушы аты (3–24)")}" autocapitalize="none" spellcheck="false" style="margin-bottom:8px">
+   <input class="field" id="fr-pw" placeholder="${L3("密码（至少 8 位）","Password (8+ characters)","Құпиясөз (8+)")}" autocapitalize="none" spellcheck="false">
+   <button class="go" id="fr-add" style="background:var(--habit)">${L3("创建账号","Create account","Аккаунт ашу")}</button>
+   ${msg?`<div class="prompt" style="margin-top:12px">${msg}</div>`:""}
+   <div class="fl">${L3("已开通","Accounts","Аккаунттар")}</div>
+   ${list===null?`<div class="hint">${t("generating")}</div>`:list.length?`<ul class="log">${list.map(m=>`<li><div class="mid"><b>${esc(m.login)}</b><small>${fmtDay(String(m.created_at).slice(0,10))}</small></div><button class="del" data-fr-del="${esc(m.login)}">${ic("i-x")}</button></li>`).join("")}</ul>`:`<div class="empty">—</div>`}`;
+  const call=async(b)=>{const {data,error}=await HUB.sb.functions.invoke("hub-ai",{body:b});if(error){let code="upstream";try{code=(await error.context.json()).error||code;}catch(e){}throw {code};}return data;};
+  let list=null; const re=msg=>{$("#sheet-body").innerHTML=body(list,msg);mount();};
+  const mount=()=>{
+    $("#fr-add").onclick=async()=>{const login=$("#fr-login").value.trim().toLowerCase(),pw=$("#fr-pw").value;
+      if(!/^[a-z][a-z0-9_.-]{2,23}$/.test(login)){toast(L3("用户名要英文字母开头，3–24 位","Username: letter first, 3–24 chars","Аты әріптен басталсын"));return;}
+      if(pw.length<8){toast(L3("密码至少 8 位","Password needs 8+ characters","Құпиясөз 8+ таңба"));return;}
+      const b=$("#fr-add");b.disabled=true;
+      try{await call({action:"invite",login,password:pw});list=(await call({action:"members"})).members;
+        re(L3(`已创建 ✓<br>把这三样发给朋友：<br>网址：<b>kainar.online/hub</b><br>用户名：<b>${esc(login)}</b><br>密码：<b>${esc(pw)}</b>`,`Created ✓<br>Send your friend:<br>Site: <b>kainar.online/hub</b><br>Username: <b>${esc(login)}</b><br>Password: <b>${esc(pw)}</b>`,`Ашылды ✓<br>Досыңызға жіберіңіз:<br>Сайт: <b>kainar.online/hub</b><br>Аты: <b>${esc(login)}</b><br>Құпиясөз: <b>${esc(pw)}</b>`));}
+      catch(e){toast(e.code==="taken"?L3("这个用户名已经有人用了","That username is taken","Бұл ат бос емес"):H.aiErr(e));b.disabled=false;}};
+    $("#sheet-body").onclick=async e=>{const b=e.target.closest("[data-fr-del]");if(!b)return;const login=b.dataset.frDel;
+      openSheet(`<h3>${L3(`删除 ${esc(login)}？`,`Delete ${esc(login)}?`,`${esc(login)} жою керек пе?`)}<button data-close>${t("cancel")}</button></h3><div class="hint">${L3("他的账号和所有记录都会删除，不能恢复。","The account and all its data are deleted. This can't be undone.","Аккаунт пен деректер өшеді.")}</div><button class="go" id="fr-del-ok" style="background:var(--move)">${t("del")}</button>`,()=>{
+        $("#fr-del-ok").onclick=async()=>{try{await call({action:"remove",login});}catch(err){toast(H.aiErr(err));}friendsSheet();};});};
+  };
+  openSheet(body(null),mount);
+  try{list=(await call({action:"members"})).members;re();}catch(e){list=[];re();}
+}
+
 function habitSheet(){let icon=HICONS[S.habits.length%HICONS.length],color=HCOLORS[S.habits.length%HCOLORS.length];
   openSheet(head(t("newHabitT"))+`<input class="field" id="hn" placeholder="${t("habitPh")}" maxlength="20"><div class="fl">${t("icon")}</div><div class="icpick" id="hip">${HICONS.map(i=>`<button data-i="${i}" class="${i===icon?"on":""}">${ic(i)}</button>`).join("")}</div><div class="fl">${t("color")}</div><div class="colpick" id="hcp">${HCOLORS.map(c=>`<button data-c="${c}" class="${c===color?"on":""}" style="background:${c}"></button>`).join("")}</div><button class="go" id="h-save">${t("addHabit")}</button>`,()=>{
     $("#hip").onclick=e=>{const b=e.target.closest("button");if(!b)return;icon=b.dataset.i;$$("#hip button").forEach(x=>x.classList.toggle("on",x===b));};
@@ -410,10 +504,12 @@ function settingsSheet(){const p=S.profile,st=S.settings;
    <div class="fl">${t("wgoal")}</div><div class="chips" style="justify-content:flex-start;margin:0" id="s-goal">${L().wgoals.map((a,i)=>`<button class="chip ${(p.goal??1)===i?"on":""}" data-v="${i}">${a}</button>`).join("")}</div>
    <div class="hint" id="s-kcal"></div>
    <div class="fl">${t("goal")}</div><div class="steps" style="grid-template-columns:1fr 1fr">${stepper("sg",t("studyGoal"),st.goal,10)}${stepper("mg",t("moveGoal"),st.moveGoal,5)}</div>
-   <button class="go" id="s-save">${t("save")}</button>`,()=>{
+   <button class="go" id="s-save">${t("save")}</button>
+   ${H.role==="owner"?`<button class="pill" id="open-friends" style="width:100%;margin-top:12px">${ic("i-habits")} ${L3("给朋友开账号","Accounts for friends","Достарға аккаунт")}</button>`:""}
+   <button class="linkbtn danger" id="sign-out" style="margin-top:14px">${L3("退出登录","Sign out","Шығу")}</button>`,()=>{
     const grp=(id,fn)=>{$(id).onclick=e=>{const b=e.target.closest("button");if(!b)return;$$(id+" button").forEach(x=>x.classList.toggle("on",x===b));fn(b);upd();};};
     let tmp={sex:p.sex,act:p.act||0,goal:p.goal??1};
-    const upd=()=>{const save0=Object.assign({},S.profile);Object.assign(S.profile,tmp,{age:+$("#st-age").value,h:+$("#st-h").value,w:+$("#st-pw").value});const k=kcalTarget();Object.assign(S.profile,save0);$("#s-kcal").textContent=k?t("dailyTarget",{k}):"";};
+    const upd=()=>{if(!$("#st-age"))return;const save0=Object.assign({},S.profile);Object.assign(S.profile,tmp,{age:+$("#st-age").value,h:+$("#st-h").value,w:+$("#st-pw").value});const k=kcalTarget();Object.assign(S.profile,save0);$("#s-kcal").textContent=k?t("dailyTarget",{k}):"";};
     grp("#s-sex",b=>tmp.sex=b.dataset.v);grp("#s-act",b=>tmp.act=+b.dataset.v);grp("#s-goal",b=>tmp.goal=+b.dataset.v);
     $("#s-lang").onclick=e=>{const b=e.target.closest("button");if(!b)return;S.settings.lang=b.dataset.l;save();settingsSheet();};
     $("#sheet-body").addEventListener("click",()=>setTimeout(upd,0));$("#sheet-body").addEventListener("input",upd);upd();
@@ -468,6 +564,9 @@ document.addEventListener("click",e=>{
     case "open-food": foodSheet();break;
     case "open-manual": manualSheet();break;
     case "open-settings": settingsSheet();break;
+    case "open-friends": friendsSheet();break;
+    case "open-reco": recoSheet();break;
+    case "sign-out": HUB.sb.auth.signOut().finally(()=>location.reload());break;
     case "choose-plan": planSheet();break;
     case "open-warm": warmSheet();break;
     case "rest-skip": rest=null;drawRest();break;
