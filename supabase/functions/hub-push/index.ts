@@ -1,8 +1,9 @@
 // ULPA · hub-push: reminders for the personal hub (1% Better, kainar.online/hub).
 //
 //   1. Every 5 minutes pg_cron (private.hub_push_tick) posts { action: "tick" } with header x-ulpa-hook.
-//      For each subscribed device: fast done, eating window over, English / training not done by the
-//      chosen time (read from today's hub_checkins), and the weekly report on Sunday 20:00.
+//      Only what matters, at most a few a day: the fast is done; one evening nudge, and only if fewer
+//      than 3 of today's 5 are done (read from hub_checkins); the weekly report on Sunday 20:00.
+//      A reminder is tried once: if the push service refuses it, it is not repeated.
 //   2. A signed-in hub user posts { action: "test" } to get a test notification on his own devices.
 // Uses ULPA's VAPID keys and hook secret (push_server_config); the private key never leaves the server.
 
@@ -40,15 +41,16 @@ type Lang = "zh" | "en" | "kk";
 const TXT: Record<string, Record<Lang, [string, string]>> = {
   fast: { zh: ["断食完成 🎉", "到时间了，可以吃饭了。记得在 1% Better 里点“结束断食”。"], en: ["Fast complete 🎉", "Time's up, you can eat now. Tap “End fast” in 1% Better."], kk: ["Ораза аяқталды 🎉", "Уақыт болды, тамақтана аласыз. 1% Better-де «Аяқтау» басыңыз."] },
   eat: { zh: ["进食时间结束", "现在开始下一次断食吧。"], en: ["Eating window is over", "Time to start your next fast."], kk: ["Тамақ уақыты бітті", "Келесі оразаны бастаңыз."] },
+  nudge: { zh: ["今天还差一点", "再完成 {n} 件就达标了，现在做还来得及。"], en: ["Almost there today", "{n} more to reach today's goal. There's still time."], kk: ["Бүгін аз қалды", "Мақсатқа тағы {n} іс қалды."] },
   eng: { zh: ["今天的英语还没做", "背几个单词、做一组练习，5 分钟就够。"], en: ["English isn't done yet today", "A few words and one drill: five minutes is enough."], kk: ["Бүгін ағылшын әлі жасалмады", "Бірнеше сөз және бір жаттығу: 5 минут жеткілікті."] },
   train: { zh: ["今天还没训练", "打开今天的计划，先热身 15 分钟。"], en: ["No training yet today", "Open today's plan and start with a 15-minute warm-up."], kk: ["Бүгін жаттығу әлі жоқ", "Бүгінгі жоспарды ашып, 15 минут қыздырыңыз."] },
   week: { zh: ["本周报告出来了", "看看这一周进步了多少。"], en: ["Your weekly report is ready", "See how much better this week was."], kk: ["Апталық есеп дайын", "Осы аптаны қараңыз."] },
   test: { zh: ["测试提醒 ✓", "提醒已经打开，会按时通知你。"], en: ["Test reminder ✓", "Reminders are on and will arrive on time."], kk: ["Сынақ ✓", "Еске салу қосулы."] },
 };
 const URLS: Record<string, string> = { fast: "/hub/#body", eat: "/hub/#body", eng: "/hub/#eng", train: "/hub/#body", week: "/hub/#today", test: "/hub/" };
-const msg = (kind: string, lang: string) => {
+const msg = (kind: string, lang: string, n = 0) => {
   const [title, body] = TXT[kind][(["zh", "en", "kk"].includes(lang) ? lang : "zh") as Lang];
-  return { title, body, url: URLS[kind], tag: "hub-" + kind };
+  return { title, body: body.replace("{n}", String(n)), url: URLS[kind] ?? "/hub/", tag: "hub-" + kind };
 };
 
 function local(tz: string, at = new Date()) {
@@ -64,11 +66,12 @@ const dueAt = (now: string, pref: unknown) => typeof pref === "string" && /^\d\d
 
 type Row = { endpoint: string; user_id: string; p256dh: string; auth: string; lang: string; tz: string; prefs: Record<string, unknown>; fast_end: string | null; eat_end: string | null; sent: Record<string, string> };
 
-async function deliver(row: Row, kind: string, keys: VapidKeys): Promise<boolean> {
-  const status = await sendPush({ endpoint: row.endpoint, p256dh: row.p256dh, auth: row.auth }, msg(kind, row.lang), keys, SUBJECT, { ttl: 3600, urgency: "high", topic: "hub-" + kind });
+// Returns false only when the subscription is gone (it is then deleted).
+async function deliver(row: Row, kind: string, keys: VapidKeys, n = 0): Promise<boolean> {
+  const status = await sendPush({ endpoint: row.endpoint, p256dh: row.p256dh, auth: row.auth }, msg(kind, row.lang, n), keys, SUBJECT, { ttl: 3600, urgency: "normal" });
   if (status === 404 || status === 410) { await db.from("hub_push").delete().eq("endpoint", row.endpoint); return false; }
-  if (status >= 400) console.error("push failed", kind, status);
-  return status < 400;
+  if (status >= 400) console.error("push failed", kind, status, row.endpoint.slice(0, 40));
+  return true;
 }
 
 async function tick(keys: VapidKeys) {
@@ -86,14 +89,13 @@ async function tick(keys: VapidKeys) {
     const l = local(row.tz);
     const due: string[] = [];
     if (p.fast && row.fast_end && Date.parse(row.fast_end) <= now && now - Date.parse(row.fast_end) < 6 * 3600_000 && s.fast !== row.fast_end) { due.push("fast"); s.fast = row.fast_end; }
-    if (p.fast && row.eat_end && Date.parse(row.eat_end) <= now && now - Date.parse(row.eat_end) < 3 * 3600_000 && s.eat !== row.eat_end) { due.push("eat"); s.eat = row.eat_end; }
     const it = items(row.user_id, l.date) as Record<string, boolean> | null;
-    if (dueAt(l.hm, p.eng) && s.eng !== l.date) { s.eng = l.date; if (!it?.eng) due.push("eng"); }
-    if (dueAt(l.hm, p.train) && s.train !== l.date) { s.train = l.date; if (!it?.train && !it?.rest) due.push("train"); }
+    const done = it ? ["fast", "train", "eng", "study", "kcal"].filter((k) => it[k]).length : 0;
+    if (dueAt(l.hm, p.nudge) && s.nudge !== l.date) { s.nudge = l.date; if (done < 3) due.push("nudge"); }
     if (p.week && l.sunday && dueAt(l.hm, "20:00") && s.week !== l.date) { due.push("week"); s.week = l.date; }
     if (JSON.stringify(s) === JSON.stringify(row.sent ?? {})) continue;
     let alive = true;
-    for (const kind of due) { if (!alive) break; alive = await deliver(row, kind, keys); if (alive) sent += 1; }
+    for (const kind of due) { if (!alive) break; alive = await deliver(row, kind, keys, 3 - done); if (alive) sent += 1; }
     if (alive) await db.from("hub_push").update({ sent: s }).eq("endpoint", row.endpoint);
   }
   return { sent };
