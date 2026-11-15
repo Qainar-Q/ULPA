@@ -139,8 +139,8 @@ function weekSheet(off){
 H.weekSheet=weekSheet;
 
 // ---------- reminders (Web Push through /hub/sw.js) ----------
-const RD={on:false,eng:"20:00",train:"18:00",fast:true,week:true};
-const R=()=>{const s=S();s.settings.remind=Object.assign({},RD,s.settings.remind||{});return s.settings.remind;};
+const RD={on:false,nudge:"21:00",fast:true,week:true};
+const R=()=>{const s=S();const r=s.settings.remind=Object.assign({},RD,s.settings.remind||{});if("eng" in r||"train" in r){delete r.eng;delete r.train;if(!r.nudge)r.nudge="21:00";}return r;};
 const pushOK=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent),standalone=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone;
 async function swReg(){return navigator.serviceWorker.register("/hub/sw.js",{scope:"/hub/"});}
@@ -156,7 +156,7 @@ async function subscribe(){
   if(e2)throw e2;
 }
 function pushFields(){const s=S(),r=R(),f=s.fast,fh=s.settings.fastH||16;
-  return {lang:s.settings.lang,tz:Intl.DateTimeFormat().resolvedOptions().timeZone||"Asia/Almaty",prefs:{eng:r.eng||null,train:r.train||null,fast:!!r.fast,week:!!r.week},
+  return {lang:s.settings.lang,tz:Intl.DateTimeFormat().resolvedOptions().timeZone||"Asia/Almaty",prefs:{nudge:r.nudge||null,fast:!!r.fast,week:!!r.week},
     fast_end:f.on?new Date(f.start+fh*3600000).toISOString():null,
     eat_end:!f.on&&f.lastEnd&&Date.now()-f.lastEnd<(24-fh)*3600000?new Date(f.lastEnd+(24-fh)*3600000).toISOString():null,
     updated_at:new Date().toISOString()};}
@@ -170,15 +170,15 @@ function remindSheet(){
    ${!pushOK()?`<div class="prompt">${isIOS&&!standalone?L3("iPhone 要先把这个网站加到主屏幕（分享 → 添加到主屏幕），再从主屏幕打开，才能收到提醒。","On iPhone: Share → Add to Home Screen, then open it from the home screen to get reminders.","iPhone: Бөлісу → Басты экранға қосу, сосын сол жерден ашыңыз."):L3("这个浏览器不支持通知。","This browser can't show notifications.","Бұл браузер хабарлама көрсетпейді.")}</div>`:`
    <label class="rrow"><span><b>${L3("打开提醒","Turn on reminders","Еске салуды қосу")}</b><small>${L3("关掉网页也能收到","Arrive even when the page is closed","Бет жабық болса да келеді")}</small></span><input type="checkbox" class="sw" id="r-on" ${r.on?"checked":""}></label>
    <div id="r-more" style="${r.on?"":"opacity:.4;pointer-events:none"}">
-   <label class="rrow"><span><b>${L3("断食","Fasting","Ораза")}</b><small>${L3("断食到点、进食窗口结束时","When the fast is done and when the eating window closes","Ораза біткенде және тамақ уақыты аяқталғанда")}</small></span><input type="checkbox" class="sw" id="r-fast" ${r.fast?"checked":""}></label>
-   <label class="rrow"><span><b>${L3("英语","English","Ағылшын")}</b><small>${L3("这个时间还没做就提醒","If not done by this time","Осы уақытқа дейін жасалмаса")}</small></span><input type="time" class="field tm" id="r-eng" value="${r.eng||""}"></label>
-   <label class="rrow"><span><b>${L3("训练","Training","Жаттығу")}</b><small>${L3("训练日这个时间还没练就提醒","On training days, if not done by this time","Жаттығу күні, осы уақытқа дейін")}</small></span><input type="time" class="field tm" id="r-train" value="${r.train||""}"></label>
+   <div class="hint" style="margin-top:4px">${L3("只在重要的时候提醒，一天最多两三条。","Only when it matters: two or three a day at most.","Тек маңызды кезде.")}</div>
+   <label class="rrow"><span><b>${L3("断食完成","Fast complete","Ораза аяқталды")}</b><small>${L3("到点可以吃饭时提醒一次","Once, when you can eat","Тамақтануға болғанда бір рет")}</small></span><input type="checkbox" class="sw" id="r-fast" ${r.fast?"checked":""}></label>
+   <label class="rrow"><span><b>${L3("晚上提醒一次","One evening nudge","Кешкі еске салу")}</b><small>${L3("只在今天还没达标（5 件没完成 3 件）时才发；清空时间就关掉","Only if today's goal (3 of 5) isn't reached yet; clear the time to turn off","Тек мақсат орындалмаса")}</small></span><input type="time" class="field tm" id="r-nudge" value="${r.nudge||""}"></label>
    <label class="rrow"><span><b>${L3("周报告","Weekly report","Апталық есеп")}</b><small>${L3("每周日 20:00","Sundays at 20:00","Жексенбі 20:00")}</small></span><input type="checkbox" class="sw" id="r-week" ${r.week?"checked":""}></label>
    <button class="pill" id="r-test" style="width:100%;margin-top:14px">${L3("发一条测试提醒","Send a test reminder","Сынақ хабарлама")}</button></div>`}`;
   H.openSheet(body(),()=>{
     if(!pushOK())return;
-    const set=async()=>{r.fast=$("#r-fast").checked;r.week=$("#r-week").checked;r.eng=$("#r-eng").value;r.train=$("#r-train").value;H.save(true);lastPush="";pushSync();};
-    ["#r-fast","#r-week","#r-eng","#r-train"].forEach(id=>$(id).addEventListener("change",set));
+    const set=async()=>{r.fast=$("#r-fast").checked;r.week=$("#r-week").checked;r.nudge=$("#r-nudge").value;H.save(true);lastPush="";pushSync();};
+    ["#r-fast","#r-week","#r-nudge"].forEach(id=>$(id).addEventListener("change",set));
     $("#r-on").onchange=async e=>{const on=e.target.checked;
       if(on){try{await subscribe();r.on=true;H.toast(L3("提醒已打开","Reminders on","Қосылды"));}catch(err){e.target.checked=false;r.on=false;H.toast(String(err.message)==="denied"?L3("通知被拒绝了，请在浏览器设置里允许","Notifications blocked. Allow them in browser settings.","Хабарламаға рұқсат жоқ"):L3("没打开成功，再试一次","Couldn't turn on. Try again.","Қосылмады"));}}
       else{await unsubscribe();r.on=false;}
@@ -238,7 +238,7 @@ function onboard(step){
         const f=e.target.closest("#ob-fast button");if(f){s.settings.fastH=+f.dataset.h;document.querySelectorAll("#ob-fast button").forEach(x=>x.classList.toggle("on",x===f));}});
       $("#ob-next").onclick=()=>{s.settings.goal=Math.max(10,+$("#st-sg").value||120);s.eng.prefs.words=Math.max(5,Math.min(40,+$("#st-ew").value||15));H.save(true);onboard(4);};};
   }else{
-    html=`${dots}<div class="obh"><b>${L3("最后一步：提醒","Last step: reminders","Соңғы қадам: еске салу")}</b><p>${L3("断食到点、英语和训练没做的时候提醒你。也可以以后在设置里打开。","Get a nudge when your fast is done or English and training are still open. You can also turn this on later in Settings.","Ораза біткенде, ағылшын мен жаттығу жасалмағанда еске салады.")}</p></div>
+    html=`${dots}<div class="obh"><b>${L3("最后一步：提醒","Last step: reminders","Соңғы қадам: еске салу")}</b><p>${L3("断食完成时提醒一次；晚上如果今天还没达标，再提醒一次。也可以以后在设置里打开。","Get a nudge when your fast is done or English and training are still open. You can also turn this on later in Settings.","Ораза біткенде, ағылшын мен жаттығу жасалмағанда еске салады.")}</p></div>
      <button class="pill" id="ob-remind" style="width:100%">${ic("i-sound")} ${L3("打开提醒","Turn on reminders","Еске салуды қосу")}</button>
      ${isIOS&&!standalone?`<div class="hint">${L3("iPhone：先点分享 → 添加到主屏幕，从主屏幕打开后才能收到提醒。","iPhone: Share → Add to Home Screen first, then open it from there.","iPhone: Бөлісу → Басты экранға қосу.")}</div>`:""}`+nav(5,L3("开始","Start","Бастау"));
     mount=()=>{$("#ob-remind").onclick=()=>remindSheetFromOnboard();$("#ob-next").onclick=()=>{s.onboarded=true;H.save();H.closeSheet();H.toast(L3("开始吧！今天的 1%","Let's go. Today's 1%.","Бастайық!"));};};
