@@ -50,6 +50,16 @@ export async function expectNoOverflow(page) {
 
 /** Open the student demo and close the welcome tour / birthday greeting. */
 export async function enterStudentDemo(page) {
+  // The demo has no classes on Sunday, so on a Sunday the pages are tested as if it were Monday.
+  await page.addInitScript(() => {
+    if (new Date().getDay() !== 0) return;
+    const Real = Date, off = 864e5;
+    class Shifted extends Real {
+      constructor(...args) { if (args.length) super(...args); else super(Real.now() + off); }
+      static now() { return Real.now() + off; }
+    }
+    window.Date = Shifted;
+  });
   await page.goto("/demo");
   await expect(page.locator(".demo-banner")).toBeVisible();
   await closeOverlays(page);
