@@ -201,14 +201,13 @@ function onboard(step){
   const nav=(next,label)=>`<div class="btnrow" style="margin-top:22px">${step?`<button class="pill" data-ob="${step-1}" style="flex:0 0 auto;padding:14px 18px">${L3("上一步","Back","Артқа")}</button>`:""}<button class="pill pri" id="ob-next" data-next="${next}">${label||L3("下一步","Next","Келесі")}</button></div>`;
   let html="",mount=()=>{};
   if(step===0){
-    html=`${dots}<div class="obh"><b>${L3("欢迎来到 1% Better","Welcome to 1% Better","1% Better-ке қош келдіңіз")}</b><p>${L3("每天进步一点点。先花一分钟设置一下。","Get a little better every day. One minute to set up.","Күн сайын сәл жақсырақ. Бір минут баптау.")}</p></div>
-     <div class="fl">${t("language")}</div><div class="seg" id="ob-lang" style="margin:0;width:auto">${["zh","en","kk"].map(l=>`<button data-l="${l}" class="${s.settings.lang===l?"on":""}">${I18N[l]._name}</button>`).join("")}</div>
+    html=`${dots}<div class="seg" id="ob-lang" style="margin:0 0 18px;width:auto">${["kk","zh","en"].map(l=>`<button data-l="${l}" class="${s.settings.lang===l?"on":""}">${I18N[l]._name}</button>`).join("")}</div><div class="obh"><b>${L3("欢迎来到 1% Better","Welcome to 1% Better","1% Better-ке қош келдіңіз")}</b><p>${L3("每天进步一点点。先花一分钟设置一下。","Get a little better every day. One minute to set up.","Күн сайын сәл жақсырақ. Бір минут баптау.")}</p></div>
      <div class="fl">${L3("你的名字（朋友会看到）","Your name (friends see it)","Атыңыз (достарыңыз көреді)")}</div><input class="field" id="ob-name" maxlength="24" value="${esc(p.name||myName())}">`+nav(1);
     mount=()=>{$("#ob-lang").onclick=e=>{const b=e.target.closest("button");if(!b)return;s.settings.lang=b.dataset.l;p.name=$("#ob-name").value.trim();H.save();onboard(0);};
       $("#ob-next").onclick=()=>{p.name=$("#ob-name").value.trim().slice(0,24);H.save(true);onboard(1);};};
   }else if(step===1){
     let tmp={sex:p.sex||"m",act:p.act??1,goal:p.goal??1};
-    html=`${dots}<div class="obh"><b>${L3("身体数据","Your body","Дене деректері")}</b><p>${L3("用来算每天该吃多少热量。","Used to work out your daily calories.","Күнделікті калорияны есептеу үшін.")}</p></div>
+    html=`${dots}<div class="seg" id="ob-lang" style="margin:0 0 18px;width:auto">${["kk","zh","en"].map(l=>`<button data-l="${l}" class="${s.settings.lang===l?"on":""}">${I18N[l]._name}</button>`).join("")}</div><div class="obh"><b>${L3("身体数据","Your body","Дене деректері")}</b><p>${L3("用来算每天该吃多少热量。","Used to work out your daily calories.","Күнделікті калорияны есептеу үшін.")}</p></div>
      <div class="seg" id="ob-sex" style="margin:0 0 8px;width:auto"><button data-v="m" class="${tmp.sex!=="f"?"on":""}">${t("male")}</button><button data-v="f" class="${tmp.sex==="f"?"on":""}">${t("female")}</button></div>
      <div class="steps">${H.stepper("age",t("age"),p.age||19,1)}${H.stepper("h",t("heightCm"),p.h||175,1)}${H.stepper("pw",t("weightKg"),K().latestWeight()||70,.5)}</div>
      <div class="fl">${t("activity")}</div><div class="chips" style="justify-content:flex-start;margin:0" id="ob-act">${K().L().acts.map((a,i)=>`<button class="chip ${tmp.act===i?"on":""}" data-v="${i}">${a}</button>`).join("")}</div>
@@ -219,7 +218,7 @@ function onboard(step){
         if(w&&!s.weights.some(x=>x.date===today()))s.weights.push({date:today(),kg:w});H.save(true);onboard(2);};};
   }else if(step===2){
     const sug=(SUBJ_SUGGEST[s.settings.lang]||SUBJ_SUGGEST.zh).filter(n=>!s.subjects.some(x=>x.name===n));
-    html=`${dots}<div class="obh"><b>${L3("你在学的科目","Your subjects","Пәндеріңіз")}</b><p>${L3("学习计时和进度会按科目记录。之后也可以改。","Study time and progress are kept per subject. You can change them later.","Оқу уақыты пән бойынша жазылады.")}</p></div>
+    html=`${dots}<div class="seg" id="ob-lang" style="margin:0 0 18px;width:auto">${["kk","zh","en"].map(l=>`<button data-l="${l}" class="${s.settings.lang===l?"on":""}">${I18N[l]._name}</button>`).join("")}</div><div class="obh"><b>${L3("你在学的科目","Your subjects","Пәндеріңіз")}</b><p>${L3("学习计时和进度会按科目记录。之后也可以改。","Study time and progress are kept per subject. You can change them later.","Оқу уақыты пән бойынша жазылады.")}</p></div>
      <ul class="obs">${s.subjects.map(x=>`<li><i style="background:${x.color}"></i><span>${esc(x.name)}</span><button class="del" data-obdel="${x.id}">${ic("i-x")}</button></li>`).join("")||`<li class="empty" style="display:block">${L3("还没有科目","No subjects yet","Пән жоқ")}</li>`}</ul>
      <form class="add" id="ob-sf" style="margin-top:10px"><input id="ob-sin" maxlength="60" autocomplete="off" placeholder="${L3("输入科目名称","Subject name","Пән атауы")}"><button class="plus">${ic("i-plus")}</button></form>
      ${sug.length?`<div class="chips" style="justify-content:flex-start;margin-top:10px">${sug.map(n=>`<button class="chip" data-obadd="${esc(n)}">+ ${esc(n)}</button>`).join("")}</div>`:""}`+nav(3);
@@ -230,7 +229,7 @@ function onboard(step){
       $("#ob-next").onclick=()=>onboard(3);};
   }else if(step===3){
     const pl=s.plan&&s.plan.id;
-    html=`${dots}<div class="obh"><b>${L3("每天的目标","Daily goals","Күнделікті мақсат")}</b><p>${L3("每天完成这 5 件里的 3 件，就算进步了 1%。","Finish 3 of these 5 each day and you're 1% better.","Осы 5-тің 3-ін орындасаңыз, 1% жақсардыңыз.")}</p></div>
+    html=`${dots}<div class="seg" id="ob-lang" style="margin:0 0 18px;width:auto">${["kk","zh","en"].map(l=>`<button data-l="${l}" class="${s.settings.lang===l?"on":""}">${I18N[l]._name}</button>`).join("")}</div><div class="obh"><b>${L3("每天的目标","Daily goals","Күнделікті мақсат")}</b><p>${L3("每天完成这 5 件里的 3 件，就算进步了 1%。","Finish 3 of these 5 each day and you're 1% better.","Осы 5-тің 3-ін орындасаңыз, 1% жақсардыңыз.")}</p></div>
      <div class="fl">${L3("训练计划","Training plan","Жаттығу жоспары")}</div><div class="obp">${DATA.PLANS.map(x=>`<button data-obplan="${x.id}" class="${pl===x.id?"on":""}"><b>${esc(H.pick(x.name))}</b><small>${x.days.length} ${L3("天一轮","-day cycle","күндік цикл")}</small></button>`).join("")}<button data-obplan="" class="${!pl?"on":""}"><b>${L3("先不选","Not now","Кейін")}</b><small>${L3("之后在“身体”里选","Pick later under Body","Кейін таңдау")}</small></button></div>
      <div class="fl">${L3("轻断食","Intermittent fasting","Аралық ораза")}</div><div class="dur" id="ob-fast" style="margin:0">${[14,16,18].map(h=>`<button data-h="${h}" class="${s.settings.fastH===h?"on":""}">${h}:${24-h}</button>`).join("")}</div>
      <div class="steps" style="grid-template-columns:1fr 1fr;margin-top:16px">${H.stepper("sg",t("studyGoal"),s.settings.goal,10)}${H.stepper("ew",L3("每天新单词","New words a day","Күніне жаңа сөз"),s.eng.prefs.words||15,5)}</div>`+nav(4);
@@ -238,7 +237,7 @@ function onboard(step){
         const f=e.target.closest("#ob-fast button");if(f){s.settings.fastH=+f.dataset.h;document.querySelectorAll("#ob-fast button").forEach(x=>x.classList.toggle("on",x===f));}});
       $("#ob-next").onclick=()=>{s.settings.goal=Math.max(10,+$("#st-sg").value||120);s.eng.prefs.words=Math.max(5,Math.min(40,+$("#st-ew").value||15));H.save(true);onboard(4);};};
   }else{
-    html=`${dots}<div class="obh"><b>${L3("最后一步：提醒","Last step: reminders","Соңғы қадам: еске салу")}</b><p>${L3("断食完成时提醒一次；晚上如果今天还没达标，再提醒一次。也可以以后在设置里打开。","Get a nudge when your fast is done or English and training are still open. You can also turn this on later in Settings.","Ораза біткенде, ағылшын мен жаттығу жасалмағанда еске салады.")}</p></div>
+    html=`${dots}<div class="seg" id="ob-lang" style="margin:0 0 18px;width:auto">${["kk","zh","en"].map(l=>`<button data-l="${l}" class="${s.settings.lang===l?"on":""}">${I18N[l]._name}</button>`).join("")}</div><div class="obh"><b>${L3("最后一步：提醒","Last step: reminders","Соңғы қадам: еске салу")}</b><p>${L3("断食完成时提醒一次；晚上如果今天还没达标，再提醒一次。也可以以后在设置里打开。","Get a nudge when your fast is done or English and training are still open. You can also turn this on later in Settings.","Ораза біткенде, ағылшын мен жаттығу жасалмағанда еске салады.")}</p></div>
      <button class="pill" id="ob-remind" style="width:100%">${ic("i-sound")} ${L3("打开提醒","Turn on reminders","Еске салуды қосу")}</button>
      ${isIOS&&!standalone?`<div class="hint">${L3("iPhone：先点分享 → 添加到主屏幕，从主屏幕打开后才能收到提醒。","iPhone: Share → Add to Home Screen first, then open it from there.","iPhone: Бөлісу → Басты экранға қосу.")}</div>`:""}`+nav(5,L3("开始","Start","Бастау"));
     mount=()=>{$("#ob-remind").onclick=()=>remindSheetFromOnboard();$("#ob-next").onclick=()=>{s.onboarded=true;H.save();H.closeSheet();H.toast(L3("开始吧！今天的 1%","Let's go. Today's 1%.","Бастайық!"));};};

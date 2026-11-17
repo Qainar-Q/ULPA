@@ -20,10 +20,10 @@ const KIND={力量:"var(--move)",有氧:"#ffb340",球类:"#40c8e0",拉伸:"#3ddc
 // ---------- state ----------
 let LS="efficiency-hub-v1";
 function defaults(){
-  const lang=(navigator.language||"zh").toLowerCase().startsWith("kk")?"kk":(navigator.language||"").toLowerCase().startsWith("zh")?"zh":"zh";
+  let lang="kk";try{lang=localStorage.getItem("hub-lang")||"kk";}catch(e){}if(!["kk","zh","en"].includes(lang))lang="kk";
   return {v:3,updatedAt:0,_stamps:{},todos:[],study:[],workouts:[],weights:[],food:[],fasts:[],
   fast:{on:false,start:0,lastEnd:0},
-  habits:[{id:"h1",icon:"h-drop",color:"#40c8e0",name:"喝够 8 杯水"},{id:"h2",icon:"h-book",color:"#ffb340",name:"阅读 20 分钟"},{id:"h3",icon:"h-moon",color:"#bf7cff",name:"11 点前睡"}],
+  habits:(N=>[{id:"h1",icon:"h-drop",color:"#40c8e0",name:N[0]},{id:"h2",icon:"h-book",color:"#ffb340",name:N[1]},{id:"h3",icon:"h-moon",color:"#bf7cff",name:N[2]}])({kk:["8 стақан су ішу","20 минут кітап оқу","23:00-ге дейін ұйықтау"],en:["Drink 8 glasses of water","Read 20 minutes","Sleep before 11"],zh:["喝够 8 杯水","阅读 20 分钟","11 点前睡"]}[lang]),
   habitLog:{},subjects:null,plan:null,planChecks:{},lifts:{},exams:[],
   profile:{sex:"m",age:20,h:0,w:0,act:1,goal:1},
   eng:{level:null,tests:[],vocab:{},newLog:{},drills:[],mistakes:[],writings:[],speaks:[],days:{},prefs:{explain:0,words:15,drill:10},cache:{}},
