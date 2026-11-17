@@ -28,7 +28,7 @@ function examSheet(id){
    <button class="linkbtn" id="ex-del" style="color:var(--move)">${L3("删除这个考试","Delete this exam","Жою")}</button>`}`,()=>{
     $("#sheet-body").addEventListener("click",e=>{const b=e.target.closest("[data-exn]");if(b)$("#ex-name").value=b.dataset.exn;});
     $("#ex-save").onclick=()=>{const name=$("#ex-name").value.trim(),date=$("#ex-date").value;if(!name||!date){H.toast(L3("填上名称和日期","Add a name and a date","Атауы мен күні"));return;}
-      Object.assign(x,{name,date,goal:$("#ex-goal").value.trim()});if(isNew)exams().push(x);H.save();examSheet(x.id);};
+      Object.assign(x,{name,date,goal:$("#ex-goal").value.trim()});if(isNew)exams().push(x);H.save();H.toast(L3("已保存","Saved","Сақталды"));if(isNew)examSheet(x.id);else H.closeSheet();};
     if(isNew)return;
     $("#ex-del").onclick=()=>{if(!confirm(L3("删除这个考试？","Delete this exam?","Жою керек пе?")))return;S().exams=exams().filter(e=>e.id!==x.id);H.save();H.closeSheet();};
     $("#ex-plan").onclick=async()=>{const b=$("#ex-plan");b.disabled=true;const t0=Date.now();const tk=setInterval(()=>{b.querySelector("span").textContent=t("thinking")+" "+Math.round((Date.now()-t0)/1000)+"s";},500);
