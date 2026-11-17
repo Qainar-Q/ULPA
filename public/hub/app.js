@@ -252,7 +252,7 @@ function tips(el,W){const tip=el.querySelector(".tip"),svg=el.querySelector("svg
 // ---------- body ----------
 const kindName=k=>(L().kinds||{})[k]||k;
 function moveLine(w){return w.kind==="力量"?[w.sets&&w.reps?`${w.sets} ${t("sets")} × ${w.reps} ${t("reps")}`:"",w.kg?`${w.kg} kg`:"",w.detail||""].filter(Boolean).join(" · "):[w.km?`${w.km} ${t("km")}`:"",w.detail||""].filter(Boolean).join(" · ");}
-function moveItem(w,showDay){return `<li><div class="bul" style="background:color-mix(in srgb,${KIND[w.kind]||KIND.其他} 20%,transparent)">${ic(w.kind==="有氧"?"h-run":"i-move","","stroke:"+(KIND[w.kind]||KIND.其他))}</div><div class="mid"><b>${esc(w.name)}</b><small>${esc(kindName(w.kind))}${moveLine(w)?" · "+esc(moveLine(w)):""}${showDay?" · "+fmtDay(w.date):""}</small></div><div class="rt num">${w.min?w.min+" "+t("min"):""}${w.kcal?`<small style="display:block;color:var(--t2)">≈${w.kcal} ${t("kcal")}</small>`:""}</div><button class="del" data-wd="${w.id}">${ic("i-x")}</button></li>`;}
+function moveItem(w,showDay){return `<li><div class="bul" style="background:color-mix(in srgb,${KIND[w.kind]||KIND.其他} 20%,transparent)">${ic(w.kind==="有氧"?"h-run":"i-move","","stroke:"+(KIND[w.kind]||KIND.其他))}</div><div class="mid" data-wed="${w.id}" style="cursor:pointer"><b>${esc(w.name)}</b><small>${esc(kindName(w.kind))}${moveLine(w)?" · "+esc(moveLine(w)):""}${showDay?" · "+fmtDay(w.date):""}</small></div><div class="rt num" data-wed="${w.id}" style="cursor:pointer">${w.min?w.min+" "+t("min"):""}${w.kcal?`<small style="display:block;color:var(--t2)">${w.src==="watch"?"⌚":"≈"}${w.kcal} ${t("kcal")}</small>`:""}</div><button class="del" data-wd="${w.id}">${ic("i-x")}</button></li>`;}
 // A weekly plan (7 days, Monday first) follows the calendar; other plans go day by day.
 function curPlan(){if(!S.plan)return null;const p=DATA.PLANS.find(x=>x.id===S.plan.id);if(!p)return null;const ov=S.plan.ovr&&S.plan.ovr.date===today()?S.plan.ovr.idx:null;const idx=p.weekly?(ov!=null?ov:(new Date().getDay()+6)%7):S.plan.idx%p.days.length;return {p,idx,day:p.days[idx]};}
 function renderBody(){
@@ -600,6 +600,13 @@ function warmLogSheet(){const w=(S.gym&&S.gym.date===today()&&S.gym.warm)||{incl
     $("#warm-save").onclick=()=>{const tk=today();if(!S.gym||S.gym.date!==tk)S.gym={date:tk,start:0,end:0};S.gym.warm=calc();save();closeSheet();};});}
 H.gymOn=gymOn;
 
+function editWorkout(id,fresh){const w=S.workouts.find(x=>x.id===id);if(!w)return;
+  openSheet(head(fresh?L3("训练已记录","Workout saved","Жаттығу жазылды"):esc(w.name))+`<div class="hint" style="margin-top:0">${L3("戴了手表？把手表上的时间和 ACTIVE KCAL（活动卡路里）填进来，更准。","Wore a watch? Enter its time and ACTIVE KCAL, it's more accurate.","Сағат болса, оның уақыты мен ACTIVE KCAL санын енгізіңіз.")}</div>
+   <div class="steps" style="grid-template-columns:1fr 1fr">${H.stepper("wem",L3("时间（分钟）","Minutes","Минут"),w.min||0,5)}${H.stepper("wek",L3("消耗（大卡）","Calories (kcal)","Калория"),w.kcal||0,10)}</div>
+   <button class="go" id="we-save" style="background:var(--move)">${t("save")}</button>`,()=>{
+    $("#we-save").onclick=()=>{const m=Math.round(+$("#st-wem").value||0),k=Math.round(+$("#st-wek").value||0);if(m!==w.min||k!==w.kcal){w.min=m;w.kcal=k;w.src="watch";if(S.gym&&S.gym.date===w.date&&S.gym.end&&w.kind==="力量")S.gym.start=S.gym.end-m*60000;}save();closeSheet();};});}
+H.editWorkout=editWorkout;
+
 // ---------- weights per set (progressive overload) ----------
 const isLift=e=>e&&!/分钟|min|мин|сек|秒|sec/i.test(String(e[2]))&&!/有氧|cardio|кардио|跑|walk/i.test(String(e[0]));
 const repHi=e=>{const m=String(e[2]).match(/\d+/g);return m?Math.max(...m.map(Number)):10;};
@@ -640,7 +647,7 @@ document.addEventListener("click",e=>{
   const a=e.target.closest("[data-seg]");if(a){bodySeg=a.dataset.seg;renderBody();}
   const fdel=e.target.closest("[data-fdel]");if(fdel){const s=+fdel.dataset.fdel;const x=S.fasts.find(y=>y.s===s);if(!x)return;
     openSheet(`<h3>${{zh:"删除这次断食？",en:"Delete this fast?",kk:"Бұл оразаны жою керек пе?"}[S.settings.lang]}<button data-close>${t("cancel")}</button></h3><div class="hint">${fmtDay(dkey(new Date(x.e)))} · ${fmtHM((x.e-x.s)/60000)}</div><button class="go" id="fdel-ok" style="background:var(--move)">${t("del")}</button>`,()=>{$("#fdel-ok").onclick=()=>{S.fasts=S.fasts.filter(y=>y.s!==s);if(S.fast.lastEnd===x.e)S.fast.lastEnd=0;save();closeSheet();};});return;}
-  const b=e.target.closest("button,[data-hdel],[data-pex],[data-exo]");if(!b)return;const d=b.dataset;
+  const b=e.target.closest("button,[data-hdel],[data-pex],[data-exo],[data-wed]");if(!b)return;const d=b.dataset;
   if(d.close!==undefined){closeSheet();return;}
   if(d.step){const[f,s]=d.step.split("|");const el=$("#st-"+f);const dec=(s.split(".")[1]||"").length;el.value=Math.max(0,+((parseFloat(el.value)||0)+parseFloat(s)).toFixed(dec));el.dispatchEvent(new Event("input",{bubbles:true}));return;}
   if(d.openSettings!==undefined){settingsSheet();return;}
@@ -654,6 +661,7 @@ document.addEventListener("click",e=>{
   if(d.td){S.todos=S.todos.filter(q=>q.id!==d.td);save();return;}
   if(d.sd){S.study=S.study.filter(x=>x.id!==d.sd);save();return;}
   if(d.wd){S.workouts=S.workouts.filter(x=>x.id!==d.wd);save();return;}
+  if(d.wed){editWorkout(d.wed);return;}
   if(d.fd){S.food=S.food.filter(x=>x.id!==d.fd);save();return;}
   if(d.subj!==undefined){if(T.running)return;T.subject=T.subject===d.subj?"":d.subj;persistT();renderStudy();return;}
   if(d.subjOpen){subjSheet(d.subjOpen);return;}
@@ -693,7 +701,7 @@ document.addEventListener("click",e=>{
       if(!cp.day.rest&&cp.day.ex&&cp.day.ex.length){const sets=(S.planChecks.date===tk&&S.planChecks.sets)||{};const done=cp.day.ex.filter((x,i)=>sets[i]>0);const list=done.length?done:cp.day.ex;
         const nSets=done.length?done.reduce((a,x)=>a+Math.min(x[1],sets[cp.day.ex.indexOf(x)]),0):cp.day.ex.reduce((a,x)=>a+x[1],0);
         if(gymOn())S.gym.end=Date.now();const real=S.gym&&S.gym.date===tk&&S.gym.start?gymMin():0;const kc=sessionKcal(cp.day.ex,sets);const w=S.gym&&S.gym.date===tk&&S.gym.warm;
-        S.workouts.push({id:uid(),kind:"力量",name:pick(cp.day.name),date:tk,ts:Date.now(),min:real||Math.max(30,Math.round(nSets*2.5)),kcal:kc.w+(done.length?kc.s:kc.plan),detail:(w?L3(`热身 爬坡${w.incline}% ${w.min}分钟、`,`warm-up ${w.incline}% ${w.min} min, `,`қыздыру ${w.min} мин, `):"")+list.map(x=>x[0]).join("、")});toast(t("logged",{x:pick(cp.day.name)}));}
+        const wid=uid();S.workouts.push({id:wid,kind:"力量",name:pick(cp.day.name),date:tk,ts:Date.now(),min:real||Math.max(30,Math.round(nSets*2.5)),kcal:kc.w+(done.length?kc.s:kc.plan),detail:(w?L3(`热身 爬坡${w.incline}% ${w.min}分钟、`,`warm-up ${w.incline}% ${w.min} min, `,`қыздыру ${w.min} мин, `):"")+list.map(x=>x[0]).join("、")});toast(t("logged",{x:pick(cp.day.name)}));S.plan.idx++;S.plan.doneDate=tk;S.planChecks={};rest=null;save();editWorkout(wid,true);break;}
       S.plan.idx++;S.plan.doneDate=tk;S.planChecks={};rest=null;save();break;}
     case "fast-cancel": S.fast.on=false;S.fast.start=0;S.fast.lastEnd=S.fast.lastEnd||0;toast({zh:"已取消，没有记录",en:"Cancelled, not saved",kk:"Болдырылмады"}[S.settings.lang]);save();break;
     case "fast-toggle": {const f=S.fast;if(f.on&&Date.now()-f.start<60000){f.on=false;f.start=0;toast({zh:"已取消",en:"Cancelled",kk:"Болдырылмады"}[S.settings.lang]);save();break;}
