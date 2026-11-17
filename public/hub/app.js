@@ -254,7 +254,7 @@ const kindName=k=>(L().kinds||{})[k]||k;
 function moveLine(w){return w.kind==="力量"?[w.sets&&w.reps?`${w.sets} ${t("sets")} × ${w.reps} ${t("reps")}`:"",w.kg?`${w.kg} kg`:"",w.detail||""].filter(Boolean).join(" · "):[w.km?`${w.km} ${t("km")}`:"",w.detail||""].filter(Boolean).join(" · ");}
 function moveItem(w,showDay){return `<li><div class="bul" style="background:color-mix(in srgb,${KIND[w.kind]||KIND.其他} 20%,transparent)">${ic(w.kind==="有氧"?"h-run":"i-move","","stroke:"+(KIND[w.kind]||KIND.其他))}</div><div class="mid"><b>${esc(w.name)}</b><small>${esc(kindName(w.kind))}${moveLine(w)?" · "+esc(moveLine(w)):""}${showDay?" · "+fmtDay(w.date):""}</small></div><div class="rt num">${w.min?w.min+" "+t("min"):""}</div><button class="del" data-wd="${w.id}">${ic("i-x")}</button></li>`;}
 // A weekly plan (7 days, Monday first) follows the calendar; other plans go day by day.
-function curPlan(){if(!S.plan)return null;const p=DATA.PLANS.find(x=>x.id===S.plan.id);if(!p)return null;const idx=p.weekly?(new Date().getDay()+6)%7:S.plan.idx%p.days.length;return {p,idx,day:p.days[idx]};}
+function curPlan(){if(!S.plan)return null;const p=DATA.PLANS.find(x=>x.id===S.plan.id);if(!p)return null;const ov=S.plan.ovr&&S.plan.ovr.date===today()?S.plan.ovr.idx:null;const idx=p.weekly?(ov!=null?ov:(new Date().getDay()+6)%7):S.plan.idx%p.days.length;return {p,idx,day:p.days[idx]};}
 function renderBody(){
   $$("#body-seg button").forEach(b=>b.classList.toggle("on",b.dataset.s===bodySeg));
   $$(".bseg").forEach(x=>x.style.display=x.dataset.s===bodySeg?"block":"none");
@@ -370,7 +370,7 @@ function weightSheet(){const last=S.weights.slice().sort((a,b)=>a.date<b.date?-1
   openSheet(head(t("logWeight"))+`<div class="steps" style="grid-template-columns:1fr">${stepper("w","kg",last?last.kg:(S.profile.w||65),.1)}</div><div class="hint">${last?t("lastTime",{d:fmtDay(last.date),x:last.kg+" kg"}):t("wSameDay")}</div><button class="go" id="wt-save" style="background:var(--move)">${t("save")}</button>`,()=>{
     $("#wt-save").onclick=()=>{const v=parseFloat($("#st-w").value);if(!(v>20&&v<300)){toast(t("wBad"));return;}const tk=today();S.weights=S.weights.filter(w=>w.date!==tk);S.weights.push({date:tk,kg:Math.round(v*10)/10});save();closeSheet();toast(t("logged",{x:v.toFixed(1)+" kg"}));};});}
 function planSheet(){
-  openSheet(head(t("choosePlan"))+DATA.PLANS.map(p=>`<div class="plan-opt"><div class="ph"><div><b>${esc(pick(p.name))}</b><div class="k">${t("planBy",{x:esc(p.author)})} · ${t("planCycle",{n:p.days.length})}</div></div><button class="tbtn" data-use-plan="${p.id}">${t("startPlan")}</button></div><div class="pdays">${p.days.map((d,i)=>`<button class="pday ${S.plan&&S.plan.id===p.id&&(p.weekly?(new Date().getDay()+6)%7:S.plan.idx%p.days.length)===i?"on":""}" data-plan-day="${p.id}|${i}"><span class="num">${p.weekly?L().wdMon[i]:i+1}</span>${esc(d.name?pick(d.name):t("restDay"))}</button>`).join("")}</div></div>`).join("")+`<div class="hint">${t("chooseDay")}</div>`);}
+  openSheet(head(t("choosePlan"))+DATA.PLANS.map(p=>`<div class="plan-opt"><div class="ph"><div><b>${esc(pick(p.name))}</b><div class="k">${t("planBy",{x:esc(p.author)})} · ${t("planCycle",{n:p.days.length})}</div></div><button class="tbtn" data-use-plan="${p.id}">${t("startPlan")}</button></div><div class="pdays">${p.days.map((d,i)=>`<button class="pday ${S.plan&&S.plan.id===p.id&&(p.weekly?(curPlan()||{idx:(new Date().getDay()+6)%7}).idx:S.plan.idx%p.days.length)===i?"on":""}" data-plan-day="${p.id}|${i}"><span class="num">${p.weekly?L().wdMon[i]:i+1}</span>${esc(d.name?pick(d.name):t("restDay"))}</button>`).join("")}</div></div>`).join("")+`<div class="hint">${t("chooseDay")}</div>`);}
 function foodSheet(){
   const h=new Date().getHours();let meal=h<11?0:h<16?1:h<21?2:3,cat=h<11?"c":0,sel=null;
   openSheet(head(t("logFood"))+`<div class="seg" id="f-meal" style="margin:0 0 12px;width:auto">${L().meals.map((m,i)=>`<button data-m="${i}" class="${i===meal?"on":""}">${m}</button>`).join("")}</div>
@@ -601,7 +601,7 @@ document.addEventListener("click",e=>{
     if(k<cur){sets[i]=k;rest=null;logLift(i,k,false);}else{logLift(i,k,true);sets[i]=k+1;const cp=curPlan();const ex=cp&&cp.day.ex[i];if(ex&&ex[3]&&!(i===cp.day.ex.length-1&&k+1>=ex[1]))startRest(ex[3],ex[0]);}save();return;}
   if(d.pex!==undefined){const tk=today();if(S.planChecks.date!==tk)S.planChecks={date:tk,c:[]};const i=+d.pex,c=S.planChecks.c,j=c.indexOf(i);if(j>=0)c.splice(j,1);else c.push(i);save();return;}
   if(d.usePlan){S.plan={id:d.usePlan,idx:0,doneDate:null};save();closeSheet();return;}
-  if(d.planDay){const[id,i]=d.planDay.split("|");if((DATA.PLANS.find(x=>x.id===id)||{}).weekly){S.plan={id,idx:0,doneDate:null};save();closeSheet();return;}S.plan={id,idx:+i,doneDate:null};S.planChecks={};save();closeSheet();return;}
+  if(d.planDay){const[id,i]=d.planDay.split("|");if((DATA.PLANS.find(x=>x.id===id)||{}).weekly){const keep=S.plan&&S.plan.id===id?S.plan:{id,idx:0,doneDate:null};keep.ovr={date:today(),idx:+i};S.plan=keep;S.planChecks={};save();closeSheet();return;}S.plan={id,idx:+i,doneDate:null};S.planChecks={};save();closeSheet();return;}
   if(d.fh){S.settings.fastH=+d.fh;save();return;}
   switch(b.id){
     case "new-subj": case "add-subj": newSubjSheet();break;
