@@ -252,7 +252,7 @@ function tips(el,W){const tip=el.querySelector(".tip"),svg=el.querySelector("svg
 // ---------- body ----------
 const kindName=k=>(L().kinds||{})[k]||k;
 function moveLine(w){return w.kind==="力量"?[w.sets&&w.reps?`${w.sets} ${t("sets")} × ${w.reps} ${t("reps")}`:"",w.kg?`${w.kg} kg`:"",w.detail||""].filter(Boolean).join(" · "):[w.km?`${w.km} ${t("km")}`:"",w.detail||""].filter(Boolean).join(" · ");}
-function moveItem(w,showDay){return `<li><div class="bul" style="background:color-mix(in srgb,${KIND[w.kind]||KIND.其他} 20%,transparent)">${ic(w.kind==="有氧"?"h-run":"i-move","","stroke:"+(KIND[w.kind]||KIND.其他))}</div><div class="mid"><b>${esc(w.name)}</b><small>${esc(kindName(w.kind))}${moveLine(w)?" · "+esc(moveLine(w)):""}${showDay?" · "+fmtDay(w.date):""}</small></div><div class="rt num">${w.min?w.min+" "+t("min"):""}</div><button class="del" data-wd="${w.id}">${ic("i-x")}</button></li>`;}
+function moveItem(w,showDay){return `<li><div class="bul" style="background:color-mix(in srgb,${KIND[w.kind]||KIND.其他} 20%,transparent)">${ic(w.kind==="有氧"?"h-run":"i-move","","stroke:"+(KIND[w.kind]||KIND.其他))}</div><div class="mid"><b>${esc(w.name)}</b><small>${esc(kindName(w.kind))}${moveLine(w)?" · "+esc(moveLine(w)):""}${showDay?" · "+fmtDay(w.date):""}</small></div><div class="rt num">${w.min?w.min+" "+t("min"):""}${w.kcal?`<small style="display:block;color:var(--t2)">≈${w.kcal} ${t("kcal")}</small>`:""}</div><button class="del" data-wd="${w.id}">${ic("i-x")}</button></li>`;}
 // A weekly plan (7 days, Monday first) follows the calendar; other plans go day by day.
 function curPlan(){if(!S.plan)return null;const p=DATA.PLANS.find(x=>x.id===S.plan.id);if(!p)return null;const ov=S.plan.ovr&&S.plan.ovr.date===today()?S.plan.ovr.idx:null;const idx=p.weekly?(ov!=null?ov:(new Date().getDay()+6)%7):S.plan.idx%p.days.length;return {p,idx,day:p.days[idx]};}
 function renderBody(){
@@ -267,8 +267,11 @@ function renderBody(){
     $("#plan-card").innerHTML=`<div class="ph"><div><div class="k">${esc(pick(p.name))}</div><b>${p.weekly?(wdi=>L3(["周一","周二","周三","周四","周五","周六","周日"][wdi],["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][wdi],["Дүйсенбі","Сейсенбі","Сәрсенбі","Бейсенбі","Жұма","Сенбі","Жексенбі"][wdi]))((new Date().getDay()+6)%7)+" · "+esc(day.name?pick(day.name):t("restDay")):t("planDay",{n:idx+1,x:esc(day.name?pick(day.name):t("restDay"))})}</b></div><button class="tbtn" id="choose-plan">${t("changePlan")}</button></div>`+
      (doneToday?`<div class="donebox">${ic("i-check")} ${t("planDone")}</div>`:
       (day.rest||!exs.length?"":`${totalSets?`<div class="pbar" style="margin:4px 0 12px"><div style="width:${doneSets/totalSets*100}%;background:var(--move)"></div></div>`:""}
+       ${gymBar(exs,sets)}
        ${day.warm?`<button class="warmrow" id="open-warm">${ic("i-flame","","stroke:var(--todo)")}<span><b>${{zh:"热身",en:"Warm-up",kk:"Жаттығу алды қыздыру"}[S.settings.lang]}</b><small>${day.warm.map(w=>esc(pick(DATA.WARM[w].name))).join(" · ")}</small></span>${ic("i-chev")}</button>`:""}
-       <ul class="exl">${exs.map((e,i)=>{const n=sets[i]||0,full=n>=e[1];return `<li class="${full?"on":""}"><div class="et"><span class="t">${esc(e[0])}</span><span class="num sr">${e[1]} × ${esc(e[2])}${e[3]?` · ${e[3]>=60?(e[3]/60)+"′":e[3]+"″"}`:""}</span></div>${e[4]?`<div class="en">${esc(e[4])}</div>`:""}${liftRow(e,i)}<div class="setdots">${Array.from({length:e[1]},(_,k)=>`<button class="sd ${k<n?"on":""}" data-set="${i}|${k}" aria-label="set ${k+1}">${k<n?ic("i-check"):k+1}</button>`).join("")}</div></li>`;}).join("")}</ul>`)+
+       ${warmLine()}
+       <div class="exh"><span>${L3(`组间休息按每个动作的时间 · 换动作休息 ${Math.round((S.settings.restEx||120)/60*10)/10} 分钟`,`Rest between sets as listed · ${Math.round((S.settings.restEx||120)/60*10)/10} min between exercises`,`Тәсіл арасы көрсетілген · жаттығу арасы ${Math.round((S.settings.restEx||120)/60*10)/10} мин`)}</span><button class="linkbtn" id="ex-sort">${sortMode?t("done"):L3("调整顺序","Reorder","Ретін өзгерту")}</button></div>
+       <ul class="exl">${exOrder(cp).map((i,pos,ord)=>{const e=exs[i];const n=sets[i]||0,full=n>=e[1];return `<li class="${full?"on":""}"><div class="et"><span class="t">${sortMode?`<button class="mv" data-mv="${pos}|-1" ${pos===0?"disabled":""} aria-label="up">↑</button><button class="mv" data-mv="${pos}|1" ${pos===ord.length-1?"disabled":""} aria-label="down">↓</button>`:""}${esc(e[0])}</span><span class="num sr">${e[1]} × ${esc(e[2])}${e[3]?` · ${L3("组间","rest","демалыс")} ${e[3]>=60?(e[3]/60)+"′":e[3]+"″"}`:""} · ≈${e[1]*setKcal()} ${t("kcal")}</span></div>${e[4]?`<div class="en">${esc(e[4])}</div>`:""}${liftRow(e,i)}<div class="setdots">${Array.from({length:e[1]},(_,k)=>`<button class="sd ${k<n?"on":""}" data-set="${i}|${k}" aria-label="set ${k+1}">${k<n?ic("i-check"):k+1}</button>`).join("")}</div></li>`;}).join("")}</ul>${kcalSum(exs,sets)}`)+
       `<div class="btnrow" style="margin-top:12px"><button class="pill pri" id="plan-finish">${day.rest||!exs.length?t("done"):t("finishDay")}</button>${p.weekly?"":`<button class="pill" id="plan-skip" style="flex:0 0 auto;padding:14px 18px">${t("skipDay")}</button>`}</div>`);}
   const tm=S.workouts.filter(w=>w.date===tk).sort((a,b)=>b.ts-a.ts);
   $("#mv-today").textContent=tm.length?moveOn(tk)+" / "+S.settings.moveGoal+" "+t("min"):"";
@@ -544,6 +547,41 @@ function settingsSheet(){const p=S.profile,st=S.settings;
       S.settings.goal=Math.max(10,+$("#st-sg").value||120);S.settings.moveGoal=Math.max(5,+$("#st-mg").value||30);save();closeSheet();};
   });}
 
+// ---------- gym session: timer, warm-up log, calories, starting weights, order ----------
+const bodyKg=()=>latestWeight()||S.profile.w||75;
+const r25=x=>x>=10?Math.round(x/2.5)*2.5:Math.max(1,Math.round(x));
+// A light first weight (kg, per hand for dumbbells) from body weight; null for body-weight or cardio moves.
+const START=[[/有氧|cardio|跑步|快走/i,null],[/双杠|臂屈伸.*自重|引体|俯卧撑|卷腹|举腿|转体|平板支撑/,null],[/杠铃.*卧推|^卧推|平板卧推/,.35,20],[/上斜.*杠铃/,.3,20],[/哑铃.*卧推|上斜.*哑铃|哑铃.*上斜/,.1],[/蝴蝶机夹胸|夹胸|飞鸟(?!.*反向)/,.24],[/颈后.*臂屈伸|过头.*臂屈伸/,.12],[/绳索臂屈伸|下压.*三头|三头.*下压/,.18],[/直臂下压/,.15],[/窄距.*下拉/,.4],[/高位下拉|下拉/,.45],[/划船/,.4],[/牧师凳|弯举(?!.*锤)/,.15],[/锤式/,.12],[/推肩/,.1],[/单边侧平举|侧平举/,.05],[/反向飞鸟/,.2],[/前平举/,.08],[/腿屈伸/,.3],[/腿弯举/,.25],[/腿举|倒蹬/,1],[/深蹲/,.5,20],[/臀推|臀桥/,.6,20],[/硬拉/,.5,20],[/箭步|弓步/,.08],[/提踵/,.5]];
+function startKg(e){const n=String(e[0]);for(const r of START)if(r[0].test(n))return r[1]==null?null:Math.max(r[2]||0,r25(bodyKg()*r[1]));return null;}
+const perHand=e=>/哑铃|单边/.test(String(e[0]));
+// Calories: about 6 kcal per minute of strength work for 75 kg; a set plus its rest is ~2 minutes.
+const setKcal=()=>Math.round(bodyKg()/75*6*2);
+function warmKcal(w){if(!w||!w.min)return 0;const v=(+w.speed||5)*1000/60,g=(+w.incline||0)/100;const vo2=0.1*v+1.8*v*g+3.5;return Math.round(vo2*bodyKg()/1000*5*w.min);}
+const gymOn=()=>S.gym&&S.gym.date===today()&&S.gym.start&&!S.gym.end;
+const gymMin=()=>S.gym&&S.gym.start?Math.max(0,Math.round(((S.gym.end||Date.now())-S.gym.start)/60000)):0;
+const fmtClock=ms=>{const s=Math.max(0,Math.floor(ms/1000));const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+":"+pad(m):m)+":"+pad(s%60);};
+const orderKey=cp=>cp.p.id+"|"+(cp.p.weekly?cp.idx:cp.idx);
+function exOrder(cp){const n=(cp.day.ex||[]).length;const o=(S.planOrder||{})[orderKey(cp)];return Array.isArray(o)&&o.length===n&&o.every(x=>x>=0&&x<n)?o:Array.from({length:n},(_,i)=>i);}
+let sortMode=false;
+function sessionKcal(exs,sets){const w=S.gym&&S.gym.date===today()?warmKcal(S.gym.warm):0;const done=exs.reduce((a,e,i)=>a+Math.min(e[1],sets[i]||0),0);return {w,s:done*setKcal(),plan:exs.reduce((a,e)=>a+e[1],0)*setKcal()};}
+function kcalSum(exs,sets){const k=sessionKcal(exs,sets);return `<div class="ksum">${L3(`已消耗 ≈ <b>${k.w+k.s}</b> 大卡（热身 ${k.w} + 力量 ${k.s}）· 全部做完约 ${k.w+k.plan}`,`Burned ≈ <b>${k.w+k.s}</b> kcal (warm-up ${k.w} + lifting ${k.s}) · all done ≈ ${k.w+k.plan}`,`≈ <b>${k.w+k.s}</b> ккал`)}</div>`;}
+function gymBar(exs,sets){const tk=today();
+  if(gymOn())return `<div class="gymbar on">${ic("i-flame","","stroke:var(--move)")}<span>${L3("训练中","Training","Жаттығуда")}</span><b class="num" id="gym-time">${fmtClock(Date.now()-S.gym.start)}</b><button class="linkbtn" id="gym-stop">${L3("暂停计时","Stop timer","Тоқтату")}</button></div>`;
+  if(S.gym&&S.gym.date===tk&&S.gym.end)return `<div class="gymbar">${ic("i-check","","stroke:var(--habit)")}<span>${L3(`今天练了 ${gymMin()} 分钟`,`Trained ${gymMin()} min today`,`Бүгін ${gymMin()} мин`)}</span><button class="linkbtn" id="gym-start">${L3("继续计时","Resume","Жалғастыру")}</button></div>`;
+  return `<button class="pill pri" id="gym-start" style="width:100%;margin-bottom:10px">${ic("i-play")} ${L3("到健身房了，开始计时","At the gym: start the timer","Залдамын: бастау")}</button>`;}
+function warmLine(){const w=S.gym&&S.gym.date===today()&&S.gym.warm;
+  return w?`<button class="warmlog" id="warm-log">${ic("i-check","","stroke:var(--todo)")}<span>${L3(`热身：爬坡 ${w.incline}% · ${w.speed} km/h · ${w.min} 分钟${w.hr?` · 心率 ${w.hr}`:""}`,`Warm-up: ${w.incline}% · ${w.speed} km/h · ${w.min} min${w.hr?` · HR ${w.hr}`:""}`,`Қыздыру: ${w.incline}% · ${w.speed} км/сағ · ${w.min} мин`)}</span><b class="num">≈${warmKcal(w)} ${t("kcal")}</b></button>`
+   :`<button class="warmlog" id="warm-log">${ic("i-plus","","stroke:var(--todo)")}<span>${L3("记录热身（坡度、速度、时间、心率）","Log warm-up (incline, speed, time, heart rate)","Қыздыруды жазу")}</span></button>`;}
+function warmLogSheet(){const w=(S.gym&&S.gym.date===today()&&S.gym.warm)||{incline:6,speed:5,min:15,hr:""};
+  openSheet(head(L3("记录热身","Log warm-up","Қыздыруды жазу"))+`<div class="hint" style="margin-top:0">${L3("跑步机爬坡走","Treadmill incline walk","Жүгіру жолында еңіспен жүру")}</div>
+   <div class="steps" style="grid-template-columns:1fr 1fr">${H.stepper("wi",L3("坡度 %","Incline %","Еңіс %"),w.incline,1)}${H.stepper("ws",L3("速度 km/h","Speed km/h","Жылдамдық"),w.speed,.5)}${H.stepper("wm",L3("时间（分钟）","Minutes","Минут"),w.min,1)}${H.stepper("wh",L3("最高心率（可不填）","Top heart rate (optional)","Пульс"),w.hr||"",5)}</div>
+   <div class="hint" id="wk-k"></div><button class="go" id="warm-save" style="background:var(--todo)">${t("save")}</button>`,()=>{
+    const calc=()=>({incline:+$("#st-wi").value||0,speed:+$("#st-ws").value||0,min:+$("#st-wm").value||0,hr:+$("#st-wh").value||0});
+    const show=()=>{$("#wk-k").textContent=L3(`大约消耗 ${warmKcal(calc())} 大卡`,`About ${warmKcal(calc())} kcal`,`Шамамен ${warmKcal(calc())} ккал`);};
+    show();$("#sheet-body").addEventListener("input",show);$("#sheet-body").addEventListener("click",()=>setTimeout(show,0));
+    $("#warm-save").onclick=()=>{const tk=today();if(!S.gym||S.gym.date!==tk)S.gym={date:tk,start:0,end:0};S.gym.warm=calc();save();closeSheet();};});}
+H.gymOn=gymOn;
+
 // ---------- weights per set (progressive overload) ----------
 const isLift=e=>e&&!/分钟|min|мин|сек|秒|sec/i.test(String(e[2]))&&!/有氧|cardio|кардио|跑|walk/i.test(String(e[0]));
 const repHi=e=>{const m=String(e[2]).match(/\d+/g);return m?Math.max(...m.map(Number)):10;};
@@ -553,8 +591,9 @@ function liftSuggest(e){const last=liftHist(e[0])[0];if(!last||!last.sets.length
   const step=top>=40?2.5:top>=10?1:0.5;return {last,kg:allTop?+(top+step).toFixed(1):top,up:allTop,hi};}
 function liftRow(e,i){if(!isLift(e))return "";const tk=today();const inp=((S.planChecks.date===tk&&S.planChecks.inp)||{})[i]||{};const sg=liftSuggest(e);
   const todays=(((S.lifts||{})[e[0]]||[]).find(x=>x.date===tk)||{sets:[]}).sets;
-  const kg=inp.kg??(sg?sg.kg:""),r=inp.r??repHi(e);
-  const tip=sg?L3(`上次 ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → 今天加到 ${sg.kg}kg`:` → 今天争取多做 1 次`),`Last ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → go ${sg.kg} kg`:` → aim for +1 rep`),`Соңғы ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → ${sg.kg} кг`:` → +1 рет`)):L3("第一次：填重量和次数，点组号记录","First time: enter weight and reps, tap a set to log","Алғаш рет: салмақ пен рет")
+  const sk=sg?null:startKg(e);
+  const kg=inp.kg??(sg?sg.kg:(sk??"")),r=inp.r??repHi(e);
+  const tip=sg?L3(`上次 ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → 今天加到 ${sg.kg}kg`:` → 今天争取多做 1 次`),`Last ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → go ${sg.kg} kg`:` → aim for +1 rep`),`Соңғы ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → ${sg.kg} кг`:` → +1 рет`)):(sk!=null?L3(`建议从 ${sk} kg${perHand(e)?"（每只手）":""}开始，觉得还能再做 2～3 次就对了，轻了下一组再加`,`Start around ${sk} kg${perHand(e)?" per hand":""}; it should feel like 2–3 reps in reserve`,`${sk} кг-нан бастаңыз`):L3("填重量和次数，点组号记录","Enter weight and reps, tap a set to log","Салмақ пен ретті жазыңыз"))
   return `<div class="lift"><input type="number" inputmode="decimal" step="0.5" min="0" data-lkg="${i}" value="${kg}" placeholder="—" aria-label="kg"><span>kg ×</span><input type="number" inputmode="numeric" min="0" data-lr="${i}" value="${r}" aria-label="reps"><small class="${sg&&sg.up?"up":""}">${esc(tip)}</small></div>${todays.length?`<div class="liftd">${L3("今天","Today","Бүгін")} ${todays.map(s=>`<b>${s.kg}×${s.r}</b>`).join(" ")}</div>`:""}`;}
 function logLift(i,k,on){const cp=curPlan();const e=cp&&cp.day.ex[i];if(!isLift(e))return;const tk=today();S.lifts=S.lifts||{};const arr=S.lifts[e[0]]=S.lifts[e[0]]||[];let d=arr.find(x=>x.date===tk);if(!d){d={date:tk,sets:[]};arr.push(d);}
   if(!on){d.sets=d.sets.slice(0,k);if(!d.sets.length)S.lifts[e[0]]=arr.filter(x=>x!==d);return;}
@@ -598,9 +637,12 @@ document.addEventListener("click",e=>{
   if(d.subj!==undefined){if(T.running)return;T.subject=T.subject===d.subj?"":d.subj;persistT();renderStudy();return;}
   if(d.subjOpen){subjSheet(d.subjOpen);return;}
   if(d.set){const[i,k]=d.set.split("|").map(Number);const tk=today();if(S.planChecks.date!==tk||!S.planChecks.sets)S.planChecks={date:tk,sets:{}};const sets=S.planChecks.sets;const cur=sets[i]||0;
-    if(k<cur){sets[i]=k;rest=null;logLift(i,k,false);}else{logLift(i,k,true);sets[i]=k+1;const cp=curPlan();const ex=cp&&cp.day.ex[i];if(ex&&ex[3]&&!(i===cp.day.ex.length-1&&k+1>=ex[1]))startRest(ex[3],ex[0]);}save();return;}
+    if(k<cur){sets[i]=k;rest=null;logLift(i,k,false);}else{logLift(i,k,true);sets[i]=k+1;const cp=curPlan();const ex=cp&&cp.day.ex[i];
+      if(ex&&cp.day.ex.length&&!gymOn()&&!(S.gym&&S.gym.date===today())){S.gym={date:today(),start:Date.now(),end:0,warm:null};}
+      if(ex){const ord=exOrder(cp);const last=ord[ord.length-1]===i;if(k+1>=ex[1]){if(!last)startRest(S.settings.restEx||120,L3("换下一个动作","Next exercise","Келесі жаттығу"));}else if(ex[3])startRest(ex[3],ex[0]);}}save();return;}
   if(d.pex!==undefined){const tk=today();if(S.planChecks.date!==tk)S.planChecks={date:tk,c:[]};const i=+d.pex,c=S.planChecks.c,j=c.indexOf(i);if(j>=0)c.splice(j,1);else c.push(i);save();return;}
   if(d.usePlan){S.plan={id:d.usePlan,idx:0,doneDate:null};save();closeSheet();return;}
+  if(d.mv){const cp=curPlan();if(cp){const [pos,dir]=d.mv.split("|").map(Number);const o=exOrder(cp).slice();const j=pos+dir;if(j>=0&&j<o.length){[o[pos],o[j]]=[o[j],o[pos]];S.planOrder=S.planOrder||{};S.planOrder[orderKey(cp)]=o;save();}}return;}
   if(d.planDay){const[id,i]=d.planDay.split("|");if((DATA.PLANS.find(x=>x.id===id)||{}).weekly){const keep=S.plan&&S.plan.id===id?S.plan:{id,idx:0,doneDate:null};keep.ovr={date:today(),idx:+i};S.plan=keep;S.planChecks={};save();closeSheet();return;}S.plan={id,idx:+i,doneDate:null};S.planChecks={};save();closeSheet();return;}
   if(d.fh){S.settings.fastH=+d.fh;save();return;}
   switch(b.id){
@@ -616,6 +658,10 @@ document.addEventListener("click",e=>{
     case "sign-out": HUB.sb.auth.signOut().finally(()=>location.reload());break;
     case "choose-plan": planSheet();break;
     case "open-warm": warmSheet();break;
+    case "warm-log": warmLogSheet();break;
+    case "gym-start": {const tk=today();if(S.gym&&S.gym.date===tk&&S.gym.end){S.gym.start+=Date.now()-S.gym.end;S.gym.end=0;}else S.gym={date:tk,start:Date.now(),end:0,warm:(S.gym&&S.gym.date===tk&&S.gym.warm)||null};save();break;}
+    case "gym-stop": if(gymOn()){S.gym.end=Date.now();save();}break;
+    case "ex-sort": sortMode=!sortMode;render();break;
     case "rest-skip": rest=null;drawRest();break;
     case "rest-plus": if(rest){rest.end+=15000;rest.total+=15;drawRest();}break;
     case "h-edit": editing=!editing;renderHabits();break;
@@ -623,7 +669,8 @@ document.addEventListener("click",e=>{
     case "plan-finish": {const cp=curPlan();if(!cp)break;const tk=today();
       if(!cp.day.rest&&cp.day.ex&&cp.day.ex.length){const sets=(S.planChecks.date===tk&&S.planChecks.sets)||{};const done=cp.day.ex.filter((x,i)=>sets[i]>0);const list=done.length?done:cp.day.ex;
         const nSets=done.length?done.reduce((a,x)=>a+Math.min(x[1],sets[cp.day.ex.indexOf(x)]),0):cp.day.ex.reduce((a,x)=>a+x[1],0);
-        S.workouts.push({id:uid(),kind:"力量",name:pick(cp.day.name),date:tk,ts:Date.now(),min:Math.max(30,Math.round(nSets*2.5)),detail:list.map(x=>x[0]).join("、")});toast(t("logged",{x:pick(cp.day.name)}));}
+        if(gymOn())S.gym.end=Date.now();const real=S.gym&&S.gym.date===tk&&S.gym.start?gymMin():0;const kc=sessionKcal(cp.day.ex,sets);const w=S.gym&&S.gym.date===tk&&S.gym.warm;
+        S.workouts.push({id:uid(),kind:"力量",name:pick(cp.day.name),date:tk,ts:Date.now(),min:real||Math.max(30,Math.round(nSets*2.5)),kcal:kc.w+(done.length?kc.s:kc.plan),detail:(w?L3(`热身 爬坡${w.incline}% ${w.min}分钟、`,`warm-up ${w.incline}% ${w.min} min, `,`қыздыру ${w.min} мин, `):"")+list.map(x=>x[0]).join("、")});toast(t("logged",{x:pick(cp.day.name)}));}
       S.plan.idx++;S.plan.doneDate=tk;S.planChecks={};rest=null;save();break;}
     case "fast-cancel": S.fast.on=false;S.fast.start=0;S.fast.lastEnd=S.fast.lastEnd||0;toast({zh:"已取消，没有记录",en:"Cancelled, not saved",kk:"Болдырылмады"}[S.settings.lang]);save();break;
     case "fast-toggle": {const f=S.fast;if(f.on&&Date.now()-f.start<60000){f.on=false;f.start=0;toast({zh:"已取消",en:"Cancelled",kk:"Болдырылмады"}[S.settings.lang]);save();break;}
@@ -665,6 +712,7 @@ function tick(){tickN++;
   const v=location.hash.slice(1);
   if(v==="study"||T.running)drawTimer();
   H.restTick();
+  if(gymOn()){const g=$("#gym-time");if(g)g.textContent=fmtClock(Date.now()-S.gym.start);}
   if(tickN%20===0&&(v==="body"||v===""||v==="today")){ if(v==="body")renderFast(); else renderToday(); }
 }
 $("#tm-start").onclick=()=>{try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume();}catch(e){}
