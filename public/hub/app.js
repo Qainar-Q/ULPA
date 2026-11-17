@@ -262,17 +262,7 @@ function renderBody(){
   // plan
   const cp=curPlan();
   if(!cp){$("#plan-card").innerHTML=`<div class="empty" style="padding:6px 0 12px">${t("noPlan")}</div><button class="pill" id="choose-plan" style="width:100%">${ic("i-list")} ${t("choosePlan")}</button>`;}
-  else{const {p,idx,day}=cp;const doneToday=S.plan.doneDate===tk;const sets=(S.planChecks.date===tk&&S.planChecks.sets)||{};
-    const exs=day.ex||[];const totalSets=exs.reduce((a,x)=>a+x[1],0),doneSets=exs.reduce((a,x,i)=>a+Math.min(x[1],sets[i]||0),0);
-    $("#plan-card").innerHTML=`<div class="ph"><div><div class="k">${esc(pick(p.name))}</div><b>${p.weekly?(wdi=>L3(["周一","周二","周三","周四","周五","周六","周日"][wdi],["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][wdi],["Дүйсенбі","Сейсенбі","Сәрсенбі","Бейсенбі","Жұма","Сенбі","Жексенбі"][wdi]))((new Date().getDay()+6)%7)+" · "+esc(day.name?pick(day.name):t("restDay")):t("planDay",{n:idx+1,x:esc(day.name?pick(day.name):t("restDay"))})}</b></div><button class="tbtn" id="choose-plan">${t("changePlan")}</button></div>`+
-     (doneToday?`<div class="donebox">${ic("i-check")} ${t("planDone")}</div>`:
-      (day.rest||!exs.length?"":`${totalSets?`<div class="pbar" style="margin:4px 0 12px"><div style="width:${doneSets/totalSets*100}%;background:var(--move)"></div></div>`:""}
-       ${gymBar(exs,sets)}
-       ${day.warm?`<button class="warmrow" id="open-warm">${ic("i-flame","","stroke:var(--todo)")}<span><b>${{zh:"热身",en:"Warm-up",kk:"Жаттығу алды қыздыру"}[S.settings.lang]}</b><small>${day.warm.map(w=>esc(pick(DATA.WARM[w].name))).join(" · ")}</small></span>${ic("i-chev")}</button>`:""}
-       ${warmLine()}
-       <div class="exh"><span>${L3(`组间休息按每个动作的时间 · 换动作休息 ${Math.round((S.settings.restEx||120)/60*10)/10} 分钟`,`Rest between sets as listed · ${Math.round((S.settings.restEx||120)/60*10)/10} min between exercises`,`Тәсіл арасы көрсетілген · жаттығу арасы ${Math.round((S.settings.restEx||120)/60*10)/10} мин`)}</span><button class="linkbtn" id="ex-sort">${sortMode?t("done"):L3("调整顺序","Reorder","Ретін өзгерту")}</button></div>
-       <ul class="exl">${exOrder(cp).map((i,pos,ord)=>{const e=exs[i];const n=sets[i]||0,full=n>=e[1];return `<li class="${full?"on":""}"><div class="et"><span class="t">${sortMode?`<button class="mv" data-mv="${pos}|-1" ${pos===0?"disabled":""} aria-label="up">↑</button><button class="mv" data-mv="${pos}|1" ${pos===ord.length-1?"disabled":""} aria-label="down">↓</button>`:""}${esc(e[0])}</span><span class="num sr">${e[1]} × ${esc(e[2])}${e[3]?` · ${L3("组间","rest","демалыс")} ${e[3]>=60?(e[3]/60)+"′":e[3]+"″"}`:""} · ≈${e[1]*setKcal()} ${t("kcal")}</span></div>${e[4]?`<div class="en">${esc(e[4])}</div>`:""}${liftRow(e,i)}<div class="setdots">${Array.from({length:e[1]},(_,k)=>`<button class="sd ${k<n?"on":""}" data-set="${i}|${k}" aria-label="set ${k+1}">${k<n?ic("i-check"):k+1}</button>`).join("")}</div></li>`;}).join("")}</ul>${kcalSum(exs,sets)}`)+
-      `<div class="btnrow" style="margin-top:12px"><button class="pill pri" id="plan-finish">${day.rest||!exs.length?t("done"):t("finishDay")}</button>${p.weekly?"":`<button class="pill" id="plan-skip" style="flex:0 0 auto;padding:14px 18px">${t("skipDay")}</button>`}</div>`);}
+  else $("#plan-card").innerHTML=planCard(cp);
   const tm=S.workouts.filter(w=>w.date===tk).sort((a,b)=>b.ts-a.ts);
   $("#mv-today").textContent=tm.length?moveOn(tk)+" / "+S.settings.moveGoal+" "+t("min"):"";
   $("#today-moves").innerHTML=tm.length?tm.map(w=>moveItem(w,false)).join(""):`<li class="empty" style="display:block">${t("noMoveToday")}</li>`;
@@ -563,6 +553,34 @@ const fmtClock=ms=>{const s=Math.max(0,Math.floor(ms/1000));const h=Math.floor(s
 const orderKey=cp=>cp.p.id+"|"+(cp.p.weekly?cp.idx:cp.idx);
 function exOrder(cp){const n=(cp.day.ex||[]).length;const o=(S.planOrder||{})[orderKey(cp)];return Array.isArray(o)&&o.length===n&&o.every(x=>x>=0&&x<n)?o:Array.from({length:n},(_,i)=>i);}
 let sortMode=false;
+let expEx=null;
+function planCard(cp){const {p,idx,day}=cp;const tk=today();const doneToday=S.plan.doneDate===tk;const sets=(S.planChecks.date===tk&&S.planChecks.sets)||{};
+  const exs=day.ex||[];const totalSets=exs.reduce((a,x)=>a+x[1],0),doneSets=exs.reduce((a,x,i)=>a+Math.min(x[1],sets[i]||0),0);
+  const wdi=(new Date().getDay()+6)%7;const dayName=esc(day.name?pick(day.name):t("restDay"));
+  const title=p.weekly?L3(["周一","周二","周三","周四","周五","周六","周日"][wdi],["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][wdi],["Дүйсенбі","Сейсенбі","Сәрсенбі","Бейсенбі","Жұма","Сенбі","Жексенбі"][wdi]):t("planDay",{n:idx+1,x:""}).replace(/ · $/,"");
+  let h=`<div class="pc-h"><div><div class="pc-k">${esc(pick(p.name))} · ${title}</div><div class="pc-t">${dayName}</div></div><button class="tbtn" id="choose-plan">${t("changePlan")}</button></div>`;
+  if(doneToday){const w=S.workouts.filter(x=>x.date===tk&&x.kind==="力量").pop();return h+`<div class="pc-done">${ic("i-check")}<div><b>${t("planDone")}</b>${w?`<small>${w.min} ${t("min")}${w.kcal?` · ≈${w.kcal} ${t("kcal")}`:""}</small>`:""}</div></div>`;}
+  if(day.rest||!exs.length)return h+`<div class="pc-rest">${L3("今天休息。散散步、拉伸 10 分钟、睡够 8 小时，肌肉就是这时候长的。","Rest day. Walk, stretch for 10 minutes and sleep 8 hours: that's when muscle grows.","Демалыс күні.")}</div><button class="pill pri" id="plan-finish" style="width:100%;margin-top:12px">${t("done")}</button>`;
+  const k=sessionKcal(exs,sets);const on=gymOn();const started=S.gym&&S.gym.date===tk&&S.gym.start;
+  h+=`<div class="pc-stats"><div><span>${L3("时长","Time","Уақыт")}</span><b class="num" id="gym-time">${started?fmtClock((S.gym.end||Date.now())-S.gym.start):"0:00"}</b></div><div><span>${L3("组数","Sets","Тәсіл")}</span><b class="num">${doneSets}<small>/${totalSets}</small></b></div><div><span>${L3("消耗","Burned","Күйді")}</span><b class="num">${k.w+k.s}<small> ${t("kcal")}</small></b></div></div>
+   <div class="pc-bar"><i style="width:${totalSets?doneSets/totalSets*100:0}%"></i></div>`;
+  h+=on?`<button class="pc-go on" id="gym-stop">${ic("i-pause")}<span>${L3("训练中 · 点一下暂停计时","Training · tap to pause the clock","Жаттығуда")}</span></button>`
+       :`<button class="pc-go" id="gym-start">${ic("i-play")}<span>${started?L3("继续计时","Resume the clock","Жалғастыру"):L3("到健身房了，开始","At the gym: start","Залдамын: бастау")}</span></button>`;
+  const w=S.gym&&S.gym.date===tk&&S.gym.warm;
+  if(day.warm)h+=`<div class="pc-warm"><button id="warm-log">${ic("i-flame")}<span><b>${L3("热身","Warm-up","Қыздыру")}</b><small>${w?L3(`爬坡 ${w.incline}% · ${w.speed} km/h · ${w.min} 分钟${w.hr?` · 心率 ${w.hr}`:""}`,`${w.incline}% · ${w.speed} km/h · ${w.min} min${w.hr?` · HR ${w.hr}`:""}`,`${w.incline}% · ${w.min} мин`):L3("点这里记录坡度、速度、时间","Tap to log incline, speed, time","Жазу үшін басыңыз")}</small></span>${w?`<em class="num">${warmKcal(w)}<small> ${t("kcal")}</small></em>`:ic("i-plus")}</button><button class="pc-how" id="open-warm">${L3("动作","How","Қалай")}</button></div>`;
+  const ord=exOrder(cp);const cur=ord.find(i=>(sets[i]||0)<exs[i][1]);const open=expEx!=null&&ord.includes(expEx)?expEx:cur;
+  h+=`<div class="pc-sec"><span>${L3(`动作 · 换动作休息 ${Math.round((S.settings.restEx||120)/60*10)/10} 分钟`,`Exercises · ${Math.round((S.settings.restEx||120)/60*10)/10} min between`,`Жаттығулар`)}</span><button id="ex-sort">${sortMode?t("done"):L3("调整顺序","Reorder","Ретін өзгерту")}</button></div><ol class="pc-ex">`;
+  ord.forEach((i,pos)=>{const e=exs[i];const n=sets[i]||0,full=n>=e[1],isOpen=i===open&&!sortMode;
+    const todays=(((S.lifts||{})[e[0]]||[]).find(x=>x.date===tk)||{sets:[]}).sets;
+    h+=`<li class="${full?"done":""} ${isOpen?"open":""} ${i===cur?"cur":""}">
+      <div class="ex-h" ${sortMode?"":`data-exo="${i}"`}>${sortMode?`<span class="ex-mv"><button class="mv" data-mv="${pos}|-1" ${pos===0?"disabled":""} aria-label="up">${ic("i-chev")}</button><button class="mv dn" data-mv="${pos}|1" ${pos===ord.length-1?"disabled":""} aria-label="down">${ic("i-chev")}</button></span>`:`<span class="ex-n num">${full?ic("i-check"):pos+1}</span>`}
+        <span class="ex-t"><b>${esc(e[0])}</b><small>${full&&todays.length?todays.map(s=>s.kg+"×"+s.r).join(" · "):`${e[1]} × ${esc(e[2])}${e[3]?` · ${L3("组间","rest","демалыс")} ${e[3]>=60?(e[3]/60)+"′":e[3]+"″"}`:""} · ≈${e[1]*setKcal()} ${t("kcal")}`}</small></span>
+        ${!isOpen&&!sortMode&&!full?`<span class="ex-dots">${Array.from({length:e[1]},(_,q)=>`<i class="${q<n?"on":""}"></i>`).join("")}</span>`:""}</div>
+      ${isOpen?`<div class="ex-b">${e[4]?`<div class="ex-note">${esc(e[4])}</div>`:""}${liftRow(e,i)}<div class="setdots">${Array.from({length:e[1]},(_,q)=>`<button class="sd ${q<n?"on":""} ${q===n?"next":""}" data-set="${i}|${q}" aria-label="set ${q+1}">${q<n?ic("i-check"):q+1}</button>`).join("")}</div></div>`:""}
+    </li>`;});
+  h+=`</ol><div class="pc-sum">${L3(`热身 ${k.w} + 力量 ${k.s} = <b>${k.w+k.s}</b> 大卡 · 全部做完约 ${k.w+k.plan}`,`Warm-up ${k.w} + lifting ${k.s} = <b>${k.w+k.s}</b> kcal · all done ≈ ${k.w+k.plan}`,`${k.w+k.s} ккал`)}</div>
+   <div class="btnrow" style="margin-top:12px"><button class="pill pri" id="plan-finish">${t("finishDay")}</button>${p.weekly?"":`<button class="pill" id="plan-skip" style="flex:0 0 auto;padding:14px 18px">${t("skipDay")}</button>`}</div>`;
+  return h;}
 function sessionKcal(exs,sets){const w=S.gym&&S.gym.date===today()?warmKcal(S.gym.warm):0;const done=exs.reduce((a,e,i)=>a+Math.min(e[1],sets[i]||0),0);return {w,s:done*setKcal(),plan:exs.reduce((a,e)=>a+e[1],0)*setKcal()};}
 function kcalSum(exs,sets){const k=sessionKcal(exs,sets);return `<div class="ksum">${L3(`已消耗 ≈ <b>${k.w+k.s}</b> 大卡（热身 ${k.w} + 力量 ${k.s}）· 全部做完约 ${k.w+k.plan}`,`Burned ≈ <b>${k.w+k.s}</b> kcal (warm-up ${k.w} + lifting ${k.s}) · all done ≈ ${k.w+k.plan}`,`≈ <b>${k.w+k.s}</b> ккал`)}</div>`;}
 function gymBar(exs,sets){const tk=today();
@@ -593,8 +611,8 @@ function liftRow(e,i){if(!isLift(e))return "";const tk=today();const inp=((S.pla
   const todays=(((S.lifts||{})[e[0]]||[]).find(x=>x.date===tk)||{sets:[]}).sets;
   const sk=sg?null:startKg(e);
   const kg=inp.kg??(sg?sg.kg:(sk??"")),r=inp.r??repHi(e);
-  const tip=sg?L3(`上次 ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → 今天加到 ${sg.kg}kg`:` → 今天争取多做 1 次`),`Last ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → go ${sg.kg} kg`:` → aim for +1 rep`),`Соңғы ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → ${sg.kg} кг`:` → +1 рет`)):(sk!=null?L3(`建议从 ${sk} kg${perHand(e)?"（每只手）":""}开始，觉得还能再做 2～3 次就对了，轻了下一组再加`,`Start around ${sk} kg${perHand(e)?" per hand":""}; it should feel like 2–3 reps in reserve`,`${sk} кг-нан бастаңыз`):L3("填重量和次数，点组号记录","Enter weight and reps, tap a set to log","Салмақ пен ретті жазыңыз"))
-  return `<div class="lift"><input type="number" inputmode="decimal" step="0.5" min="0" data-lkg="${i}" value="${kg}" placeholder="—" aria-label="kg"><span>kg ×</span><input type="number" inputmode="numeric" min="0" data-lr="${i}" value="${r}" aria-label="reps"><small class="${sg&&sg.up?"up":""}">${esc(tip)}</small></div>${todays.length?`<div class="liftd">${L3("今天","Today","Бүгін")} ${todays.map(s=>`<b>${s.kg}×${s.r}</b>`).join(" ")}</div>`:""}`;}
+  const tip=sg?L3(`上次 ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → 今天加到 ${sg.kg}kg`:` → 今天争取多做 1 次`),`Last ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → go ${sg.kg} kg`:` → aim for +1 rep`),`Соңғы ${sg.last.sets.map(s=>s.kg+"×"+s.r).join(" ")}`+(sg.up?` → ${sg.kg} кг`:` → +1 рет`)):(sk!=null?L3(`建议从 ${sk} kg${perHand(e)?"（每只手）":""}开始，还能再做 2～3 次就对了`,`Start around ${sk} kg${perHand(e)?" per hand":""}; it should feel like 2–3 reps in reserve`,`${sk} кг-нан бастаңыз`):L3("填重量和次数，点组号记录","Enter weight and reps, tap a set to log","Салмақ пен ретті жазыңыз"))
+  return `<div class="lift"><label><input type="number" inputmode="decimal" step="0.5" min="0" data-lkg="${i}" value="${kg}" placeholder="—" aria-label="kg"><span>kg</span></label><i>×</i><label><input type="number" inputmode="numeric" min="0" data-lr="${i}" value="${r}" aria-label="reps"><span>${L3("次","reps","рет")}</span></label></div><div class="lift-tip ${sg&&sg.up?"up":""}">${esc(tip)}</div>${todays.length?`<div class="liftd">${L3("今天","Today","Бүгін")} ${todays.map(s=>`<b>${s.kg}×${s.r}</b>`).join(" ")}</div>`:""}`;}
 function logLift(i,k,on){const cp=curPlan();const e=cp&&cp.day.ex[i];if(!isLift(e))return;const tk=today();S.lifts=S.lifts||{};const arr=S.lifts[e[0]]=S.lifts[e[0]]||[];let d=arr.find(x=>x.date===tk);if(!d){d={date:tk,sets:[]};arr.push(d);}
   if(!on){d.sets=d.sets.slice(0,k);if(!d.sets.length)S.lifts[e[0]]=arr.filter(x=>x!==d);return;}
   const kg=parseFloat(($(`[data-lkg="${i}"]`)||{}).value),r=parseInt(($(`[data-lr="${i}"]`)||{}).value);if(!(kg>=0)||!(r>0))return;
@@ -607,10 +625,13 @@ H.liftHist=liftHist;
 // ---------- rest timer & warm-up ----------
 let rest=null;
 function startRest(sec,name){rest={end:Date.now()+sec*1000,total:sec,name};try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();actx.resume&&actx.resume();}catch(e){}drawRest();}
-function drawRest(){const el=$("#restbar");if(!rest){el.classList.remove("on");return;}const l=Math.max(0,Math.round((rest.end-Date.now())/1000));
-  if(l<=0){rest=null;el.classList.remove("on");beep();toast({zh:"休息结束，开始下一组",en:"Rest over, next set",kk:"Демалыс бітті, келесі тәсіл"}[S.settings.lang]);return;}
-  el.classList.add("on");el.innerHTML=`<div class="rb-fill" style="width:${(1-l/rest.total)*100}%"></div><div class="rb-in"><span>${{zh:"组间休息",en:"Rest",kk:"Демалыс"}[S.settings.lang]}</span><b class="num">${Math.floor(l/60)}:${pad(l%60)}</b><button id="rest-plus">+15″</button><button id="rest-skip">${t("skipDay")}</button></div>`;}
+function drawRest(){const el=$("#restbar");if(!rest){el.classList.remove("on");document.body.classList.remove("resting");return;}const ms=Math.max(0,rest.end-Date.now()),l=Math.ceil(ms/1000);
+  if(ms<=0){rest=null;el.classList.remove("on");document.body.classList.remove("resting");beep();try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}toast(L3("休息结束，开始下一组","Rest over, next set","Демалыс бітті"));return;}
+  const R=96,C=2*Math.PI*R,frac=ms/(rest.total*1000);
+  if(!el.classList.contains("on")||!$("#rb-ring")){el.innerHTML=`<div class="rb-card" role="timer" aria-live="off"><div class="rb-k">${L3("休息","Rest","Демалыс")}</div><div class="rb-ring"><svg class="rb-svg" viewBox="0 0 220 220"><circle cx="110" cy="110" r="${R}" class="rb-bg"/><circle id="rb-ring" cx="110" cy="110" r="${R}" class="rb-fg" stroke-dasharray="${C}" transform="rotate(-90 110 110)"/></svg><div class="rb-time num" id="rb-time"></div></div><div class="rb-next" id="rb-next"></div><div class="rb-btns"><button id="rest-minus">−15″</button><button id="rest-plus">+15″</button><button id="rest-skip" class="pri">${L3("跳过","Skip","Өткізу")}</button></div></div>`;el.classList.add("on");document.body.classList.add("resting");}
+  $("#rb-ring").style.strokeDashoffset=C*(1-frac);$("#rb-time").textContent=Math.floor(l/60)+":"+pad(l%60);$("#rb-next").textContent=rest.name||"";}
 H.restTick=()=>{if(rest)drawRest();};
+setInterval(()=>{if(rest)drawRest();},250);
 function warmSheet(){const cp=curPlan();if(!cp||!cp.day.warm)return;
   openSheet(head({zh:"热身",en:"Warm-up",kk:"Қыздыру"}[S.settings.lang])+cp.day.warm.map((w,i)=>{const x=DATA.WARM[w];return `<div class="warm"><svg viewBox="0 0 200 160" class="fig">${x.svg}</svg><div><div class="k num">${i+1}</div><b>${esc(pick(x.name))}</b><div class="ms">${esc(pick(x.reps))}</div></div></div>`;}).join(""));}
 
@@ -619,7 +640,7 @@ document.addEventListener("click",e=>{
   const a=e.target.closest("[data-seg]");if(a){bodySeg=a.dataset.seg;renderBody();}
   const fdel=e.target.closest("[data-fdel]");if(fdel){const s=+fdel.dataset.fdel;const x=S.fasts.find(y=>y.s===s);if(!x)return;
     openSheet(`<h3>${{zh:"删除这次断食？",en:"Delete this fast?",kk:"Бұл оразаны жою керек пе?"}[S.settings.lang]}<button data-close>${t("cancel")}</button></h3><div class="hint">${fmtDay(dkey(new Date(x.e)))} · ${fmtHM((x.e-x.s)/60000)}</div><button class="go" id="fdel-ok" style="background:var(--move)">${t("del")}</button>`,()=>{$("#fdel-ok").onclick=()=>{S.fasts=S.fasts.filter(y=>y.s!==s);if(S.fast.lastEnd===x.e)S.fast.lastEnd=0;save();closeSheet();};});return;}
-  const b=e.target.closest("button,[data-hdel],[data-pex]");if(!b)return;const d=b.dataset;
+  const b=e.target.closest("button,[data-hdel],[data-pex],[data-exo]");if(!b)return;const d=b.dataset;
   if(d.close!==undefined){closeSheet();return;}
   if(d.step){const[f,s]=d.step.split("|");const el=$("#st-"+f);const dec=(s.split(".")[1]||"").length;el.value=Math.max(0,+((parseFloat(el.value)||0)+parseFloat(s)).toFixed(dec));el.dispatchEvent(new Event("input",{bubbles:true}));return;}
   if(d.openSettings!==undefined){settingsSheet();return;}
@@ -639,9 +660,10 @@ document.addEventListener("click",e=>{
   if(d.set){const[i,k]=d.set.split("|").map(Number);const tk=today();if(S.planChecks.date!==tk||!S.planChecks.sets)S.planChecks={date:tk,sets:{}};const sets=S.planChecks.sets;const cur=sets[i]||0;
     if(k<cur){sets[i]=k;rest=null;logLift(i,k,false);}else{logLift(i,k,true);sets[i]=k+1;const cp=curPlan();const ex=cp&&cp.day.ex[i];
       if(ex&&cp.day.ex.length&&!gymOn()&&!(S.gym&&S.gym.date===today())){S.gym={date:today(),start:Date.now(),end:0,warm:null};}
-      if(ex){const ord=exOrder(cp);const last=ord[ord.length-1]===i;if(k+1>=ex[1]){if(!last)startRest(S.settings.restEx||120,L3("换下一个动作","Next exercise","Келесі жаттығу"));}else if(ex[3])startRest(ex[3],ex[0]);}}save();return;}
+      if(ex){const ord=exOrder(cp);const pos=ord.indexOf(i);const last=pos===ord.length-1;if(k+1>=ex[1]){expEx=null;if(!last){const nx=cp.day.ex[ord[pos+1]];startRest(S.settings.restEx||120,L3(`下一个：${nx[0]}`,`Next: ${nx[0]}`,`Келесі: ${nx[0]}`));}}else if(ex[3])startRest(ex[3],L3(`下一组：${ex[0]} · 第 ${k+2} 组`,`Next: ${ex[0]} · set ${k+2}`,`Келесі: ${ex[0]} · ${k+2}`));}}save();return;}
   if(d.pex!==undefined){const tk=today();if(S.planChecks.date!==tk)S.planChecks={date:tk,c:[]};const i=+d.pex,c=S.planChecks.c,j=c.indexOf(i);if(j>=0)c.splice(j,1);else c.push(i);save();return;}
   if(d.usePlan){S.plan={id:d.usePlan,idx:0,doneDate:null};save();closeSheet();return;}
+  if(d.exo!==undefined){const i=+d.exo;expEx=expEx===i?-1:i;render();return;}
   if(d.mv){const cp=curPlan();if(cp){const [pos,dir]=d.mv.split("|").map(Number);const o=exOrder(cp).slice();const j=pos+dir;if(j>=0&&j<o.length){[o[pos],o[j]]=[o[j],o[pos]];S.planOrder=S.planOrder||{};S.planOrder[orderKey(cp)]=o;save();}}return;}
   if(d.planDay){const[id,i]=d.planDay.split("|");if((DATA.PLANS.find(x=>x.id===id)||{}).weekly){const keep=S.plan&&S.plan.id===id?S.plan:{id,idx:0,doneDate:null};keep.ovr={date:today(),idx:+i};S.plan=keep;S.planChecks={};save();closeSheet();return;}S.plan={id,idx:+i,doneDate:null};S.planChecks={};save();closeSheet();return;}
   if(d.fh){S.settings.fastH=+d.fh;save();return;}
@@ -664,6 +686,7 @@ document.addEventListener("click",e=>{
     case "ex-sort": sortMode=!sortMode;render();break;
     case "rest-skip": rest=null;drawRest();break;
     case "rest-plus": if(rest){rest.end+=15000;rest.total+=15;drawRest();}break;
+    case "rest-minus": if(rest){rest.end-=15000;drawRest();}break;
     case "h-edit": editing=!editing;renderHabits();break;
     case "plan-skip": if(S.plan&&!(curPlan()||{p:{}}).p.weekly){S.plan.idx++;S.planChecks={};save();}break;
     case "plan-finish": {const cp=curPlan();if(!cp)break;const tk=today();
