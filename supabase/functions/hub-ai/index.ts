@@ -88,29 +88,46 @@ async function askGroq(key: string, prompt: string, quick: boolean): Promise<str
 }
 
 // Pictures (food photos, textbook pages): a Groq vision model, then Gemini.
-const GROQ_VISION = (Deno.env.get("GROQ_VISION_MODEL") ?? "meta-llama/llama-4-scout-17b-16e-instruct,meta-llama/llama-4-maverick-17b-128e-instruct").split(",").map((m) => m.trim()).filter(Boolean);
+const GROQ_VISION_PREF = (Deno.env.get("GROQ_VISION_MODEL") ?? "qwen/qwen3.6-27b,meta-models/muse-spark-open,meta-llama/llama-4-scout-17b-16e-instruct").split(",").map((m) => m.trim()).filter(Boolean);
+let visionModels: string[] | null = null;
+// Groq retires vision models often: keep the preferred ones that still exist, plus any other vision-looking model it lists.
+async function groqVisionModels(key: string): Promise<string[]> {
+  if (visionModels) return visionModels;
+  try {
+    const r = await fetch("https://api.groq.com/openai/v1/models", { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(5000) });
+    if (r.ok) {
+      const ids: string[] = ((await r.json()).data ?? []).filter((m: { active?: boolean }) => m.active !== false).map((m: { id: string }) => m.id);
+      const extra = ids.filter((id) => /vision|-vl|llava|scout|maverick|muse|qwen3\.[6-9]|gemma-?[3-9]|pixtral/i.test(id) && !GROQ_VISION_PREF.includes(id));
+      const list = [...GROQ_VISION_PREF.filter((m) => ids.includes(m)), ...extra].slice(0, 4);
+      console.log("groq vision models", list.join(","));
+      if (list.length) return (visionModels = list);
+    }
+  } catch (e) { console.error("groq models list failed", String(e)); }
+  return GROQ_VISION_PREF;
+}
 async function askGroqVision(key: string, prompt: string, image: string): Promise<string> {
   let last: unknown = null;
-  for (const model of GROQ_VISION) {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 40000);
-    try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST", signal: ctl.signal,
-        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify({ model, max_completion_tokens: 4000, temperature: 0.3, response_format: { type: "json_object" },
-          messages: [{ role: "system", content: SYSTEM }, { role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: image } }] }] }),
-      });
-      if (!response.ok) {
-        console.error("groq vision error", model, response.status, (await response.text()).slice(0, 300));
-        last = new UpstreamError(response.status === 429 ? "busy" : "upstream");
-        continue;
-      }
-      const result = await response.json();
-      const text = result.choices?.[0]?.message?.content ?? "";
-      if (text.trim()) return text;
-    } catch (error) { console.error("groq vision failed", model, String(error)); last = error; }
-    finally { clearTimeout(timer); }
+  for (const model of await groqVisionModels(key)) {
+    for (const strict of [true, false]) {
+      try {
+        const body: Record<string, unknown> = { model, max_completion_tokens: 4000, temperature: 0.3,
+          messages: [{ role: "system", content: SYSTEM }, { role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: image } }] }] };
+        if (strict) body.response_format = { type: "json_object" };
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST", signal: AbortSignal.timeout(30000),
+          headers: { authorization: `Bearer ${key}`, "content-type": "application/json" }, body: JSON.stringify(body) });
+        if (!response.ok) {
+          console.error("groq vision error", model, response.status, (await response.text()).slice(0, 300));
+          last = new UpstreamError(response.status === 429 ? "busy" : "upstream");
+          if (response.status === 400 && strict) continue;
+          break;
+        }
+        const result = await response.json();
+        const text = String(result.choices?.[0]?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+        if (text) { console.log("groq vision ok", model); return text; }
+        break;
+      } catch (error) { console.error("groq vision failed", model, String(error)); last = error; break; }
+    }
   }
   throw last ?? new UpstreamError("upstream");
 }

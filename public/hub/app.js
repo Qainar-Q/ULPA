@@ -403,7 +403,7 @@ function aiEstimate(meal){
    <button class="go" id="ai-food-go" style="background:var(--eng);margin-top:10px">${L3("算卡路里","Estimate","Есептеу")}</button><div id="ai-food-out"></div>`;
   $("#f-pick").innerHTML="";
   $("#ai-photo").onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{photo=await H.shrinkImage(f,896);const pv=$("#ai-photo-pv");pv.src=photo;pv.hidden=false;$("#ai-food-go").click();}catch(err){toast(L3("照片读不了，换一张试试","Couldn't read that photo","Сурет оқылмады"));}};
-  $("#ai-food-go").onclick=async()=>{const txt=$("#ai-food").value.trim();if(!txt&&!photo)return;const b=$("#ai-food-go");b.disabled=true;const t0=Date.now();const tk=setInterval(()=>{b.textContent=t("thinking")+" "+Math.round((Date.now()-t0)/1000)+"s";},500);
+  $("#ai-food-go").onclick=async()=>{const txt=$("#ai-food").value.trim();if(!txt&&!photo)return;const b=$("#ai-food-go");b.disabled=true;const t0=Date.now();const tk=setInterval(()=>{b.textContent=L3("AI 正在识别…","Analysing…","AI талдауда…")+" "+Math.round((Date.now()-t0)/1000)+"s";},500);
     try{const r=await H.aiJson(`${foodCtx()}
 Estimate calories and protein for what the user ate, split into separate items with realistic portion sizes for this region. If an amount is vague, assume a typical portion and say so in "amount".
 ${photo?`The attached photo shows the meal. Identify every food and drink in it, judge each portion's weight in grams from the plate, cutlery and hand sizes, and count only what is visible.${txt?` The user adds: """${txt.slice(0,800)}"""`:""}`:`Food description: """${txt.slice(0,1500)}"""`}
