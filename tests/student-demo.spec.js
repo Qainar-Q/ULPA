@@ -169,3 +169,13 @@ test("students see files shared by teachers", async ({ page, errors }) => {
   await expect(shared).toBeVisible();
   await expect(shared.locator(".material__teacher")).toContainText("Оқытушы");
 });
+
+test("tasks show when and by whom they were posted", async ({ page, errors }) => {
+  await enterStudentDemo(page);
+  await page.goto("/tasks");
+  const card = page.locator(".task").first();
+  await expect(card.locator(".task__meta")).toContainText(/\d{2}\.\d{2}.* \d{2}:\d{2}/);
+  await card.locator(".task__body").click();
+  await expect(page.getByText(/^Қосылды: \d{2}\.\d{2}\.\d{4} \d{2}:\d{2}/)).toBeVisible();
+  await expectNoOverflow(page);
+});

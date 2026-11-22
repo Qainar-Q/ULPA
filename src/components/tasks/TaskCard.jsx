@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Clock3, Paperclip, Users } from "lucide-react";
+import { CalendarPlus, Check, Clock3, Paperclip, Users } from "lucide-react";
 import { courseAccent } from "../../lib/courseStyle.js";
-import { dueInfo } from "../../lib/due.js";
+import { dueInfo, formatShortDateTime } from "../../lib/due.js";
 import { useTasks } from "../../features/tasks/TasksContext.jsx";
 
 /** One assignment row with its own (per-student) done checkbox. */
@@ -48,6 +48,11 @@ export default function TaskCard({ task, course, compact = false, progress }) {
           {files > 0 && (
             <span>
               <Paperclip size={13} aria-hidden="true" /> {files}
+            </span>
+          )}
+          {!compact && task.created_at && (
+            <span title={`Қосылды${task.creator_name ? ` · ${task.creator_name}` : ""}`}>
+              <CalendarPlus size={13} aria-hidden="true" /> қосылды {formatShortDateTime(task.created_at)}
             </span>
           )}
           {progress && (
