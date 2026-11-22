@@ -24,6 +24,17 @@ export function localInputToIso(value) {
   return new Date(`${value}:00${almatyOffset(guess)}`).toISOString();
 }
 
+/**
+ * Default deadline for a new task: one week after posting, but the evening before —
+ * posted Monday → Sunday 23:59 (Almaty). As "YYYY-MM-DDTHH:mm" for the form.
+ */
+export function defaultDueInput(from = new Date()) {
+  const { year, month, day } = almatyDateParts(from);
+  const date = new Date(Date.UTC(year, month - 1, day + 6));
+  const p = (n) => String(n).padStart(2, "0");
+  return `${date.getUTCFullYear()}-${p(date.getUTCMonth() + 1)}-${p(date.getUTCDate())}T23:59`;
+}
+
 /** ISO string → "YYYY-MM-DDTHH:mm" in Almaty for <input type="datetime-local">. */
 export function isoToLocalInput(iso) {
   if (!iso) return "";

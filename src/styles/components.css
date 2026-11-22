@@ -481,3 +481,14 @@ a.text-link {
   height: 48px;
   width: 60%;
 }
+
+/* Four tabs on a phone: 2 × 2 instead of a row that runs off the screen */
+@media (max-width: 560px) {
+  .segmented--grid4 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .segmented--grid4 .segmented__item {
+    text-align: center;
+  }
+}

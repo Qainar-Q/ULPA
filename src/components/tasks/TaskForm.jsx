@@ -9,7 +9,7 @@ import {
   saveTask,
   uploadAttachment,
 } from "../../features/tasks/taskApi.js";
-import { isoToLocalInput, localInputToIso } from "../../lib/due.js";
+import { defaultDueInput, isoToLocalInput, localInputToIso } from "../../lib/due.js";
 import { useAuth } from "../../features/auth/AuthContext.jsx";
 import { groupChoices } from "../../lib/permissions.js";
 
@@ -28,7 +28,8 @@ export default function TaskForm({ task, defaultCourseId, onClose, onSaved }) {
     courseId: task?.course_id ?? defaultCourseId ?? "",
     title: task?.title ?? "",
     description: task?.description ?? "",
-    due: isoToLocalInput(task?.due_at),
+    // New task: one week later, the evening before (e.g. Mon → Sun 23:59). Editing keeps its own.
+    due: task ? isoToLocalInput(task.due_at) : defaultDueInput(),
     groupNo: task?.group_no ? String(task.group_no) : isAdmin ? "both" : String(student?.group_no ?? "both"),
   });
   const [existing, setExisting] = useState((task?.assignment_attachments ?? []).filter((file) => file.uploaded));
@@ -115,7 +116,9 @@ export default function TaskForm({ task, defaultCourseId, onClose, onSaved }) {
         <div className="field">
           <label className="field__label" htmlFor="tf-due">Тапсыру мерзімі (Алматы уақыты)</label>
           <input id="tf-due" type="datetime-local" className="input" value={values.due} onChange={(event) => set("due")(event.target.value)} />
-          <p className="field__hint">Бос қалдырсаң — мерзімсіз тапсырма.</p>
+          <p className="field__hint">
+            {task ? "Бос қалдырсаң — мерзімсіз тапсырма." : "Әдепкі: бір аптадан кейін, алдыңғы күні 23:59. Өзгертуге немесе өшіруге болады."} Мерзімі өткен соң тапсырма «Мерзімі өткен» бөліміне ауысады.
+          </p>
         </div>
 
         <div className="field">
