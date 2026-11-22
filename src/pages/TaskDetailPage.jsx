@@ -185,7 +185,14 @@ export default function TaskDetailPage() {
         <h2 className="panel-title">Сипаттама</h2>
         {task.description ? <p className="prose">{task.description}</p> : <p className="muted">Сипаттама жоқ.</p>}
         {task.due_at && <p className="muted small task-due-exact">Мерзімі: {formatDateTime(task.due_at)} (Алматы уақыты)</p>}
-        {task.creator_name && <p className="muted small">Қосқан: {task.creator_name}</p>}
+        <p className="muted small">
+          Қосылды: {formatDateTime(task.created_at)}
+          {task.creator_name ? ` · ${task.creator_name}` : ""}
+        </p>
+        {/* Edited later (more than a minute after posting): show when. */}
+        {task.updated_at && new Date(task.updated_at) - new Date(task.created_at) > 60_000 && (
+          <p className="muted small">Соңғы өзгеріс: {formatDateTime(task.updated_at)}</p>
+        )}
       </section>
 
       <section className="panel">

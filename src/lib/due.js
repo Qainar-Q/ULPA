@@ -70,6 +70,15 @@ export function dueInfo(iso, now = new Date()) {
   return { tone: "later", label: `${shortDate} · ${time}` };
 }
 
+/** Short Almaty date + time, e.g. "22.11 14:35" (year added only if it is not this year). */
+export function formatShortDateTime(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  const { day, month, year } = almatyDateParts(date);
+  const thisYear = almatyDateParts(new Date()).year;
+  return `${pad(day)}.${pad(month)}${year === thisYear ? "" : `.${year}`} ${clock(date)}`;
+}
+
 export function formatDateTime(iso) {
   if (!iso) return "—";
   const date = new Date(iso);
