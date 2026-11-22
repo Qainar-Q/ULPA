@@ -755,3 +755,18 @@
   border-color: var(--accent-line);
   color: var(--accent);
 }
+
+/* "N tasks are past their deadline" → opens the overdue tab */
+.overdue-note {
+  display: block;
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}

@@ -13,16 +13,10 @@ import { useAuth } from "../features/auth/AuthContext.jsx";
 import { useClassSize } from "../features/tasks/useClassSize.js";
 import { useMarkSeen } from "../features/unread/UnreadContext.jsx";
 
-const STATUS_FILTERS = [
-  { id: "open", label: "Орындалмаған" },
-  { id: "done", label: "Орындалған" },
-  { id: "all", label: "Барлығы" },
-];
-
-/** Open tasks: soonest deadline first, undated last. Done tasks: newest first. */
+/** Open tasks: soonest deadline first, undated last. Done / overdue: most recent deadline first. */
 function sortTasks(list, status) {
   return [...list].sort((a, b) => {
-    if (status === "done") return (b.due_at ?? "").localeCompare(a.due_at ?? "");
+    if (status === "done" || status === "overdue") return (b.due_at ?? "").localeCompare(a.due_at ?? "");
     if (!a.due_at) return 1;
     if (!b.due_at) return -1;
     return a.due_at.localeCompare(b.due_at);
@@ -33,7 +27,7 @@ export default function TasksPage() {
   useMarkSeen("tasks");
   const [status, setStatus] = useQueryParam("status", "open");
   const [courseSlug, setCourseSlug] = useQueryParam("course", "");
-  const { tasks, isDone, doneCount, status: loadStatus, reload } = useTasks();
+  const { tasks, isDone, isOverdue, overdueTasks, doneCount, status: loadStatus, reload } = useTasks();
   const { courseById, courseBySlug } = useCatalog();
   const { isAdmin } = useAuth();
   const classSize = useClassSize();
@@ -43,14 +37,22 @@ export default function TasksPage() {
   const visible = useMemo(() => {
     const filtered = tasks.filter((task) => {
       if (course && task.course_id !== course.id) return false;
-      if (status === "open") return !isDone(task.id);
+      // Past the deadline and not marked done → only in "Мерзімі өткен".
+      if (status === "open") return !isDone(task.id) && !isOverdue(task);
+      if (status === "overdue") return !isDone(task.id) && isOverdue(task);
       if (status === "done") return isDone(task.id);
       return true;
     });
     return sortTasks(filtered, status);
-  }, [tasks, course, status, isDone]);
+  }, [tasks, course, status, isDone, isOverdue]);
 
-  const overdueCount = visible.filter((task) => !isDone(task.id) && task.due_at && new Date(task.due_at) < new Date()).length;
+  const overdueCount = overdueTasks.filter((task) => !course || task.course_id === course.id).length;
+  const STATUS_FILTERS = [
+    { id: "open", label: "Ағымдағы" },
+    { id: "overdue", label: overdueCount ? `Мерзімі өткен · ${overdueCount}` : "Мерзімі өткен" },
+    { id: "done", label: "Орындалған" },
+    { id: "all", label: "Барлығы" },
+  ];
 
   return (
     <div className="stack-lg">
@@ -66,7 +68,7 @@ export default function TasksPage() {
       />
 
       <div className="toolbar">
-        <Segmented label="Тапсырма күйі" options={STATUS_FILTERS} value={status} onChange={setStatus} />
+        <Segmented label="Тапсырма күйі" options={STATUS_FILTERS} value={status} onChange={setStatus} className="segmented--grid4" />
         <CourseSelect id="task-course" value={courseSlug} onChange={setCourseSlug} />
       </div>
 
@@ -82,12 +84,23 @@ export default function TasksPage() {
 
       {loadStatus === "ready" && (
         <>
-          {overdueCount > 0 && status !== "done" && (
-            <p className="form__error">{overdueCount} тапсырманың мерзімі өтіп кетті.</p>
+          {status === "open" && overdueCount > 0 && (
+            <button type="button" className="overdue-note" onClick={() => setStatus("overdue")}>
+              {overdueCount} тапсырманың мерзімі өтіп кетті, бірақ «орындалды» деп белгіленбеген → қарау
+            </button>
+          )}
+          {status === "overdue" && visible.length > 0 && (
+            <p className="muted small">Мерзімі өтіп кеткен, бірақ сен «орындалды» деп белгілемеген тапсырмалар. Тапсырған болсаң — белгілеп қой.</p>
           )}
           {visible.length === 0 ? (
-            <EmptyState icon={ClipboardList} title={status === "open" ? "Орындалмаған тапсырма жоқ 🎉" : "Тапсырма жоқ"} compact>
-              Жаңа тапсырманы «Тапсырма қосу» батырмасымен қос — ол сенің тобыңа немесе екі топқа көрінеді.
+            <EmptyState
+              icon={ClipboardList}
+              title={status === "open" ? "Ағымдағы тапсырма жоқ 🎉" : status === "overdue" ? "Мерзімі өткен тапсырма жоқ 👍" : "Тапсырма жоқ"}
+              compact
+            >
+              {status === "overdue"
+                ? "Мерзімі өтіп, белгіленбей қалған тапсырмалар осында шығады."
+                : "Жаңа тапсырманы «Тапсырма қосу» батырмасымен қос — ол сенің тобыңа немесе екі топқа көрінеді."}
             </EmptyState>
           ) : (
             <ul className="task-list">

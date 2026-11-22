@@ -179,3 +179,29 @@ test("tasks show when and by whom they were posted", async ({ page, errors }) =>
   await expect(page.getByText(/^Қосылды: \d{2}\.\d{2}\.\d{4} \d{2}:\d{2}/)).toBeVisible();
   await expectNoOverflow(page);
 });
+
+test("past-deadline tasks move to their own tab; new tasks default to a week later", async ({ page, errors }) => {
+  await enterStudentDemo(page);
+  await page.goto("/tasks");
+  const lab = "Интегралдар: өзіндік жұмыс"; // demo task whose deadline passed yesterday, not marked done
+  await expect(page.locator(".task", { hasText: "Туындылар" })).toBeVisible();
+  await expect(page.locator(".task", { hasText: lab })).toHaveCount(0);
+  await page.locator(".overdue-note").click();
+  await expect(page).toHaveURL(/status=overdue/);
+  await expect(page.locator(".task", { hasText: lab })).toBeVisible();
+  await expect(page.locator(".task", { hasText: "Туындылар" })).toHaveCount(0);
+  // Marking it done moves it to "Орындалған".
+  await page.locator(".task", { hasText: lab }).locator(".task__check").click();
+  await expect(page.locator(".task", { hasText: lab })).toHaveCount(0);
+  await expectNoOverflow(page);
+
+  // New task form: deadline prefilled = 6 days later, 23:59 (Almaty).
+  await page.getByRole("button", { name: "Тапсырма қосу" }).click();
+  const expected = await page.evaluate(() => {
+    const f = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Almaty", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+    const g = (t) => Number(f.find((x) => x.type === t).value);
+    const d = new Date(Date.UTC(g("year"), g("month") - 1, g("day") + 6));
+    return `${d.toISOString().slice(0, 10)}T23:59`;
+  });
+  await expect(page.locator("#tf-due")).toHaveValue(expected);
+});

@@ -54,21 +54,33 @@ export function TasksProvider({ children }) {
     [student?.id, load]
   );
 
+  // A task leaves the "open" list at its deadline, even with the page left open.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const value = useMemo(() => {
     const doneSet = new Set(state.statuses.filter((row) => row.student_id === student?.id).map((row) => row.assignment_id));
     const doneCount = new Map();
     for (const row of state.statuses) doneCount.set(row.assignment_id, (doneCount.get(row.assignment_id) ?? 0) + 1);
-    const openTasks = state.tasks.filter((task) => !doneSet.has(task.id));
+    const isOverdue = (task) => Boolean(task.due_at) && new Date(task.due_at).getTime() < now;
+    // Open = not marked done and deadline not passed yet. Past-deadline ones go to "overdue".
+    const openTasks = state.tasks.filter((task) => !doneSet.has(task.id) && !isOverdue(task));
+    const overdueTasks = state.tasks.filter((task) => !doneSet.has(task.id) && isOverdue(task));
     return {
       status: state.status,
       tasks: state.tasks,
       openTasks,
+      overdueTasks,
+      isOverdue,
       isDone: (id) => doneSet.has(id),
       doneCount: (id) => doneCount.get(id) ?? 0, // meaningful for admins (they can read all marks)
       toggleDone,
       reload: load,
     };
-  }, [state, student?.id, toggleDone, load]);
+  }, [state, student?.id, toggleDone, load, now]);
 
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
 }
