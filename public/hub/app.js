@@ -110,6 +110,7 @@ async function pull(){
     else if((S.updatedAt||0)>(r.updatedAt||0)){dirty=true;flush();}}
   else if(S.updatedAt){dirty=true;flush();}
   setSync("ok",t("synced"));
+  H.synced=true;if(H.onPulled)try{H.onPulled();}catch(e){}
 }
 H.pull=pull;
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&!dirty&&!writing)pull();});
@@ -168,6 +169,7 @@ H.render=render;
 
 function renderToday(){
   if(H.plusToday)try{H.plusToday();}catch(e){console.error(e);}
+  if(H.dayPlanRender)try{H.dayPlanRender();}catch(e){console.error(e);}
   const tk=today(),sm=studyOn(tk),mm=moveOn(tk),g=S.settings.goal,mg=S.settings.moveGoal,hd=S.habits.filter(h=>hDone(h.id,tk)).length;
   const R=$("#rings");R.innerHTML=rings(Math.min(176,window.innerWidth-60),[[sm/g,"var(--study)"],[mm/mg,"var(--move)"],[habitFrac(tk),"var(--habit)"]],20,4,firstRender);kick(R);
   $("#lg").innerHTML=[["study",sm,g,t("min")],["move",mm,mg,t("min")],["habit",hd,S.habits.length,t("count")]].map(([c,a,b,u])=>`<div class="item"><div class="lbl c-${c}">${t(c==="habit"?"habits":c)}</div><div class="val num">${a}<small>/${b} ${u}</small></div></div>`).join("");

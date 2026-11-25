@@ -75,6 +75,10 @@ h2 button.side{color:var(--study)}
 .tile .disc.pop{animation:pop .35s ease}
 @keyframes pop{40%{transform:scale(1.1)}}
 
+.dp{margin-top:14px}.dph{display:flex;align-items:center;gap:8px}.dph svg{width:20px;height:20px;flex:0 0 20px}.dph b{flex:1;font-size:16px}
+.dpa{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--t2)}.dpa input{accent-color:var(--eng);width:16px;height:16px}
+.dpt{margin-top:8px;font-weight:700;line-height:1.45}.dpt.dim{color:var(--t2);font-size:14px}.dpn{margin-top:10px;resize:vertical;font:inherit;font-weight:700}
+.dpb{margin-top:12px}.dpb .pill{font-size:14px;padding:12px}.dpb .pill svg{width:18px;height:18px}.dpb .pill[disabled]{opacity:.6}
 /* todos */
 .add{display:flex;align-items:center;gap:10px;background:var(--s1);border-radius:var(--r-md);padding:4px 6px 4px 14px}
 .add input{flex:1;min-width:0;padding:10px 0;font-weight:700}
@@ -646,6 +650,7 @@ em.up,em.dn{font-style:normal;font-size:12.5px;font-weight:800}em.up{color:var(-
     <div class="minis" id="minis"></div>
     <h2><span data-t="habits"></span> <a class="side" href="#habits" style="color:var(--t2);text-decoration:none" data-t="all"></a></h2>
     <div class="tiles" id="t-habits"></div>
+    <div id="plus-dayplan"></div>
     <h2><span data-t="todo"></span> <span class="side" id="td-left"></span></h2>
     <form class="add" id="todo-form"><input id="todo-in" maxlength="120" autocomplete="off"><button class="plus" aria-label="add"><svg><use href="#i-plus"/></svg></button></form>
     <ul class="todos" id="todo-list"></ul>
@@ -741,13 +746,14 @@ em.up,em.dn{font-style:normal;font-size:12.5px;font-weight:800}em.up{color:var(-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script src="i18n.js?v=2"></script>
 <script src="data.js?v=3"></script>
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 <script src="eng.js?v=6"></script>
 <script src="plus.js?v=4"></script>
 <script src="plus2.js?v=2"></script>
 <script src="mock.js?v=1"></script>
 <script src="boost.js?v=1"></script>
 <script src="battle.js?v=1"></script>
+<script src="dayplan.js?v=1"></script>
 <script src="hub.js?v=7"></script>
 </body>
 </html>
