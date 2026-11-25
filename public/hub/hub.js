@@ -93,6 +93,7 @@
     H.useUser(session.user.id, role);
     document.getElementById("gate").classList.remove("on");
     H.boot();
+    if (role === "owner" && window.BATTLE) { try { BATTLE.boot(); } catch (e) { console.error(e); } }
     Promise.resolve(H.pull()).catch(()=>{}).finally(()=>{ if (H.plusStart) H.plusStart(); });
   }
   start();
